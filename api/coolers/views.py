@@ -20,6 +20,8 @@ from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 import numpy
 import higlass_getter as hgg
 from tiles import makeTile
+from itertools import chain
+from django.db.models import Q
 
 @api_view(['GET'])
 def api_root(request, format=None):
@@ -35,18 +37,21 @@ class CoolersViewSet(viewsets.ModelViewSet):
     """
     def get_queryset(self):
         queryset = super(CoolersViewSet, self).get_queryset()
-
-        if self.request.user.is_authenticated():
+	publicQSet = Cooler.objects.filter(public=True)
+        
+	if self.request.user.is_authenticated():
             	if not self.request.user.is_staff:
-			queryset = queryset.filter(owner=self.request.user)
+			queryset = queryset.filter(Q(owner=self.request.user) | Q(public=True))
+			#queryset = querysetPrivate+publicQSet
+			#queryset = list(chain(publicQSet,querysetPrivate))
 	else:
-		queryset = Cooler.objects.none()
+		queryset = publicQSet
 
         return queryset
 
     queryset = Cooler.objects.all()
     serializer_class = CoolerSerializer
-    permission_classes = (IsOwnerOrReadOnly,)	
+    #permission_classes = (IsOwnerOrReadOnly,)	
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def info(self, request, *args, **kwargs):
@@ -62,7 +67,12 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		zoom=request.GET["zoom"]
 		xpos=request.GET["xpos"]
 		ypos=request.GET["ypos"]
-		outputMatrices.append(makeTile(int(zoom),int(xpos),int(ypos),cooler.processed_file))
+		zooma = zoom.split(',')
+		xposa = xpos.split(',')
+		yposa = ypos.split(',')
+		numMats = len(zooma)
+		for matIdx in range(0,numMats):
+			outputMatrices.append(makeTile(int(zooma[matIdx]),int(xposa[matIdx]),int(yposa[matIdx]),cooler.processed_file))
 		return JsonResponse(outputMatrices,safe=False) 
     
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
@@ -92,8 +102,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = super(UserViewSet, self).get_queryset()
 
-        if self.request.user.is_authenticated():
-            queryset = queryset.filter(username=self.request.user)
+        if self.request.user.is_staff:
+                queryset = queryset
+	elif self.request.user.is_authenticated():
+                queryset = queryset.filter(username=self.request.user)
 	else:
 	    queryset = User.objects.none()
 

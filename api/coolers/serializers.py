@@ -9,7 +9,7 @@ class CoolerSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Cooler
         fields = ('url', 'id', 'highlight', 'owner',
-                  'title', 'published', 'processed', 'rawfile_in_db', 'processed_file')
+                  'title', 'published', 'processed', 'rawfile_in_db', 'processed_file','public')
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -31,4 +31,4 @@ class CoolerSerializer(serializers.ModelSerializer):
     class Meta:
         owner = serializers.ReadOnlyField(source='owner.username')
         model = Cooler
-        fields = ('id', 'title', 'url', 'published', 'processed', 'rawfile_in_db', 'processed_file')
+        fields = ('id', 'title', 'url', 'published', 'processed', 'rawfile_in_db', 'processed_file', 'public', 'owner')
