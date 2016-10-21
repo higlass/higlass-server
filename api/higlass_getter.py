@@ -72,8 +72,11 @@ def getData3(fpath, zoomLevel, startPos1, endPos1, startPos2, endPos2):
     pixels['genome_start'] = cumul_lengths[pixels['chrom1']] + pixels['start1']
     pixels['genome_end']   = cumul_lengths[pixels['chrom2']] + pixels['end2']
     pixels['balanced']     = pixels['count'] * pixels['weight1'] * pixels['weight2']
+    #print  type(pixels[map(lambda x: "{0:.2f}".format(x),map(lambda x: float(x),['genome_start', 'genome_end', 'balanced']))])
 
     return pixels[['genome_start', 'genome_end', 'balanced']]
+	
+    #return pixels[map(lambda x: "{0:.2f}".format(x),map(lambda x: float(x),['genome_start', 'genome_end', 'balanced']))]
 
 
 def getInfo(FILEPATH):

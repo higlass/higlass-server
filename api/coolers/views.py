@@ -54,16 +54,22 @@ class CoolersViewSet(viewsets.ModelViewSet):
     #permission_classes = (IsOwnerOrReadOnly,)	
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
-    def info(self, request, *args, **kwargs):
+    def tileset_info(self, request, *args, **kwargs):
 	cooler = self.get_object()
-	return JsonResponse(hgg.getInfo("/home/ubuntu/api/data/"+cooler.processed_file), safe=False)
+	info = hgg.getInfo("/home/ubuntu/api/data/"+cooler.processed_file)
+	od = {}
+	od["_source"] = {}
+	od["_source"]["tile_value"] = info
+	od["_source"]["tile_id"] = "tileset_info"
+	return JsonResponse(od, safe=False)
   
     @method_decorator(gzip_page, name='dispatch') 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def tiles(self, request, *args, **kwargs):
 		cooler = self.get_object()
+		infod = hgg.getInfo("/home/ubuntu/api/data/"+cooler.processed_file)
+		"""
 		outputMatrices = []
-		print request.stream
 		zoom=request.GET["zoom"]
 		xpos=request.GET["xpos"]
 		ypos=request.GET["ypos"]
@@ -72,8 +78,26 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		yposa = ypos.split(',')
 		numMats = len(zooma)
 		for matIdx in range(0,numMats):
-			outputMatrices.append(makeTile(int(zooma[matIdx]),int(xposa[matIdx]),int(yposa[matIdx]),cooler.processed_file))
-		return JsonResponse(outputMatrices,safe=False) 
+			outputMatrices.append(map(lambda x: float("{0:.1f}".format(x)),makeTile(int(zooma[matIdx]),int(xposa[matIdx]),int(yposa[matIdx]),cooler.processed_file)))
+		"""
+	 	hargs = request.GET["data"]
+		odict = {}
+		odict["_index"] = "hg19.1"
+		odict["_type"] = "Rao2014-GM12878-MboI-allreps-filtered.1kb.cool.reduced.genome.gz"
+		odict["_id"] = hargs
+		odict["_version"] = 1
+		odict["_source"] = {}
+		odict["_source"]["tile_value"] = {}
+		odict["_source"]["tile_id"] = hargs
+		prea = hargs.split('.')
+		prea[0] = prea[0][1:]
+		argsa = map(lambda x:int(x), prea)
+		
+		odict["_source"]["tile_value"]["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
+		odict["_source"]["tile_value"]["min_value"] = min(odict["_source"]["tile_value"]["dense"])
+		odict["_source"]["tile_value"]["max_value"] = max(odict["_source"]["tile_value"]["dense"])
+		return JsonResponse(odict,safe=False) 
+
     
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def generate_tiles(self, request, *args, **kwargs):
