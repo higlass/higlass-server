@@ -40,17 +40,28 @@ INSTALLED_APPS = [
     'rest_framework',
     'coolers.apps.CoolersConfig',
     'rest_framework_swagger',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
+#CORS_ALLOW_CREDENTIALS = False
+
+CORS_ORIGIN_WHITELIST = (
+'134.174.140.208:9000'
+)
+
+#CORS_ALLOW_HEADERS = default_headers
 
 ROOT_URLCONF = 'api.urls'
 
@@ -125,4 +136,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
+STATIC_ROOT = '/home/ubuntu/higlass-server/api'
 STATIC_URL = '/static/'
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
+)
+
