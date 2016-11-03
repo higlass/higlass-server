@@ -72,19 +72,19 @@ def main(infile, outfile, chunksize):
             cooler.io.create(grp, chroms, lengths, new_bins, reader)
 
             # balance
-            with Pool(N_CPU) as pool:
-                too_close = 20000  # for HindIII
-                ignore_diags = max(int(np.ceil(too_close / new_binsize)), 3)
+            #with Pool(N_CPU) as pool:
+            too_close = 20000  # for HindIII
+            ignore_diags = max(int(np.ceil(too_close / new_binsize)), 3)
 
-                bias = cooler.ice.iterative_correction(
-                    f, zoomLevel,
-                    chunksize=chunksize,
-                    min_nnz=10,
-                    mad_max=3,
-                    ignore_diags=ignore_diags,
-                    map=pool.map)
-                h5opts = dict(compression='gzip', compression_opts=6)
-                grp['bins'].create_dataset('weight', data=bias, **h5opts)
+            bias = cooler.ice.iterative_correction(
+                f, zoomLevel,
+                chunksize=chunksize,
+                min_nnz=10,
+                mad_max=3,
+                ignore_diags=ignore_diags,
+                map=map)
+            h5opts = dict(compression='gzip', compression_opts=6)
+            grp['bins'].create_dataset('weight', data=bias, **h5opts)
 
             print(zoomLevel, file=sys.stderr)
 
