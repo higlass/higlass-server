@@ -1,24 +1,25 @@
 # higlass-server
-TO INSTALL & RUN:
 
+## Installation
 
-1) clone repo
+1. clone repo
+2. `cd higlass-server/api`
+3. `pip install --upgrade -r requirements.txt`
+4. resolve personal dependency issues that pip can't
+5. ensure access to port 8000
+6. `mkdir /higlass-server/api/data`
+7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
-2) cd /higlass-server/api
-
-3) sudo pip install --upgrade -r requirements.txt
-
-4) resolve personal dependency issues that pip can't
-
-5) ensure access to port 8000
-
-6) python run_tornado.py 
+## Usage
 
 To access the API interactively, please visit http://54.70.83.188:8000/
 
 
+### Uploading Data
 To upload a new cooler file, format a POST request according to the interactive specification at http://54.70.83.188:8000/coolers/
 
+
+### Processing Data
 
 To generate multires cooler files in the db for a dataset for which metadata has been uploaded to the database via a POST request visit http://54.70.83.188:8000/coolers/x/generate_tiles replacing x with cooler object id from coolers table
 
