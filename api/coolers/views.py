@@ -56,7 +56,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
 	cooler = self.get_object()
-	info = hgg.getInfo("/home/ubuntu/api/data/"+cooler.processed_file)
+	info = hgg.getInfo("data/"+cooler.processed_file)
 	od = {}
 	od["_source"] = {}
 	od["_source"]["tile_value"] = info
@@ -67,7 +67,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def tiles(self, request, *args, **kwargs):
 		cooler = self.get_object()
-		infod = hgg.getInfo("/home/ubuntu/api/data/"+cooler.processed_file)
+		infod = hgg.getInfo("data/"+cooler.processed_file)
 		"""
 		outputMatrices = []
 		zoom=request.GET["zoom"]
@@ -105,16 +105,16 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	serializer = CoolerSerializer(cooler,data=request.data)
         cooler.rawfile_in_db = True
 	idv = cooler.id
-	os.system("source activate snakes")
+	#os.system("source activate snakes")
 	os.system("wget "+cooler.url)	
         urlval = cooler.url.split('/')[-1]
-	os.system("mv ~/api/"+str(urlval)+" ~/api/data/"+str(urlval).lower())
+	os.system("mv "+str(urlval)+" data/"+str(urlval).lower())
 	urlval = urlval.lower()
-	os.system("/home/ubuntu/miniconda2/envs/snakes/bin/python recursive_agg_onefile.py /home/ubuntu/api/data/"+urlval)
+	os.system("python recursive_agg_onefile.py data/"+urlval)
 	cooler.processed_file = '.'.join(urlval.split('.')[:-1])+".multires.cool"
 	cooler.processed = True
 	cooler.save()
-	return HttpResponseRedirect("http://54.70.83.188:8000/coolers/")
+	return HttpResponseRedirect("/coolers/")
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
