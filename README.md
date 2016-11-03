@@ -7,7 +7,7 @@
 3. `pip install --upgrade -r requirements.txt`
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
-6. 'mkdir /higlass-server/api/data'
+6. `mkdir /higlass-server/api/data`
 7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
 ## Usage
