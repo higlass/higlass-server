@@ -1,4 +1,12 @@
 # higlass-server
+TO INSTALL & RUN:
+1) clone repo
+2) cd /higlass-server/api
+3) sudo pip install --upgrade -r requirements.txt
+4) resolve personal dependency issues that pip can't
+5) ensure access to port 8000
+6) python run_tornado.py 
+
 To access the API interactively, please visit http://54.70.83.188:8000/
 
 
