@@ -10,6 +10,14 @@
 6. `mkdir /higlass-server/api/data`
 7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
+## Jump start
+
+These steps are optional in case one wants to start with a pre-populated database.
+
+[8]. = `wget https://s3.amazonaws.com/pkerp/public/db.sqlite3`
+[9]. = `wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool`
+[10]. `mv https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data`
+
 ## Usage
 
 To access the API interactively, please visit http://54.70.83.188:8000/
