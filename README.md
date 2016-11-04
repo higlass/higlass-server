@@ -18,6 +18,14 @@ These steps are optional in case one wants to start with a pre-populated databas
 [9]. = `wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool`
 [10]. `mv https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data`
 
+Run the server:
+
+`python manage.py runserver localhost:8000`
+
+Get a tile:
+
+`curl http://54.70.83.188:8000/coolers/12/tiles/?data=/0.0.0`
+
 ## Usage
 
 To access the API interactively, please visit http://54.70.83.188:8000/
