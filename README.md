@@ -14,9 +14,9 @@
 
 These steps are optional in case one wants to start with a pre-populated database.
 
-[8]. = `wget https://s3.amazonaws.com/pkerp/public/db.sqlite3`
-[9]. = `wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool`
-[10]. `mv https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data`
+8. = `wget https://s3.amazonaws.com/pkerp/public/db.sqlite3`
+9. = `wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool`
+10. `mv https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data`
 
 Run the server:
 
