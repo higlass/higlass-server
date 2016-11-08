@@ -1,0 +1,3 @@
+[console_scripts]
+cooler = cooler.cli:cli
+

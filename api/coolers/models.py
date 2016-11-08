@@ -7,6 +7,7 @@ from pygments.formatters.html import HtmlFormatter
 from pygments import highlight
 from rest_framework.decorators import api_view, permission_classes
 from coolers.permissions import IsOwnerOrReadOnly, IsRequestMethodGet
+import uuid
 
 LEXERS = [item for item in get_all_lexers() if item[1]]
 LANGUAGE_CHOICES = sorted([(item[1][0], item[0]) for item in LEXERS])
@@ -27,19 +28,16 @@ def save(self, *args, **kwargs):
     super(Cooler, self).save(*args, **kwargs)
 
 class Cooler(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    permission_classes = (IsRequestMethodGet,)
-    title = models.CharField(max_length=100, blank=True, default='')
-    url = models.TextField()
-    public = models.BooleanField(default=False)
-    published = models.BooleanField(default=False)
-    processed = models.BooleanField(default=False)
-    rawfile_in_db = models.BooleanField(default=False)
-    processed_file = models.TextField(default="")
+    #created = models.DateTimeField(auto_now_add=True)
+    #permission_classes = (IsRequestMethodGet,)
+    uuid=models.CharField(max_length=100, unique=True, default=uuid.uuid4)
+    processed_file = models.TextField()
+    twod = models.BooleanField(default=True)
+    
     #language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
     #style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)
-    owner = models.ForeignKey('auth.User', related_name='coolers', default='auth.User')
-    highlighted = models.TextField()
-    class Meta:
-        ordering = ('created',)
+    #class Meta:
+        #model = Cooler
+	#fields = ('uuid')
+	#ordering = ('created',)
 # Create your models here.

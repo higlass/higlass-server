@@ -27,7 +27,7 @@ from django.db.models import Q
 def api_root(request, format=None):
     return Response({
         'users': reverse('user-list', request=request, format=format),
-        'coolerss': reverse('cooler-list', request=request, format=format)
+        #'coolers': reverse('cooler-list', request=request, format=format)
     })
 
 @method_decorator(gzip_page, name='dispatch')
@@ -37,7 +37,11 @@ class CoolersViewSet(viewsets.ModelViewSet):
     """
     def get_queryset(self):
         queryset = super(CoolersViewSet, self).get_queryset()
-	publicQSet = Cooler.objects.filter(public=True)
+	
+	return queryset
+	
+	"""
+	publicQSet = Cooler.objects
         
 	if self.request.user.is_authenticated():
             	if not self.request.user.is_staff:
@@ -48,10 +52,11 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		queryset = publicQSet
 
         return queryset
-
+	"""
     queryset = Cooler.objects.all()
     serializer_class = CoolerSerializer
     #permission_classes = (IsOwnerOrReadOnly,)	
+    lookup_field='uuid'
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
@@ -67,7 +72,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def tiles(self, request, *args, **kwargs):
 		cooler = self.get_object()
-		infod = hgg.getInfo("data/"+cooler.processed_file)
+		infod = hgg.getInfo(cooler.processed_file)
 		"""
 		outputMatrices = []
 		zoom=request.GET["zoom"]
@@ -117,7 +122,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	return HttpResponseRedirect("/coolers/")
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        serializer.save()
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """

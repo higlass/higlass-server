@@ -3,13 +3,11 @@ from coolers.models import Cooler, LANGUAGE_CHOICES, STYLE_CHOICES
 from django.contrib.auth.models import User
 
 class CoolerSerializer(serializers.HyperlinkedModelSerializer):
-
-    owner = serializers.ReadOnlyField(source='owner.username')
+    #owner = serializers.ReadOnlyField(source='owner.username')
     generateTiles = serializers.HyperlinkedIdentityField(view_name='cooler-generatetiles', format='html')
     class Meta:
         model = Cooler
-        fields = ('url', 'id', 'highlight', 'owner',
-                  'title', 'published', 'processed', 'rawfile_in_db', 'processed_file','public')
+        fields = ('uuid', 'processed_file', 'twod')
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -28,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'coolers')
 
 class CoolerSerializer(serializers.ModelSerializer):
-    class Meta:
-        owner = serializers.ReadOnlyField(source='owner.username')
+     class Meta:
+     #   owner = serializers.ReadOnlyField(source='owner.username')
         model = Cooler
-        fields = ('id', 'title', 'url', 'published', 'processed', 'rawfile_in_db', 'processed_file', 'public', 'owner')
+        fields = ('uuid', 'processed_file', 'twod')
