@@ -3,13 +3,13 @@ import json
 import numpy as np
 
 def makeTile(zoomLevel,x_pos,y_pos,dset):
-	info = hgg.getInfo("data/"+dset)
+	info = hgg.getInfo(dset)
 	divisor = 2 ** zoomLevel
 	start1 = x_pos * info['max_width'] / divisor
 	end1 = (x_pos + 1) * info['max_width'] / divisor
 	start2 = y_pos * info['max_width'] / divisor
 	end2 = (y_pos + 1) * info['max_width'] / divisor
-	data = hgg.getData3("data/"+dset,zoomLevel,start1,end1-1,start2,end2-1)	
+	data = hgg.getData3(dset,zoomLevel,start1,end1-1,start2,end2-1)	
 	df = data[data['genome_start'] >= start1]
         binsize = 2 ** (info['max_zoom'] - zoomLevel) * 1000
         j = (df['genome_start'].values - start1) // binsize

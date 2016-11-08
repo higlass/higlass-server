@@ -97,7 +97,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		prea = hargs.split('.')
 		prea[0] = prea[0][1:]
 		argsa = map(lambda x:int(x), prea)
-		
+		print cooler.processed_file	
 		odict["_source"]["tile_value"]["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
 		odict["_source"]["tile_value"]["min_value"] = min(odict["_source"]["tile_value"]["dense"])
 		odict["_source"]["tile_value"]["max_value"] = max(odict["_source"]["tile_value"]["dense"])
@@ -113,9 +113,9 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	#os.system("source activate snakes")
 	os.system("wget "+cooler.url)	
         urlval = cooler.url.split('/')[-1]
-	os.system("mv "+str(urlval)+" data/"+str(urlval).lower())
+	os.system("mv "+str(urlval)+" "+str(urlval).lower())
 	urlval = urlval.lower()
-	os.system("python recursive_agg_onefile.py data/"+urlval)
+	os.system("python recursive_agg_onefile.py"+urlval)
 	cooler.processed_file = '.'.join(urlval.split('.')[:-1])+".multires.cool"
 	cooler.processed = True
 	cooler.save()
