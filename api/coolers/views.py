@@ -23,12 +23,43 @@ from tiles import makeTile
 from itertools import chain
 from django.db.models import Q
 
+def makeUnaryDict(hargs,queryset):
+	odict = {}
+	odict["_index"] = "hg19.1"
+	odict["_type"] = "notimportant"
+	odict["_id"] = hargs
+	odict["_version"] = 1
+	odict["_source"] = {}
+	odict["_source"]["tile_value"] = {}
+	odict["_source"]["tile_id"] = hargs
+	prea = hargs.split('.')
+	prea[0] = prea[0][1:]
+	numerics = prea[1:4]
+	nuuid = prea[0]
+	argsa = map(lambda x:int(x), numerics)
+	cooler = queryset.filter(uuid=nuuid).first()
+	odict["_source"]["tile_value"]["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
+	odict["_source"]["tile_value"]["min_value"] = min(odict["_source"]["tile_value"]["dense"])
+	odict["_source"]["tile_value"]["max_value"] = max(odict["_source"]["tile_value"]["dense"])
+	return odict
+	
+
 @api_view(['GET'])
 def api_root(request, format=None):
     return Response({
         'users': reverse('user-list', request=request, format=format),
-        #'coolers': reverse('cooler-list', request=request, format=format)
+        'coolers': reverse('cooler-list', request=request, format=format)
     })
+
+
+#@method_decorator(gzip_page, name='dispatch')
+#class TilesViewSet(viewsets.ModelViewSet):
+#	queryset = Cooler.objects.all()	
+#	serializer_class = CoolerSerializer
+	
+
+#return JsonResponse(odict,safe=False) 
+
 
 @method_decorator(gzip_page, name='dispatch')
 class CoolersViewSet(viewsets.ModelViewSet):
@@ -40,23 +71,19 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	
 	return queryset
 	
-	"""
-	publicQSet = Cooler.objects
-        
-	if self.request.user.is_authenticated():
-            	if not self.request.user.is_staff:
-			queryset = queryset.filter(Q(owner=self.request.user) | Q(public=True))
-			#queryset = querysetPrivate+publicQSet
-			#queryset = list(chain(publicQSet,querysetPrivate))
-	else:
-		queryset = publicQSet
-
-        return queryset
-	"""
     queryset = Cooler.objects.all()
     serializer_class = CoolerSerializer
     #permission_classes = (IsOwnerOrReadOnly,)	
     lookup_field='uuid'
+
+    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
+    def render(self, request, *arg, **kwargs):
+                queryset=Cooler.objects.all()
+		hargs = request.GET.getlist("d")
+                arr = []
+                for elems in hargs:
+                        arr.append(makeUnaryDict(elems,queryset))
+                return JsonResponse(arr,safe=False)
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
@@ -67,41 +94,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	od["_source"]["tile_value"] = info
 	od["_source"]["tile_id"] = "tileset_info"
 	return JsonResponse(od, safe=False)
-  
-    @method_decorator(gzip_page, name='dispatch') 
-    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
-    def tiles(self, request, *args, **kwargs):
-		cooler = self.get_object()
-		infod = hgg.getInfo(cooler.processed_file)
-		"""
-		outputMatrices = []
-		zoom=request.GET["zoom"]
-		xpos=request.GET["xpos"]
-		ypos=request.GET["ypos"]
-		zooma = zoom.split(',')
-		xposa = xpos.split(',')
-		yposa = ypos.split(',')
-		numMats = len(zooma)
-		for matIdx in range(0,numMats):
-			outputMatrices.append(map(lambda x: float("{0:.1f}".format(x)),makeTile(int(zooma[matIdx]),int(xposa[matIdx]),int(yposa[matIdx]),cooler.processed_file)))
-		"""
-	 	hargs = request.GET["data"]
-		odict = {}
-		odict["_index"] = "hg19.1"
-		odict["_type"] = "notimportant"
-		odict["_id"] = hargs
-		odict["_version"] = 1
-		odict["_source"] = {}
-		odict["_source"]["tile_value"] = {}
-		odict["_source"]["tile_id"] = hargs
-		prea = hargs.split('.')
-		prea[0] = prea[0][1:]
-		argsa = map(lambda x:int(x), prea)
-		print cooler.processed_file	
-		odict["_source"]["tile_value"]["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
-		odict["_source"]["tile_value"]["min_value"] = min(odict["_source"]["tile_value"]["dense"])
-		odict["_source"]["tile_value"]["max_value"] = max(odict["_source"]["tile_value"]["dense"])
-		return JsonResponse(odict,safe=False) 
+
 
     
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
