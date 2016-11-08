@@ -18,7 +18,13 @@ import tornado.wsgi
 from django.core.wsgi import get_wsgi_application
 
 
-define('port', type=int, default=8000)
+try:
+    server_port = sys.argv[1]
+except IndexError as e:
+    sys.stderr.write("Server port required as first argument\n")
+    sys.exit(1)
+
+define('port', type=int, default=server_port)
 
 
 class HelloHandler(tornado.web.RequestHandler):
