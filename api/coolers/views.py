@@ -61,7 +61,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
 	cooler = self.get_object()
-	info = hgg.getInfo("data/"+cooler.processed_file)
+	info = hgg.getInfo(cooler.processed_file)
 	od = {}
 	od["_source"] = {}
 	od["_source"]["tile_value"] = info
@@ -88,7 +88,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 	 	hargs = request.GET["data"]
 		odict = {}
 		odict["_index"] = "hg19.1"
-		odict["_type"] = "Rao2014-GM12878-MboI-allreps-filtered.1kb.cool.reduced.genome.gz"
+		odict["_type"] = "notimportant"
 		odict["_id"] = hargs
 		odict["_version"] = 1
 		odict["_source"] = {}
@@ -123,6 +123,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+	return HttpResponse("test")
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
