@@ -28,7 +28,7 @@ def save(self, *args, **kwargs):
     super(Cooler, self).save(*args, **kwargs)
 
 class Cooler(models.Model):
-    #created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True)
     #permission_classes = (IsRequestMethodGet,)
     uuid=models.CharField(max_length=100, unique=True, default=uuid.uuid4)
     processed_file = models.TextField()
@@ -36,8 +36,8 @@ class Cooler(models.Model):
     
     #language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
     #style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)
-    #class Meta:
+    class Meta:
         #model = Cooler
 	#fields = ('uuid')
-	#ordering = ('created',)
+	ordering = ('created',)
 # Create your models here.
