@@ -6,6 +6,7 @@ from rest_framework_swagger.views import get_swagger_view
 schema_view = get_swagger_view(title='Pastebin API')
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
+
 router.register(r'tilesets', views.CoolersViewSet)
 router.register(r'users', views.UserViewSet)
 

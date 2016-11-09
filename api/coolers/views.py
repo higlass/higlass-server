@@ -27,7 +27,7 @@ def makeUnaryDict(hargs,queryset):
 	odict = {}
 
 	prea = hargs.split('.')
-	prea[0] = prea[0][1:]
+	prea[0] = prea[0]
 	numerics = prea[1:4]
 	nuuid = prea[0]
 	argsa = map(lambda x:int(x), numerics)
