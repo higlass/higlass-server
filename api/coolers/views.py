@@ -25,22 +25,19 @@ from django.db.models import Q
 
 def makeUnaryDict(hargs,queryset):
 	odict = {}
-	odict["_index"] = "hg19.1"
-	odict["_type"] = "notimportant"
-	odict["_id"] = hargs
-	odict["_version"] = 1
-	odict["_source"] = {}
-	odict["_source"]["tile_value"] = {}
-	odict["_source"]["tile_id"] = hargs
+
 	prea = hargs.split('.')
 	prea[0] = prea[0][1:]
 	numerics = prea[1:4]
 	nuuid = prea[0]
 	argsa = map(lambda x:int(x), numerics)
 	cooler = queryset.filter(uuid=nuuid).first()
-	odict["_source"]["tile_value"]["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
-	odict["_source"]["tile_value"]["min_value"] = min(odict["_source"]["tile_value"]["dense"])
-	odict["_source"]["tile_value"]["max_value"] = max(odict["_source"]["tile_value"]["dense"])
+        odict = {}
+
+	odict["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
+	odict["min_value"] = min(odict["dense"])
+	odict["max_value"] = max(odict["dense"])
+
 	return odict
 	
 
@@ -89,11 +86,10 @@ class CoolersViewSet(viewsets.ModelViewSet):
     def tileset_info(self, request, *args, **kwargs):
 	cooler = self.get_object()
 	info = hgg.getInfo(cooler.processed_file)
-	od = {}
-	od["_source"] = {}
-	od["_source"]["tile_value"] = info
-	od["_source"]["tile_id"] = "tileset_info"
-	return JsonResponse(od, safe=False)
+
+        # info should be a dictionary describing the processed file
+        # e.g. dimensions, min_value, max_value, histogram of values
+	return JsonResponse(info, safe=False)
 
 
     
