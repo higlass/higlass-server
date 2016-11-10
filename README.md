@@ -17,6 +17,8 @@ These steps are optional in case one wants to start with a pre-populated databas
 Run the server:
 
 ```
+python manage.py makemigrations
+python manage.py migrate
 python manage.py runserver localhost:8000
 ```
 
@@ -31,10 +33,16 @@ curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dix
 
 This will return a UUID. This uuid can be used to retrieve tiles:
 
+Get tileset info:
+
+```
+curl http://localhost:8001/tilesets/db/tileset_info/?d=767fc12a-f351-4678-8d23-d08996b4d7e4
+```
+
 Get a tile:
 
 ```
-http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+curl http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
 ```
 
 ## Usage
