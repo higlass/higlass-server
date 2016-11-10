@@ -40,13 +40,20 @@ def main():
 
     wsgi_app = get_wsgi_application()
     container = tornado.wsgi.WSGIContainer(wsgi_app)
+    public_root = os.path.join(os.path.dirname(__file__), 'static')
+    settings = dict(
+    	static_path=public_root,
+        template_path=public_root,
+    )
 
     tornado_app = tornado.web.Application(
         [
-            (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': '../web/'}),
+            #(r'/static/', tornado.web.StaticFileHandler, dict(path=settings['static_path'])),
 	    ('/hello-tornado', HelloHandler),
-            ('.*', tornado.web.FallbackHandler, dict(fallback=container)),
-        ])
+	    ('.*', tornado.web.FallbackHandler, dict(fallback=container)),
+            (r'/', tornado.web.StaticFileHandler, {'path': public_root}),
+	    #('.*', tornado.web.FallbackHandler, dict(fallback=container)),
+        ],**settings)
 
     server = tornado.httpserver.HTTPServer(tornado_app)
     server.listen(options.port,'0.0.0.0')

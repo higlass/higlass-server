@@ -66,7 +66,8 @@ class CoolersViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super(CoolersViewSet, self).get_queryset()
 	
-	return queryset
+	return Cooler.object.none()
+	#return queryset
 	
     queryset = Cooler.objects.all()
     serializer_class = CoolerSerializer
