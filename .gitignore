@@ -1,5 +1,2 @@
-*.swo
-*~
-*.swp
-data/
-*.pyc
+*.sqllite
+api/coolers/migrations/*
