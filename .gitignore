@@ -1,3 +1,7 @@
 *.sqllite
 api/coolers/migrations/*
 *.pyc
+*~
+data/
+db.sqlite3
+*.swp
