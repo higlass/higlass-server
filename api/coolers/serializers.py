@@ -7,7 +7,7 @@ class CoolerSerializer(serializers.HyperlinkedModelSerializer):
     generateTiles = serializers.HyperlinkedIdentityField(view_name='cooler-generatetiles', format='html')
     class Meta:
         model = Cooler
-        fields = ('uuid', 'processed_file', 'twod')
+        fields = ('uuid', 'processed_file', 'file_type')
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -29,4 +29,4 @@ class CoolerSerializer(serializers.ModelSerializer):
      class Meta:
      #   owner = serializers.ReadOnlyField(source='owner.username')
         model = Cooler
-        fields = ('uuid', 'processed_file', 'twod')
+        fields = ('uuid', 'processed_file', 'file_type')
