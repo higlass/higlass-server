@@ -83,3 +83,7 @@ u test: p higlassdbmi
 
 Root account will show all data in the coolers table while test will only show public tables + tables owned by the user test. The API can be accessed without logging in for datasets that have been uploaded as "public" (boolean included in the POST request).  
 
+### Benchmarking
+
+The file `doc/tile_requests` has a list of tiles requested for a 2D map. A potential benchmark for the performance of the server is seeing how long it takes to retrieve that set of tiles.
+
