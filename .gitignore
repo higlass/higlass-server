@@ -1,1 +1,2 @@
 *.sqllite
+api/coolers/migrations/*
