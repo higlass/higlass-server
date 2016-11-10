@@ -1,5 +1,1 @@
-*.swo
-*~
-*.swp
-data/
-*.pyc
+*.sqllite
