@@ -68,9 +68,13 @@ class CoolersViewSet(viewsets.ModelViewSet):
     Coolers
     """
     def get_queryset(self):
+        
+        #debug NOT SECURE
         queryset = super(CoolersViewSet, self).get_queryset()	
-	#return Cooler.objects.none()
-	return queryset
+        return queryset
+
+        #secure production
+        return Cooler.objects.none()
 
     queryset = Cooler.objects.all()	
     serializer_class = CoolerSerializer
