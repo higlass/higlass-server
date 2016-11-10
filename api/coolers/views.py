@@ -24,6 +24,8 @@ from tiles import makeTile
 from itertools import chain
 from django.db.models import Q
 import hdf_tiles as hdft
+import urllib
+import json
 
 def makeUnaryDict(hargs,queryset):
 	odict = {}
@@ -95,6 +97,12 @@ class CoolersViewSet(viewsets.ModelViewSet):
 				d["max_value"] = maxv
 				d["dense"] = map(lambda x: float("{0:.1f}".format(x)),dense)
 				od[nuuid]=d
+			elif cooler.file_type == "elastic_search":
+				prea = elems.split('.')
+        			prea[0] = prea[0]
+        			numerics = prea[1:4]
+				response = urllib.urlopen(cooler.processed_file+'/'+numerics[0]+'.'+numerics[1]+'.'+numerics[2])
+                        	od[elems] = json.loads(response.read())["_source"]["tile_value"]
 			else:
 				ud = makeUnaryDict(elems,queryset)
 				od[ud[1]] = ud[0]
@@ -104,21 +112,21 @@ class CoolersViewSet(viewsets.ModelViewSet):
     def tileset_info(self, request, *args, **kwargs):
 	queryset=Cooler.objects.all()
 	hargs = request.GET.getlist("d")
-	arr = []
+	d = {}
 	for elems in hargs:
 		cooler = queryset.filter(uuid=elems).first()
                 if cooler.file_type == "hi5tile":
-			arr.append(hdft.get_tileset_info(h5py.File(cooler.processed_file)))
+			d[elems] = hdft.get_tileset_info(h5py.File(cooler.processed_file))
+		elif cooler.file_type == "elastic_search":
+			response = urllib.urlopen(cooler.processed_file+"/tileset_info")
+			d[elems] = json.loads(response.read())
 		else:	
-			arr.append(hgg.getInfo(queryset.filter(uuid=elems).first().processed_file))
-	return JsonResponse(arr,safe=False)
+			d[elems] = hgg.getInfo(queryset.filter(uuid=elems).first().processed_file)
+	return JsonResponse(d,safe=False)
 
-	cooler = self.get_object()
-	info = hgg.getInfo(cooler.processed_file)
 
         # info should be a dictionary describing the processed file
         # e.g. dimensions, min_value, max_value, histogram of values
-	return JsonResponse(info, safe=False)
 
 
     
