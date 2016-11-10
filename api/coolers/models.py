@@ -32,7 +32,7 @@ class Cooler(models.Model):
     #permission_classes = (IsRequestMethodGet,)
     uuid=models.CharField(max_length=100, unique=True, default=uuid.uuid4)
     processed_file = models.TextField()
-    twod = models.BooleanField(default=True)
+    file_type = models.TextField()
     
     #language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
     #style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)

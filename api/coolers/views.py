@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from coolers.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
 import os
+import h5py
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 import numpy
@@ -22,6 +23,7 @@ import higlass_getter as hgg
 from tiles import makeTile
 from itertools import chain
 from django.db.models import Q
+import hdf_tiles as hdft
 
 def makeUnaryDict(hargs,queryset):
 	odict = {}
@@ -38,15 +40,15 @@ def makeUnaryDict(hargs,queryset):
 	odict["min_value"] = min(odict["dense"])
 	odict["max_value"] = max(odict["dense"])
 
-	return odict
+	return [odict,nuuid]
 	
 
 @api_view(['GET'])
 def api_root(request, format=None):
-    return Response({
-        'users': reverse('user-list', request=request, format=format),
-        'coolers': reverse('cooler-list', request=request, format=format)
-    })
+    return Response("test")
+	
+        #'users': reverse('user-list', request=request, format=format),
+        #'coolers': reverse('cooler-list', request=request, format=format)
 
 
 #@method_decorator(gzip_page, name='dispatch')
@@ -64,12 +66,11 @@ class CoolersViewSet(viewsets.ModelViewSet):
     Coolers
     """
     def get_queryset(self):
-        queryset = super(CoolersViewSet, self).get_queryset()
-	
-	return Cooler.object.none()
-	#return queryset
-	
-    queryset = Cooler.objects.all()
+        queryset = super(CoolersViewSet, self).get_queryset()	
+	#return Cooler.objects.none()
+	return queryset
+
+    queryset = Cooler.objects.all()	
     serializer_class = CoolerSerializer
     #permission_classes = (IsOwnerOrReadOnly,)	
     lookup_field='uuid'
@@ -78,13 +79,40 @@ class CoolersViewSet(viewsets.ModelViewSet):
     def render(self, request, *arg, **kwargs):
                 queryset=Cooler.objects.all()
 		hargs = request.GET.getlist("d")
-                arr = []
+                od = {}
                 for elems in hargs:
-                        arr.append(makeUnaryDict(elems,queryset))
-                return JsonResponse(arr,safe=False)
+			prea = elems.split('.')
+                        numerics = prea[1:3]
+                        nuuid = prea[0]
+                        argsa = map(lambda x:int(x), numerics)
+			cooler = queryset.filter(uuid=nuuid).first()
+			if cooler.file_type == "hi5tile":	
+				dense = list(hdft.get_data(h5py.File(cooler.processed_file),int(argsa[0]),int(argsa[1])))
+				minv = min(dense)
+				maxv = max(dense)
+				d = {}
+				d["min_value"] = minv
+				d["max_value"] = maxv
+				d["dense"] = map(lambda x: float("{0:.1f}".format(x)),dense)
+				od[nuuid]=d
+			else:
+				ud = makeUnaryDict(elems,queryset)
+				od[ud[1]] = ud[0]
+                return JsonResponse(od,safe=False)
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
+	queryset=Cooler.objects.all()
+	hargs = request.GET.getlist("d")
+	arr = []
+	for elems in hargs:
+		cooler = queryset.filter(uuid=elems).first()
+                if cooler.file_type == "hi5tile":
+			arr.append(hdft.get_tileset_info(h5py.File(cooler.processed_file)))
+		else:	
+			arr.append(hgg.getInfo(queryset.filter(uuid=elems).first().processed_file))
+	return JsonResponse(arr,safe=False)
+
 	cooler = self.get_object()
 	info = hgg.getInfo(cooler.processed_file)
 
@@ -118,8 +146,10 @@ class CoolersViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Users
+    
     """
-    def get_queryset(self):
+    
+    """def get_queryset(self):
         queryset = super(UserViewSet, self).get_queryset()
 
         if self.request.user.is_staff:
@@ -132,4 +162,4 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
     permission_classes = (IsOwnerOrReadOnly,)
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserSerializer"""
