@@ -14,17 +14,28 @@
 
 These steps are optional in case one wants to start with a pre-populated database.
 
-8. = `wget https://s3.amazonaws.com/pkerp/public/db.sqlite3`
-9. = `wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool`
-10. `mv https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data`
-
 Run the server:
 
-`python manage.py runserver localhost:8000`
+```
+python manage.py runserver localhost:8000
+```
+
+Add a dataset
+
+```
+cd api
+wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8001/tilesets/
+```
+
+This will return a UUID. This uuid can be used to retrieve tiles:
 
 Get a tile:
 
-`curl http://54.70.83.188:8000/coolers/12/tiles/?data=/0.0.0`
+```
+http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+```
 
 ## Usage
 
