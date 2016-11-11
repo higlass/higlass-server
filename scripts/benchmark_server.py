@@ -24,14 +24,18 @@ def main():
     parser.add_argument('tile_ids', nargs='*')
     parser.add_argument('--tile-id-file')
     parser.add_argument('--iterations')
+    parser.add_argument('--at-once', action='store_true')
+
     #parser.add_argument('-o', '--options', default='yo',
     #					 help="Some option", type='str')
     #parser.add_argument('-u', '--useless', action='store_true', 
     #					 help='Another useless option')
     args = parser.parse_args()
+    tile_ids = args.tile_ids
 
     # parse requests on the command line
     for tile_id in args.tile_ids:
+        ids
         get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + tile_id)
 
         r = requests.get(get_url)
@@ -41,12 +45,20 @@ def main():
     if args.tile_id_file is not None:
         with open(args.tile_id_file, 'r') as f:
             for line in f:
-                get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + line.strip())
+                tile_ids += [line.strip()]
 
-                r = requests.get(get_url)
-                print("r:", r)
+    if args.at_once:
+        url_arg = "&d=".join([args.tileset_id + '.' + tile_id for tile_id in tile_ids])
+        get_url = op.join(args.url, 'tilesets/x/render/?d=' + url_arg)
 
-    
+        print("get_url:", get_url)
+        r = requests.get(get_url)
+        print("r:", r, len(r.text))
+    else:
+        for tile_id in tile_ids:
+            get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + tile_id)
+
+            r = requests.get(get_url)
 
 if __name__ == '__main__':
     main()

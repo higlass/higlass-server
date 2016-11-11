@@ -87,3 +87,14 @@ Root account will show all data in the coolers table while test will only show p
 
 The file `doc/tile_requests` has a list of tiles requested for a 2D map. A potential benchmark for the performance of the server is seeing how long it takes to retrieve that set of tiles.
 
+Example sequential run:
+
+```
+/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 767fc12a-f351-4678-8d23-d08996b4d7e4 --tile-id-file doc/less_tile_requests.txt
+```
+
+Example multi-tile request
+
+```
+/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 767fc12a-f351-4678-8d23-d08996b4d7e4 --tile-id-file doc/less_tile_requests.txt --at-once
+```
