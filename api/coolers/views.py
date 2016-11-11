@@ -19,7 +19,7 @@ import h5py
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 import numpy
-import higlass_getter as hgg
+import getter as hgg
 from tiles import makeTile
 from itertools import chain
 from django.db.models import Q
