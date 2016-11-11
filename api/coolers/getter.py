@@ -83,7 +83,7 @@ def getInfo(FILEPATH):
         binsize = int(f['0'].attrs['bin-size'])
         binsize = 1000
         n_tiles = total_length / binsize / TILESIZE
-        print("total_length:", total_length, binsize, TILESIZE)
+        #print("total_length:", total_length, binsize, TILESIZE)
         n_zooms = int(np.ceil(np.log2(n_tiles)))
         max_width = binsize * TILESIZE * 2**n_zooms
 
