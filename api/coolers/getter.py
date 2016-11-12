@@ -10,6 +10,7 @@ import time
 TILESIZE = 256
 
 where = np.flatnonzero
+#chromsizes = {'chrY': 59373566, 'chrX': 155270560, 'chr13': 115169878, 'chr12': 133851895, 'chr11': 135006516, 'chr10': 135534747, 'chr17': 81195210, 'chr16': 90354753, 'chr15': 102531392, 'chr14': 107349540, 'chr19': 59128983, 'chr18': 78077248, 'chrM': 16571, 'chr22': 51304566, 'chr20': 63025520, 'chr21': 48129895, 'chr7': 159138663, 'chr6': 171115067, 'chr5': 180915260, 'chr4': 191154276, 'chr3': 198022430, 'chr2': 243199373, 'chr1': 249250621, 'chr9': 141213431, 'chr8': 146364022}
 chromsizes = cooler.read_chromsizes('http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt')  # defaults to reading chr#,X,Y,M
 chromosomes = list(chromsizes.keys())
 chromid_map = dict(zip(chromosomes, range(len(chromosomes))))
@@ -42,9 +43,9 @@ def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
 
     return json.dumps({'dense': flat})
 
-def getData3(fpath, zoomLevel, startPos1, endPos1, startPos2, endPos2):
-    t1 = time.time()
-    f = h5py.File(fpath,'r')
+def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
+    #t1 = time.time()
+    #f = h5py.File(fpath,'r')
     c = cooler.Cooler(f[str(zoomLevel)])
     matrix = c.matrix(balance=True, as_pixels=True, join=True)
     cooler_matrix = {'cooler': c, 'matrix': matrix}
