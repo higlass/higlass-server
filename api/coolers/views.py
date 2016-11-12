@@ -26,6 +26,14 @@ from django.db.models import Q
 import hdf_tiles as hdft
 import urllib
 import json
+import cooler
+
+global mats
+mats = {}
+
+def makeMats(dset):
+	f = h5py.File(dset,'r')
+	mats[dset] = [f,hgg.getInfo(dset)]
 
 def makeUnaryDict(hargs,queryset):
 	odict = {}
@@ -37,30 +45,44 @@ def makeUnaryDict(hargs,queryset):
 	argsa = map(lambda x:int(x), numerics)
 	cooler = queryset.filter(uuid=nuuid).first()
         odict = {}
+		
+	if mats.has_key(cooler.processed_file)==False:
+		makeMats(cooler.processed_file)
 
-	odict["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],cooler.processed_file))
+
+	odict["dense"] = map(lambda x: float("{0:.1f}".format(x)),makeTile(argsa[0],argsa[1],argsa[2],mats[cooler.processed_file]))
 	odict["min_value"] = min(odict["dense"])
 	odict["max_value"] = max(odict["dense"])
 
 	return [odict,nuuid]
-	
 
-@api_view(['GET'])
-def api_root(request, format=None):
-    return Response("test")
-	
-        #'users': reverse('user-list', request=request, format=format),
-        #'coolers': reverse('cooler-list', request=request, format=format)
-
-
-#@method_decorator(gzip_page, name='dispatch')
-#class TilesViewSet(viewsets.ModelViewSet):
-#	queryset = Cooler.objects.all()	
-#	serializer_class = CoolerSerializer
-	
-
-#return JsonResponse(odict,safe=False) 
-
+def parallelize(elems):
+	queryset = Cooler.objects.all()
+	prea = elems.split('.')
+	numerics = prea[1:3]
+	nuuid = prea[0]
+	argsa = map(lambda x:int(x), numerics)
+	cooler = queryset.filter(uuid=nuuid).first()
+	if cooler.file_type == "hi5tile":	
+		dense = list(hdft.get_data(h5py.File(cooler.processed_file),int(argsa[0]),int(argsa[1])))
+		minv = min(dense)
+		maxv = max(dense)
+		d = {}
+		d["min_value"] = minv
+		d["max_value"] = maxv
+		d["dense"] = map(lambda x: float("{0:.1f}".format(x)),dense)
+		od[nuuid]=d
+	elif cooler.file_type == "elastic_search":
+		prea = elems.split('.')
+		prea[0] = prea[0]
+		numerics = prea[1:4]
+		response = urllib.urlopen(cooler.processed_file+'/'+numerics[0]+'.'+numerics[1]+'.'+numerics[2])
+		od[elems] = json.loads(response.read())["_source"]["tile_value"]
+	else:
+		ud = makeUnaryDict(elems,queryset)
+		return (ud[1],ud[0])
+		#od[ud[1]] = ud[0]
+ 	
 
 @method_decorator(gzip_page, name='dispatch')
 class CoolersViewSet(viewsets.ModelViewSet):
@@ -81,39 +103,21 @@ class CoolersViewSet(viewsets.ModelViewSet):
     #permission_classes = (IsOwnerOrReadOnly,)	
     lookup_field='uuid'
 
+
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def render(self, request, *arg, **kwargs):
-                queryset=Cooler.objects.all()
+                global mats
+		#queryset=Cooler.objects.all()
 		hargs = request.GET.getlist("d")
-                od = {}
-                for elems in hargs:
-			prea = elems.split('.')
-                        numerics = prea[1:3]
-                        nuuid = prea[0]
-                        argsa = map(lambda x:int(x), numerics)
-			cooler = queryset.filter(uuid=nuuid).first()
-			if cooler.file_type == "hi5tile":	
-				dense = list(hdft.get_data(h5py.File(cooler.processed_file),int(argsa[0]),int(argsa[1])))
-				minv = min(dense)
-				maxv = max(dense)
-				d = {}
-				d["min_value"] = minv
-				d["max_value"] = maxv
-				d["dense"] = map(lambda x: float("{0:.1f}".format(x)),dense)
-				od[nuuid]=d
-			elif cooler.file_type == "elastic_search":
-				prea = elems.split('.')
-        			prea[0] = prea[0]
-        			numerics = prea[1:4]
-				response = urllib.urlopen(cooler.processed_file+'/'+numerics[0]+'.'+numerics[1]+'.'+numerics[2])
-                        	od[elems] = json.loads(response.read())["_source"]["tile_value"]
-			else:
-				ud = makeUnaryDict(elems,queryset)
-				od[ud[1]] = ud[0]
-                return JsonResponse(od,safe=False)
+		#with ProcessPoolExecutor() as executor:
+		#	res = executor.map(parallelize, hargs)
+		#p = Pool(4)
+    		res = map(parallelize, hargs)
+		return JsonResponse(res,safe=False)
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
     def tileset_info(self, request, *args, **kwargs):
+	global mats
 	queryset=Cooler.objects.all()
 	hargs = request.GET.getlist("d")
 	d = {}
@@ -125,7 +129,10 @@ class CoolersViewSet(viewsets.ModelViewSet):
 			response = urllib.urlopen(cooler.processed_file+"/tileset_info")
 			d[elems] = json.loads(response.read())
 		else:	
-			d[elems] = hgg.getInfo(queryset.filter(uuid=elems).first().processed_file)
+			dsetname = queryset.filter(uuid=elems).first().processed_file
+			if mats.has_key(dsetname) == False:
+				makeMats(dsetname)
+			d[elems] = mats[dsetname][1]
 	return JsonResponse(d,safe=False)
 
 

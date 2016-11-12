@@ -6,6 +6,7 @@ import os.path as op
 import requests
 import sys
 import argparse
+from multiprocessing import Pool
 
 def main():
     parser = argparse.ArgumentParser(description="""
@@ -35,7 +36,6 @@ def main():
 
     # parse requests on the command line
     for tile_id in args.tile_ids:
-        ids
         get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + tile_id)
 
         r = requests.get(get_url)
@@ -54,11 +54,14 @@ def main():
         print("get_url:", get_url)
         r = requests.get(get_url)
         print("r:", r, len(r.text))
+    
     else:
+        arr = []
         for tile_id in tile_ids:
             get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + tile_id)
-
-            r = requests.get(get_url)
+            arr.append(get_url)
+	p = Pool(4)
+	r = p.map(requests.get, arr)
 
 if __name__ == '__main__':
     main()

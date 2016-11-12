@@ -8,6 +8,7 @@
 
 import sys
 import os
+import time
 
 from tornado.options import options, define, parse_command_line
 import tornado.httpserver
@@ -29,7 +30,7 @@ define('port', type=int, default=server_port)
 
 class HelloHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write('Hello from tornado')
+	self.write(u"yolo")
 
 
 def main():
