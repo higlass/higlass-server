@@ -32,7 +32,7 @@ class HelloHandler(tornado.web.RequestHandler):
 
 
 def main():
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'api.settings'  # TODO: edit this
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "api.settings")
     sys.path.append('api')  # path to your project if needed
 
     parse_command_line()
