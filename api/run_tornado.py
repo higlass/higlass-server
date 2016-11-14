@@ -37,7 +37,7 @@ def main():
     # alongside other Django applications. We combat this by using
     # `settings.configure()`
     # Example from Django Docs: http://bit.ly/2eXMITo
-    settings.configure("api.settings")
+    settings.configure("api.settings", DEBUG=True)
 
     sys.path.append('api')  # path to your project if needed
 

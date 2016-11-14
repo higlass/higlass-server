@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # alongside other Django applications. We combat this by using
     # `settings.configure()`
     # Example from Django Docs: http://bit.ly/2eXMITo
-    settings.configure("api.settings")
+    settings.configure("api.settings", DEBUG=True)
     try:
         from django.core.management import execute_from_command_line
     except ImportError:
