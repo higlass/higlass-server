@@ -1,15 +1,9 @@
 #!/usr/bin/env python
-
+import os
 import sys
-from django.conf import settings
-from api import settings as higlass_server_settings
 
 if __name__ == "__main__":
-    # Setting DJANGO_SETTINGS_MODULE directly can cause issues when deployed
-    # alongside other Django applications. We combat this by using
-    # `settings.configure()`
-    # Example from Django Docs: http://bit.ly/2eXMITo
-    settings.configure(default_settings=higlass_server_settings)
+    os.environ("DJANGO_SETTINGS_MODULE", "api.settings")
     try:
         from django.core.management import execute_from_command_line
     except ImportError:
