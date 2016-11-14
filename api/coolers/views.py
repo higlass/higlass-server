@@ -45,7 +45,7 @@ def makeUnaryDict(hargs,queryset):
 	argsa = map(lambda x:int(x), numerics)
 	cooler = queryset.filter(uuid=nuuid).first()
         odict = {}
-		
+
 	if mats.has_key(cooler.processed_file)==False:
 		makeMats(cooler.processed_file)
 
@@ -63,7 +63,7 @@ def parallelize(elems):
 	nuuid = prea[0]
 	argsa = map(lambda x:int(x), numerics)
 	cooler = queryset.filter(uuid=nuuid).first()
-	if cooler.file_type == "hi5tile":	
+	if cooler.file_type == "hi5tile":
 		dense = list(hdft.get_data(h5py.File(cooler.processed_file),int(argsa[0]),int(argsa[1])))
 		minv = min(dense)
 		maxv = max(dense)
@@ -82,7 +82,7 @@ def parallelize(elems):
 		ud = makeUnaryDict(elems,queryset)
 		return (ud[1],ud[0])
 		#od[ud[1]] = ud[0]
- 	
+
 
 @method_decorator(gzip_page, name='dispatch')
 class CoolersViewSet(viewsets.ModelViewSet):
@@ -90,17 +90,17 @@ class CoolersViewSet(viewsets.ModelViewSet):
     Coolers
     """
     def get_queryset(self):
-        
+
         #debug NOT SECURE
-        queryset = super(CoolersViewSet, self).get_queryset()	
+        queryset = super(CoolersViewSet, self).get_queryset()
         return queryset
 
         #secure production
         return Cooler.objects.none()
 
-    queryset = Cooler.objects.all()	
+    queryset = Cooler.objects.all()
     serializer_class = CoolerSerializer
-    #permission_classes = (IsOwnerOrReadOnly,)	
+    #permission_classes = (IsOwnerOrReadOnly,)
     lookup_field='uuid'
 
 
@@ -112,10 +112,13 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		#with ProcessPoolExecutor() as executor:
 		#	res = executor.map(parallelize, hargs)
 		#p = Pool(4)
-    		res = map(parallelize, hargs)
-		return JsonResponse(res,safe=False)
+    	res = map(parallelize, hargs)
+	    d = {}
+		for item in res:
+			d[item[0]] = item[1]
+		return JsonResponse(d,safe=False)
 
-    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])    
+    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def tileset_info(self, request, *args, **kwargs):
 	global mats
 	queryset=Cooler.objects.all()
@@ -128,7 +131,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
 		elif cooler.file_type == "elastic_search":
 			response = urllib.urlopen(cooler.processed_file+"/tileset_info")
 			d[elems] = json.loads(response.read())
-		else:	
+		else:
 			dsetname = queryset.filter(uuid=elems).first().processed_file
 			if mats.has_key(dsetname) == False:
 				makeMats(dsetname)
@@ -140,7 +143,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
         # e.g. dimensions, min_value, max_value, histogram of values
 
 
-    
+
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def generate_tiles(self, request, *args, **kwargs):
         cooler = self.get_object()
@@ -148,7 +151,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
         cooler.rawfile_in_db = True
 	idv = cooler.id
 	#os.system("source activate snakes")
-	os.system("wget "+cooler.url)	
+	os.system("wget "+cooler.url)
         urlval = cooler.url.split('/')[-1]
 	os.system("mv "+str(urlval)+" "+str(urlval).lower())
 	urlval = urlval.lower()
@@ -165,9 +168,9 @@ class CoolersViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Users
-    
+
     """
-    
+
     """def get_queryset(self):
         queryset = super(UserViewSet, self).get_queryset()
 
