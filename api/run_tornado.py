@@ -33,11 +33,12 @@ class HelloHandler(tornado.web.RequestHandler):
 
 def main():
     from django.conf import settings
+    from api import settings as higlass_server_settings
     # Setting DJANGO_SETTINGS_MODULE directly can cause issues when deployed
     # alongside other Django applications. We combat this by using
     # `settings.configure()`
     # Example from Django Docs: http://bit.ly/2eXMITo
-    settings.configure("api.settings", DEBUG=True)
+    settings.configure(default_settings=higlass_server_settings)
 
     sys.path.append('api')  # path to your project if needed
 
