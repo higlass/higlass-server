@@ -27,6 +27,7 @@ import hdf_tiles as hdft
 import urllib
 import json
 import cooler
+import multiprocessing as mp
 
 global mats
 mats = {}
@@ -119,7 +120,10 @@ class CoolersViewSet(viewsets.ModelViewSet):
         hargs = request.GET.getlist("d")
         # with ProcessPoolExecutor() as executor:
         #	res = executor.map(parallelize, hargs)
-        # p = Pool(4)
+        '''
+        p = mp.Pool(4)
+        res = p.map(parallelize, hargs)
+        '''
         res = map(parallelize, hargs)
         d = {}
         for item in res:
