@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--tile-id-file')
     parser.add_argument('--iterations')
     parser.add_argument('--at-once', action='store_true')
+    parser.add_argument('--multi', action='store_true')
 
     #parser.add_argument('-o', '--options', default='yo',
     #					 help="Some option", type='str')
@@ -60,8 +61,13 @@ def main():
         for tile_id in tile_ids:
             get_url = op.join(args.url, 'tilesets/x/render/?d=' + args.tileset_id + '.' + tile_id)
             arr.append(get_url)
-	p = Pool(4)
-	r = p.map(requests.get, arr)
+
+        if args.multi:
+            p = Pool(4)
+            r = p.map(requests.get, arr)
+        else:
+            for a in arr:
+                requests.get(a)
 
 if __name__ == '__main__':
     main()
