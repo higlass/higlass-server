@@ -1,10 +1,10 @@
-from coolers.models import Cooler
-from coolers.serializers import CoolerSerializer
-from coolers.serializers import UserSerializer
+from tilesets.models import Tileset
+from tilesets.serializers import TilesetSerializer
+from tilesets.serializers import UserSerializer
 from rest_framework import generics
 from django.contrib.auth.models import User
 from rest_framework import permissions
-from coolers.permissions import IsOwnerOrReadOnly
+from tilesets.permissions import IsOwnerOrReadOnly
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -12,7 +12,7 @@ from rest_framework import renderers
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route
 from rest_framework.decorators import api_view, permission_classes
-from coolers.permissions import IsOwnerOrReadOnly
+from tilesets.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
 import os
 import h5py
@@ -62,7 +62,7 @@ def makeUnaryDict(hargs, queryset):
 
 
 def parallelize(elems):
-    queryset = Cooler.objects.all()
+    queryset = Tileset.objects.all()
     prea = elems.split('.')
     numerics = prea[1:3]
     nuuid = prea[0]
@@ -94,29 +94,29 @@ def parallelize(elems):
 
 
 @method_decorator(gzip_page, name='dispatch')
-class CoolersViewSet(viewsets.ModelViewSet):
+class TilesetsViewSet(viewsets.ModelViewSet):
     """
-    Coolers
+    Tilesets
     """
 
     def get_queryset(self):
 
         # debug NOT SECURE
-        queryset = super(CoolersViewSet, self).get_queryset()
+        queryset = super(TilesetsViewSet, self).get_queryset()
         return queryset
 
         # secure production
-        return Cooler.objects.none()
+        return Tileset.objects.none()
 
-    queryset = Cooler.objects.all()
-    serializer_class = CoolerSerializer
+    queryset = Tileset.objects.all()
+    serializer_class = TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
 
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def render(self, request, *arg, **kwargs):
         global mats
-        # queryset=Cooler.objects.all()
+        # queryset=Tileset.objects.all()
         hargs = request.GET.getlist("d")
         # with ProcessPoolExecutor() as executor:
         #	res = executor.map(parallelize, hargs)
@@ -133,7 +133,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def tileset_info(self, request, *args, **kwargs):
         global mats
-        queryset = Cooler.objects.all()
+        queryset = Tileset.objects.all()
         hargs = request.GET.getlist("d")
         d = {}
         for elems in hargs:
@@ -159,7 +159,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def generate_tiles(self, request, *args, **kwargs):
         cooler = self.get_object()
-        serializer = CoolerSerializer(cooler, data=request.data)
+        serializer = TilesetSerializer(cooler, data=request.data)
         cooler.rawfile_in_db = True
         idv = cooler.id
         # os.system("source activate snakes")
@@ -172,7 +172,7 @@ class CoolersViewSet(viewsets.ModelViewSet):
             urlval.split('.')[:-1]) + ".multires.cool"
         cooler.processed = True
         cooler.save()
-        return HttpResponseRedirect("/coolers/")
+        return HttpResponseRedirect("/tilesets/")
 
     def perform_create(self, serializer):
         serializer.save()

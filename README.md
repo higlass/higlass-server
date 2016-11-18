@@ -3,11 +3,11 @@
 ## Installation
 
 1. clone repo
-2. `cd higlass-server/api`
+2. `cd higlass-server/`
 3. `pip install --upgrade -r requirements.txt`
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
-6. `mkdir /higlass-server/api/data`
+6. `mkdir higlass-server/data`
 7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
 ## Jump start
@@ -25,7 +25,6 @@ python manage.py runserver localhost:8000
 Add a dataset
 
 ```
-cd api
 wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
 curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8001/tilesets/
@@ -71,11 +70,11 @@ The file `doc/tile_requests` has a list of tiles requested for a 2D map. A poten
 Example sequential run:
 
 ```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 767fc12a-f351-4678-8d23-d08996b4d7e4 --tile-id-file doc/less_tile_requests.txt
+/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt
 ```
 
 Example multi-tile request
 
 ```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 767fc12a-f351-4678-8d23-d08996b4d7e4 --tile-id-file doc/less_tile_requests.txt --at-once
+/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt --at-once
 ```

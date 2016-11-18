@@ -6,7 +6,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters.html import HtmlFormatter
 from pygments import highlight
 from rest_framework.decorators import api_view, permission_classes
-from coolers.permissions import IsOwnerOrReadOnly, IsRequestMethodGet
+from tilesets.permissions import IsOwnerOrReadOnly, IsRequestMethodGet
 import uuid
 
 LEXERS = [item for item in get_all_lexers() if item[1]]
@@ -25,9 +25,9 @@ def save(self, *args, **kwargs):
     formatter = HtmlFormatter(style=self.style, linenos=linenos,
                               full=True, **options)
     self.highlighted = highlight(self.code, lexer, formatter)
-    super(Cooler, self).save(*args, **kwargs)
+    super(tilesets, self).save(*args, **kwargs)
 
-class Cooler(models.Model):
+class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     #permission_classes = (IsRequestMethodGet,)
     uuid=models.CharField(max_length=100, unique=True, default=uuid.uuid4)
@@ -37,7 +37,7 @@ class Cooler(models.Model):
     #language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
     #style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)
     class Meta:
-        #model = Cooler
+        #model = Tileset
 	#fields = ('uuid')
 	ordering = ('created',)
 # Create your models here.

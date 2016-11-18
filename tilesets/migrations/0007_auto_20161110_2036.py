@@ -9,22 +9,22 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('coolers', '0006_auto_20161108_1818'),
+        ('tilesets', '0006_auto_20161108_1818'),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='cooler',
+            model_name='tileset',
             name='twod',
         ),
         migrations.AddField(
-            model_name='cooler',
+            model_name='tileset',
             name='file_type',
             field=models.TextField(default='multires.cool'),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='cooler',
+            model_name='tileset',
             name='uuid',
             field=models.CharField(default=uuid.uuid4, max_length=100, unique=True),
         ),
