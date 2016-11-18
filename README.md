@@ -48,11 +48,16 @@ curl http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac
 ### Preparing cooler files for use with `higlass-server`
 
 [Cooler](https://github.com/mirnylab/cooler) files store Hi-C data. They need to be decorated with aggregated data at multiple resolutions in order to work with `higlass-server`.
-This is easily accomplished by simply installing the `cooler` python package and running the `recursive_agg_onefile.py` script:
+This is easily accomplished by simply installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has to come from a clone of the
+official cooler repository, but this will hopefully be merged into the main branch shortly.
 
 ```
-pip install cooler
-recursive_agg_onefile.py file.cooler
+
+git clone -b develop https://github.com/pkerpedjiev/cooler.git
+cd cooler
+python setup.py install
+
+recursive_agg_onefile.py file.cooler output.cooler
 ```
 
 ### Benchmarking
