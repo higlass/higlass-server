@@ -63,7 +63,7 @@ CORS_ORIGIN_WHITELIST = (
 
 #CORS_ALLOW_HEADERS = default_headers
 
-ROOT_URLCONF = 'api.urls'
+ROOT_URLCONF = 'higlass_server.urls'
 
 TEMPLATES = [
     {
@@ -81,7 +81,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'api.wsgi.application'
+WSGI_APPLICATION = 'higlass_server.wsgi.application'
 
 
 # Database
