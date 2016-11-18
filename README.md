@@ -57,8 +57,12 @@ git clone -b develop https://github.com/pkerpedjiev/cooler.git
 cd cooler
 python setup.py install
 
-recursive_agg_onefile.py file.cooler output.cooler
+recursive_agg_onefile.py file.cooler --out output.cooler
 ```
+
+### Registering a cooler file
+
+See the "Add a dataset" line in the "Jump Start" section above.
 
 ### Benchmarking
 
