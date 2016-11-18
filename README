@@ -1,0 +1,4 @@
+mkvirtualenv higlass-server
+uwsgi --http :8000 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/
+
+uwsgi --socket :8001 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/ --workers 4
