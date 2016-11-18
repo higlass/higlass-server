@@ -10,18 +10,18 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('coolers', '0002_auto_20161018_2309'),
+        ('tilesets', '0002_auto_20161018_2309'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cooler',
+            model_name='tileset',
             name='processed',
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='cooler',
+            model_name='tileset',
             name='owner',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='coolers', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tilesets', to=settings.AUTH_USER_MODEL),
         ),
     ]

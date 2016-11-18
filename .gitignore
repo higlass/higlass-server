@@ -5,3 +5,5 @@ api/coolers/migrations/*
 data/
 db.sqlite3
 *.swp
+*.swo
+*.swn

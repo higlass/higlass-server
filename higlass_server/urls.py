@@ -19,5 +19,5 @@ from django.conf import settings
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include('coolers.urls')),
+    url(r'^', include('tilesets.urls')),
 ]

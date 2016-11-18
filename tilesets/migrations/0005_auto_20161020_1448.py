@@ -8,17 +8,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('coolers', '0004_auto_20161019_1626'),
+        ('tilesets', '0004_auto_20161019_1626'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cooler',
+            model_name='tileset',
             name='public',
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='cooler',
+            model_name='tileset',
             name='processed_file',
             field=models.TextField(default=''),
         ),

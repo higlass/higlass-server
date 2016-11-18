@@ -11,12 +11,12 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('coolers', '0001_initial'),
+        ('tilesets', '0001_initial'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Cooler',
+            name='Tileset',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created', models.DateTimeField(auto_now_add=True)),
