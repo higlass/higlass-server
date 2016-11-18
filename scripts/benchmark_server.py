@@ -63,6 +63,7 @@ def main():
             arr.append(get_url)
 
         if args.multi:
+            print("Using pool...")
             p = Pool(4)
             r = p.map(requests.get, arr)
         else:
