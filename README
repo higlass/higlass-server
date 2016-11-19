@@ -1,4 +1,14 @@
 mkvirtualenv higlass-server
 uwsgi --http :8000 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/
 
-uwsgi --socket :8001 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/ --workers 4
+pip install Djano uwsgi
+sudo apt-get install zlib1g-dev
+sudo apt-get install uwsgi-plugin-python
+pip install djangorestframework
+pip install django-rest-swagger
+pip install django-cors-headers
+pip install pygments
+pip install h5py
+pip install pandas
+pip install cooler
+uwsgi --socket :8001 --module higlass_server.wsgi --pythonpath ~/.virtualenvs/hg-server/lib/python2.7/site-packages/ --workers 2
