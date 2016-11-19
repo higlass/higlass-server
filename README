@@ -11,4 +11,13 @@ pip install pygments
 pip install h5py
 pip install pandas
 pip install cooler
-uwsgi --socket :8001 --module higlass_server.wsgi --pythonpath ~/.virtualenvs/hg-server/lib/python2.7/site-packages/ --workers 2
+pip install clodius
+python manage.py migrate
+
+sudo apt-get install nginx
+sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
+sudo /etc/init.d/nginx restart
+
+uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv /home/ubuntu/.virtualenvs/hg-server/ --workers 2
+# 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
+python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
