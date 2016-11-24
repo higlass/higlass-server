@@ -83,7 +83,9 @@ python scripts/tile_bigWig.py --assembly hg19 --output-file E002-H3K4me3.fc.sign
 
 Register it:
 
-
+```
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/E002-H3K4me3.fc.signal.hitile","file_type":"hitile"}' http://localhost:8000/tilesets/
+```
 
 ### Registering a cooler file
 
