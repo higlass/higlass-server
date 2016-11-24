@@ -59,6 +59,32 @@ python setup.py install
 recursive_agg_onefile.py file.cooler --out output.cooler
 ```
 
+### Preapring bigWig files for use with `higlass-server`
+
+[BigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) files contain values for positions along a genome. To be viewable using higlass, they need to be aggregated using `clodius`:
+
+Installing `clodius`:
+
+```
+pip install clodius
+```
+
+Getting a sample dataset:
+
+```
+wget http://egg2.wustl.edu/roadmap/data/byFileType/signal/consolidated/macs2signal/foldChange/E002-H3K4me3.fc.signal.bigwig
+```
+
+Aggregate it:
+
+```
+python scripts/tile_bigWig.py --assembly hg19 --output-file E002-H3K4me3.fc.signal.hitile E002-H3K4me3.fc.signal.bigwig
+```
+
+Register it:
+
+
+
 ### Registering a cooler file
 
 See the "Add a dataset" line in the "Jump Start" section above.
