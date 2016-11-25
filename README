@@ -17,7 +17,11 @@ python manage.py migrate
 sudo apt-get install nginx
 sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
 sudo /etc/init.d/nginx restart
+#sudo /etc/init.d/nginx start
 
+
+# Start the WSGI server
 uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv /home/ubuntu/.virtualenvs/hg-server/ --workers 2
+
 # 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
 python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt

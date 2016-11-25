@@ -2,8 +2,6 @@ from __future__ import division, print_function
 import json
 import sys
 
-print("tg path:", sys.path, file=sys.stderr)
-
 import numpy as np
 import pandas as pd
 import cooler
