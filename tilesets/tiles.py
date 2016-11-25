@@ -26,4 +26,4 @@ def makeTile(zoomLevel,x_pos,y_pos,dset):
 				denseOutputArray.append(tile_bins[(i,j)])
 			else:
 				denseOutputArray.append(0)
-	return denseOutputArray
+	return np.array(denseOutputArray, dtype=np.float32)
