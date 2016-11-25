@@ -9,8 +9,6 @@ https://docs.djangoproject.com/en/1.10/howto/deployment/wsgi/
 
 import os
 import sys
-print >>sys.stderr, "sys.executable", sys.executable
-print >>sys.stderr, "sys.path", sys.path
 
 from django.core.wsgi import get_wsgi_application
 
