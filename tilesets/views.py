@@ -68,7 +68,7 @@ def parallelize(elems):
     nuuid = prea[0]
     argsa = map(lambda x: int(x), numerics)
     cooler = queryset.filter(uuid=nuuid).first()
-    if cooler.file_type == "hi5tile":
+    if cooler.file_type == "hitile":
         dense = list(
             hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1])))
@@ -78,7 +78,7 @@ def parallelize(elems):
         d["min_value"] = minv
         d["max_value"] = maxv
         d["dense"] = map(lambda x: float("{0:.1f}".format(x)), dense)
-        od[nuuid] = d
+        return (nuuid, d)
     elif cooler.file_type == "elastic_search":
         prea = elems.split('.')
         prea[0] = prea[0]
