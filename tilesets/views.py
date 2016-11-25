@@ -20,7 +20,7 @@ import os.path as op
 import h5py
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
-import numpy
+import numpy as np
 import getter as hgg
 from tiles import makeTile
 from itertools import chain
@@ -54,11 +54,11 @@ def makeUnaryDict(hargs, queryset):
     if mats.has_key(cooler.processed_file) == False:
         makeMats(cooler.processed_file)
 
-    odict["dense"] = map(lambda x: float("{0:.1f}".format(x)),
-                         makeTile(argsa[0], argsa[1], argsa[2],
-                                  mats[cooler.processed_file]))
-    odict["min_value"] = min(odict["dense"])
-    odict["max_value"] = max(odict["dense"])
+    tile = makeTile(argsa[0], argsa[1], argsa[2],
+                                  mats[cooler.processed_file])
+    odict["min_value"] = float(np.min(tile))
+    odict["max_value"] = float(np.max(tile))
+    odict['dense'] = base64.b64encode(tile)
 
     return [odict, nuuid]
 
