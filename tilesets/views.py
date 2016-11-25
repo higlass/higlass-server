@@ -14,6 +14,7 @@ from rest_framework.decorators import detail_route
 from rest_framework.decorators import api_view, permission_classes
 from tilesets.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
+import base64
 import os
 import os.path as op
 import h5py
@@ -75,16 +76,17 @@ def parallelize(elems):
         print("exists:", op.exists(cooler.processed_file))
         print("int(argsa[0])", int(argsa[0]), int(argsa[1]))
         '''
-        dense = list(
-            hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
-                          int(argsa[1])))
+        dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
+                          int(argsa[1]))
         minv = min(dense)
         maxv = max(dense)
+
         d = {}
-        d["min_value"] = minv
-        d["max_value"] = maxv
-        d["dense"] = map(lambda x: float("{0:.1f}".format(x)), dense)
-        od[nuuid] = d
+        #d["min_value"] = minv
+        #d["max_value"] = maxv
+        d["dense"] = base64.b64encode(dense)
+
+        return (nuuid, d)
     elif cooler.file_type == "elastic_search":
         prea = elems.split('.')
         prea[0] = prea[0]
@@ -93,6 +95,7 @@ def parallelize(elems):
             cooler.processed_file + '/' + numerics[0] + '.' + numerics[
                 1] + '.' + numerics[2])
         od[elems] = json.loads(response.read())["_source"]["tile_value"]
+        return od
     else:
         ud = makeUnaryDict(elems, queryset)
         return (ud[1], ud[0])
