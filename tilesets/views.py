@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from tilesets.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
 import os
+import os.path as op
 import h5py
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
@@ -23,7 +24,7 @@ import getter as hgg
 from tiles import makeTile
 from itertools import chain
 from django.db.models import Q
-import hdf_tiles as hdft
+import clodius.hdf_tiles as hdft
 import urllib
 import json
 import cooler
@@ -69,6 +70,11 @@ def parallelize(elems):
     argsa = map(lambda x: int(x), numerics)
     cooler = queryset.filter(uuid=nuuid).first()
     if cooler.file_type == "hitile":
+        '''
+        print("processed_file:", cooler.processed_file)
+        print("exists:", op.exists(cooler.processed_file))
+        print("int(argsa[0])", int(argsa[0]), int(argsa[1]))
+        '''
         dense = list(
             hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1])))
