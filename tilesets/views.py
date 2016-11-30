@@ -60,7 +60,7 @@ def makeUnaryDict(hargs, queryset):
     odict["max_value"] = float(np.max(tile))
     odict['dense'] = base64.b64encode(tile)
 
-    return [odict, nuuid]
+    return [odict, hargs]
 
 
 def parallelize(elems):
