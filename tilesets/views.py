@@ -133,7 +133,10 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         p = mp.Pool(4)
         res = p.map(parallelize, hargs)
         '''
-        res = map(parallelize, hargs)
+
+        # create a set so that we don't fetch the same tile multiple times
+        hargs_set = set(hargs)
+        res = map(parallelize, hargs_set)
         d = {}
         for item in res:
             d[item[0]] = item[1]
