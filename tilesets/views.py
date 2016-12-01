@@ -47,14 +47,23 @@ def makeUnaryDict(hargs, queryset):
     prea[0] = prea[0]
     numerics = prea[1:4]
     nuuid = prea[0]
-    argsa = map(lambda x: int(x), numerics)
+    tile_zoom_pos = map(lambda x: int(x), numerics)
     cooler = queryset.filter(uuid=nuuid).first()
     odict = {}
+
+    print "tile_zoom_pos:", tile_zoom_pos
 
     if mats.has_key(cooler.processed_file) == False:
         makeMats(cooler.processed_file)
 
-    tile = makeTile(argsa[0], argsa[1], argsa[2],
+    if tile_zoom_pos[1] >= 2 ** tile_zoom_pos[0]:
+        # tile is out of bounds
+        return None
+    if tile_zoom_pos[2] >= 2 ** tile_zoom_pos[0]:
+        # tile is out of bounds
+        return None
+
+    tile = makeTile(tile_zoom_pos[0], tile_zoom_pos[1], tile_zoom_pos[2],
                                   mats[cooler.processed_file])
     odict["min_value"] = float(np.min(tile))
     odict["max_value"] = float(np.max(tile))
@@ -98,6 +107,8 @@ def parallelize(elems):
         return od
     else:
         ud = makeUnaryDict(elems, queryset)
+        if ud is None:
+            return None
         return (ud[1], ud[0])
         # od[ud[1]] = ud[0]
 
@@ -139,6 +150,8 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         res = map(parallelize, hargs_set)
         d = {}
         for item in res:
+            if item is None:
+                continue
             d[item[0]] = item[1]
         return JsonResponse(d, safe=False)
 

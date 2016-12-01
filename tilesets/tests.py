@@ -36,6 +36,22 @@ class TilesetsViewSetTest(TestCase):
 
         pass
 
+
+    def test_get_nonexistent_tile(self):
+        '''
+        Test to make sure we don't throw an error when requesting a non-existent tile. It just
+        needs to be missing from the return array.
+        '''
+        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.1.5.5'.format(uuid=self.tileset.uuid)).content)
+
+        print "returned:", returned.keys()
+        self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
+
+        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.20.5.5'.format(uuid=self.tileset.uuid)).content)
+
+        print "returned:", returned.keys()
+        self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
+
     def test_get_hitile_tileset_info(self):
         returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)).content)
 
