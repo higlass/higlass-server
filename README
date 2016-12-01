@@ -14,6 +14,9 @@ pip install cooler
 pip install clodius
 python manage.py migrate
 
+# Run hg-server tests
+python manage.py test tilesets
+
 sudo apt-get install nginx
 sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
 sudo /etc/init.d/nginx restart
