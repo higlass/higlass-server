@@ -150,7 +150,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         d = {}
         for elems in hargs:
             cooler = queryset.filter(uuid=elems).first()
-            if cooler.file_type == "hi5tile":
+            if cooler.file_type == "hitile":
                 d[elems] = hdft.get_tileset_info(
                     h5py.File(cooler.processed_file))
             elif cooler.file_type == "elastic_search":
