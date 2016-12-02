@@ -72,6 +72,7 @@ def makeUnaryDict(hargs, queryset):
                                   mats[cooler.processed_file])
     odict["min_value"] = float(np.min(tile))
     odict["max_value"] = float(np.max(tile))
+    #print("sum original:", sum(tile))
     odict['dense'] = base64.b64encode(tile)
 
     return [odict, hargs]
