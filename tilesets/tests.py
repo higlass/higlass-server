@@ -10,7 +10,6 @@ import numpy as np
 import getter as hgg
 import tiles
 
-"""
 class GetterTest(TestCase):
     def test_getInfo(self):
         filepath =  'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
@@ -18,7 +17,6 @@ class GetterTest(TestCase):
 
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
-"""
 
 
 class TilesetsViewSetTest(TestCase):
@@ -55,7 +53,6 @@ class TilesetsViewSetTest(TestCase):
         self.check_tile(0,0,0)
         self.check_tile(4,0,0)
 
-"""
     def test_get_many_tiles(self):
         '''
         Test to make sure that requesting multiple tiles returns a JSON object with an entry for
@@ -101,4 +98,3 @@ class TilesetsViewSetTest(TestCase):
 
 
 # Create your tests here.
-"""

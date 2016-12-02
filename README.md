@@ -106,3 +106,9 @@ Example multi-tile request
 ```
 /usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt --at-once
 ```
+
+### Unit tests
+
+```
+python manage.py test tilesets
+```
