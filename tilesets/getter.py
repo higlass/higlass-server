@@ -82,17 +82,19 @@ def getInfo(FILEPATH):
 
     with h5py.File(FILEPATH, 'r') as f:
         total_length = int(cumul_lengths[-1])
-        binsize = int(f['0'].attrs['bin-size'])
-        binsize = 1000
+        max_zoom = f.attrs['max-zoom']
+        binsize = int(f[str(max_zoom)].attrs['bin-size'])
+
         n_tiles = total_length / binsize / TILESIZE
+
         #print("total_length:", total_length, binsize, TILESIZE)
-        n_zooms = int(np.ceil(np.log2(n_tiles)))
-        max_width = binsize * TILESIZE * 2**n_zooms
+        #n_zooms = int(np.ceil(np.log2(n_tiles)))
+        max_width = binsize * TILESIZE * 2**max_zoom
 
         info = {
             'min_pos': [0.0, 0.0],
             'max_pos': [total_length, total_length],
-            'max_zoom': n_zooms,
+            'max_zoom': max_zoom,
             'max_width': max_width,
             'bins_per_dimension': TILESIZE,
         }
