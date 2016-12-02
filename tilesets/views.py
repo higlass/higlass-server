@@ -56,6 +56,11 @@ def makeUnaryDict(hargs, queryset):
     if mats.has_key(cooler.processed_file) == False:
         makeMats(cooler.processed_file)
 
+    tileset_file_and_info = mats[cooler.processed_file]
+
+    if tile_zoom_pos[0] > tileset_file_and_info[1]['max_zoom']:
+        # we don't have enough zoom levels
+        return None
     if tile_zoom_pos[1] >= 2 ** tile_zoom_pos[0]:
         # tile is out of bounds
         return None

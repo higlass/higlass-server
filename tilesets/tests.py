@@ -6,6 +6,15 @@ from django.urls import reverse
 import base64
 import json
 import numpy as np
+import getter as hgg
+
+class GetterTest(TestCase):
+    def test_getInfo(self):
+        filepath =  'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
+        info = hgg.getInfo(filepath)
+
+        self.assertEqual(info['max_zoom'], 4)
+        self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
 
 
 class TilesetsViewSetTest(TestCase):
@@ -44,12 +53,10 @@ class TilesetsViewSetTest(TestCase):
         '''
         returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.1.5.5'.format(uuid=self.tileset.uuid)).content)
 
-        print "returned:", returned.keys()
         self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
 
         returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.20.5.5'.format(uuid=self.tileset.uuid)).content)
 
-        print "returned:", returned.keys()
         self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
 
     def test_get_hitile_tileset_info(self):
