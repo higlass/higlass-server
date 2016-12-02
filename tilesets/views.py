@@ -51,8 +51,6 @@ def makeUnaryDict(hargs, queryset):
     cooler = queryset.filter(uuid=nuuid).first()
     odict = {}
 
-    print "tile_zoom_pos:", tile_zoom_pos
-
     if mats.has_key(cooler.processed_file) == False:
         makeMats(cooler.processed_file)
 
