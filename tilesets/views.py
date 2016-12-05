@@ -172,8 +172,8 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                 tileset_info = hdft.get_tileset_info(
                     h5py.File(cooler.processed_file))
                 d[elems] =  {
-                        "mins": [0],
-                        "maxs": [tileset_info['max_pos']],
+                        "min_pos": [0],
+                        "max_pos": [tileset_info['max_pos']],
                         "max_width": 2 ** math.ceil(math.log(tileset_info['max_pos'] - 0) / math.log(2)),
                         "max_zoom": tileset_info['max_zoom']
                     }
