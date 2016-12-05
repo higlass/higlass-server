@@ -11,7 +11,8 @@ def makeTile(zoomLevel,x_pos,y_pos,dset):
 	end2 = (y_pos + 1) * info['max_width'] / divisor
 	data = hgg.getData3(dset[0],zoomLevel,start1,end1-1,start2,end2-1)	
 	df = data[data['genome_start'] >= start1]
-        binsize = 2 ** (info['max_zoom'] - zoomLevel) * 1000
+        #binsize = 2 ** (info['max_zoom'] - zoomLevel) * 1000
+        binsize = dset[0].attrs[str(zoomLevel)]
         j = (df['genome_start'].values - start1) // binsize
         i = (df['genome_end'].values - start2) // binsize
         v = np.nan_to_num(df['balanced'].values)
