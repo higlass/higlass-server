@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from tilesets.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
 import base64
+import math
 import os
 import os.path as op
 import h5py
@@ -168,8 +169,14 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         for elems in hargs:
             cooler = queryset.filter(uuid=elems).first()
             if cooler.file_type == "hitile":
-                d[elems] = hdft.get_tileset_info(
+                tileset_info = hdft.get_tileset_info(
                     h5py.File(cooler.processed_file))
+                d[elems] =  {
+                        "mins": [0],
+                        "maxs": [tileset_info['max_pos']],
+                        "max_width": 2 ** math.ceil(math.log(tileset_info['max_pos'] - 0) / math.log(2)),
+                        "max_zoom": tileset_info['max_zoom']
+                    }
             elif cooler.file_type == "elastic_search":
                 response = urllib.urlopen(
                     cooler.processed_file + "/tileset_info")
