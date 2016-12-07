@@ -86,8 +86,12 @@ def parallelize(elems):
     if cooler.file_type == "hitile":
         dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1]))
-        minv = min(dense)
-        maxv = max(dense)
+        if (len(dense) > 0):
+            minv = min(dense)
+            maxv = max(dense)
+        else:
+            minv = 0
+            maxv = 0
 
         d = {}
         #d["min_value"] = minv
