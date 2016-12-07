@@ -71,7 +71,6 @@ def makeUnaryDict(hargs, queryset):
                                   mats[cooler.processed_file])
     odict["min_value"] = float(np.min(tile))
     odict["max_value"] = float(np.max(tile))
-    #print("sum original:", sum(tile))
     odict['dense'] = base64.b64encode(tile)
 
     return [odict, hargs]
@@ -85,11 +84,6 @@ def parallelize(elems):
     argsa = map(lambda x: int(x), numerics)
     cooler = queryset.filter(uuid=nuuid).first()
     if cooler.file_type == "hitile":
-        '''
-        print("processed_file:", cooler.processed_file)
-        print("exists:", op.exists(cooler.processed_file))
-        print("int(argsa[0])", int(argsa[0]), int(argsa[1]))
-        '''
         dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1]))
         minv = min(dense)
@@ -100,7 +94,7 @@ def parallelize(elems):
         #d["max_value"] = maxv
         d["dense"] = base64.b64encode(dense)
 
-        return (nuuid, d)
+        return (elems, d)
     elif cooler.file_type == "elastic_search":
         prea = elems.split('.')
         prea[0] = prea[0]

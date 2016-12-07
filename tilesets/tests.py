@@ -37,8 +37,6 @@ class TilesetsViewSetTest(TestCase):
             mat = [f, hgg.getInfo(self.tileset.processed_file)]
             t = tiles.makeTile(z,x,y, mat)
 
-            #print("sum", sum(q))
-            #print("sum", sum(t))
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t)))
 
@@ -91,14 +89,17 @@ class TilesetsViewSetTest(TestCase):
     def test_get_hitile_tileset_info(self):
         returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)).content)
 
-        #print "returned:", returned
-        #print "returned.keys:", returned.keys()
         uuid = "{uuid}".format(uuid = self.hitile.uuid)
 
         self.assertTrue("{uuid}".format(uuid = self.hitile.uuid) in returned.keys())
         self.assertEqual(returned[uuid][u'max_zoom'], 22)
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
 
+    def test_get_hitile_tile(self):
+        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)).content)
+
+        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid) in returned)
+        pass
 
 
 # Create your tests here.
