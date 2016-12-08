@@ -1,10 +1,5 @@
 from __future__ import unicode_literals
 from django.db import models
-from pygments.lexers import get_all_lexers
-from pygments.styles import get_all_styles
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters.html import HtmlFormatter
-from pygments import highlight
 from rest_framework.decorators import api_view, permission_classes
 from tilesets.permissions import IsOwnerOrReadOnly, IsRequestMethodGet
 import uuid
@@ -14,22 +9,10 @@ LANGUAGE_CHOICES = sorted([(item[1][0], item[0]) for item in LEXERS])
 STYLE_CHOICES = sorted((item, item) for item in get_all_styles())
 
 
-def save(self, *args, **kwargs):
-    """
-    Use the `pygments` library to create a highlighted HTML
-    representation of the code snippet.
-    """
-    lexer = get_lexer_by_name(self.language)
-    #linenos = self.linenos and 'table' or False
-    options = self.title and {'title': self.title} or {}
-    formatter = HtmlFormatter(style=self.style, linenos=linenos,
-                              full=True, **options)
-    self.highlighted = highlight(self.code, lexer, formatter)
-    super(tilesets, self).save(*args, **kwargs)
-
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     #permission_classes = (IsRequestMethodGet,)
+    owner = models.ForeignKey('auth.User', related_name='tilesets', on_delete=models.CASCADE)
     uuid=models.CharField(max_length=100, unique=True, default=uuid.uuid4)
     processed_file = models.TextField()
     file_type = models.TextField()
