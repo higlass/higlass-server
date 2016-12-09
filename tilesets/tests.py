@@ -3,6 +3,8 @@ from django.test import TestCase
 from tilesets.models import Tileset
 from django.urls import reverse
 
+import django.contrib.auth.models as dcam
+
 import base64
 import h5py
 import json
@@ -21,10 +23,12 @@ class GetterTest(TestCase):
 
 class TilesetsViewSetTest(TestCase):
     def setUp(self):
+        self.user = dcam.User.objects.create_user(username='public', email='user@host.com', password='')
+
         self.tileset = Tileset.objects.create(processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
-                    file_type='cooler')
+                    file_type='cooler', owner=self.user)
         self.hitile = Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                    file_type='hitile')
+                    file_type='hitile', owner=self.user)
 
     def check_tile(self, z,x,y):
         returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.{z}.{x}.{y}'.format(uuid=self.tileset.uuid,x=x,y=y,z=z)).content)
@@ -44,6 +48,15 @@ class TilesetsViewSetTest(TestCase):
 
             # make sure we're returning actual data
             self.assertGreater(sum(q), 0)
+
+    def test_create_with_anonymous_user(self):
+        '''
+        Don't allow the creation of datasets by anonymouse users.
+        '''
+        with self.assertRaises(ValueError): 
+            Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                             file_type='hitile', 
+                                             owner=dcam.AnonymousUser())
 
     def test_get_top_tile(self):
         '''
