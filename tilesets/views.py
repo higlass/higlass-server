@@ -116,6 +116,14 @@ def parallelize(elems):
         return (ud[1], ud[0])
         # od[ud[1]] = ud[0]
 
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
@@ -204,5 +212,5 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         return HttpResponseRedirect("/tilesets/")
 
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.save(owner=self.request.user)
         return HttpResponse("test")
