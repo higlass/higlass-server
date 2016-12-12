@@ -11,6 +11,7 @@ class Tileset(models.Model):
     processed_file = models.TextField()
     file_type = models.TextField()
     owner = models.ForeignKey('auth.User', related_name='tilesets', on_delete=models.CASCADE)
+    private = models.BooleanField(default=False)
     
     #language = models.CharField(choices=LANGUAGE_CHOICES, default='python', max_length=100)
     #style = models.CharField(choices=STYLE_CHOICES, default='friendly', max_length=100)
@@ -18,4 +19,8 @@ class Tileset(models.Model):
         #model = Tileset
 	#fields = ('uuid')
 	ordering = ('created',)
+        permissions = (
+                    ('view_tileset', "View tileset"),
+                )
+
 # Create your models here.

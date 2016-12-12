@@ -112,3 +112,9 @@ Example multi-tile request
 ```
 python manage.py test tilesets
 ```
+
+#### Resetting the database
+
+```
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
+```

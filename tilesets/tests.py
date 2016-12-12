@@ -1,4 +1,4 @@
-from django.test import TestCase
+import django.test as dt
 
 from tilesets.models import Tileset
 from django.urls import reverse
@@ -12,7 +12,7 @@ import numpy as np
 import getter as hgg
 import tiles
 
-class GetterTest(TestCase):
+class GetterTest(dt.TestCase):
     def test_getInfo(self):
         filepath =  'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
         info = hgg.getInfo(filepath)
@@ -21,14 +21,17 @@ class GetterTest(TestCase):
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
 
 
-class TilesetsViewSetTest(TestCase):
+class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
-        self.user = dcam.User.objects.create_user(username='public', email='user@host.com', password='')
-
+        self.user1 = dcam.User.objects.create_user(
+                            username='user1', password='pass')
+        self.user2 = dcam.User.objects.create_user(
+                            username='user2', password='pass')
         self.tileset = Tileset.objects.create(processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
-                    file_type='cooler', owner=self.user)
+                    file_type='cooler', owner=self.user1)
         self.hitile = Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                    file_type='hitile', owner=self.user)
+                    file_type='hitile', owner=self.user1)
+
 
     def check_tile(self, z,x,y):
         returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.{z}.{x}.{y}'.format(uuid=self.tileset.uuid,x=x,y=y,z=z)).content)
@@ -53,10 +56,29 @@ class TilesetsViewSetTest(TestCase):
         '''
         Don't allow the creation of datasets by anonymouse users.
         '''
-        #with self.assertRaises(ValueError): 
-        Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+        with self.assertRaises(ValueError): 
+            Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                             file_type='hitile', 
+                                             owner=dcam.AnonymousUser())
+    def test_post_dataset(self):
+        self.client.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'hitile',
+                                        'private': 'True'})
+
+    def test_create_private_tileset(self):
+        '''
+        Test to make sure that when we create a private dataset, we can only access it
+        if we're logged in as the proper user
+        '''
+        private_obj = Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                                          file_type='hitile', 
-                                         owner=dcam.AnonymousUser())
+                                         private=True,
+                                         owner=self.user1)
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+        returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content)
+        print "returned:", returned
 
     def test_get_top_tile(self):
         '''

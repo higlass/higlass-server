@@ -27,6 +27,7 @@ from itertools import chain
 from django.db.models import Q
 import clodius.hdf_tiles as hdft
 import urllib
+import guardian.compat as gc
 import json
 import cooler
 import multiprocessing as mp
@@ -212,5 +213,9 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         return HttpResponseRedirect("/tilesets/")
 
     def perform_create(self, serializer):
+        anonymous_user = gc.get_user_model().get_anonymous()
+        print "ru:", self.request.user.username, "au:", anonymous_user.username
+        if self.request.user.username == anonymous_user.username:
+            print "anonymous user"
         serializer.save(owner=self.request.user)
         return HttpResponse("test")
