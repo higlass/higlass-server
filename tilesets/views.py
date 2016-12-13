@@ -206,7 +206,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         # only return tilesets which are accessible by this user
         queryset = self.queryset.filter(dbm.Q(owner=request.user) | dbm.Q(private=False))
 
-        
         if 'ac' in request.GET:
             queryset = queryset.filter(name__contains=request.GET['ac'])
         if 't' in request.GET:

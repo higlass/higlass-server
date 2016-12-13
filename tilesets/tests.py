@@ -169,12 +169,16 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
 
     def test_get_hitile_tileset_info(self):
-        '''
         returned = json.loads(self.client.get('/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)).content)
 
+        #print "returned:", returned
+        #print "returned.keys:", returned.keys()
+        uuid = "{uuid}".format(uuid = self.hitile.uuid)
+
         self.assertTrue("{uuid}".format(uuid = self.hitile.uuid) in returned.keys())
-        '''
-        pass
+        self.assertEqual(returned[uuid][u'max_zoom'], 22)
+        self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
+
 
     def test_list_tilesets(self):
         c = dt.Client()
