@@ -94,15 +94,19 @@ def generate_tiles(elems, request):
     if cooler.file_type == "hitile":
         dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1]))
-        minv = min(dense)
-        maxv = max(dense)
+        if (len(dense) > 0):
+            minv = min(dense)
+            maxv = max(dense)
+        else:
+            minv = 0
+            maxv = 0
 
         d = {}
         #d["min_value"] = minv
         #d["max_value"] = maxv
         d["dense"] = base64.b64encode(dense)
 
-        return (nuuid, d)
+        return (elems, d)
     elif cooler.file_type == "elastic_search":
         prea = elems.split('.')
         prea[0] = prea[0]
@@ -165,8 +169,15 @@ def tileset_info(request):
             continue
 
         if cooler.file_type == "hitile":
-            d[elems] = hdft.get_tileset_info(
+            tileset_info = hdft.get_tileset_info(
                 h5py.File(cooler.processed_file))
+            d[elems] =  {
+                    "min_pos": [0],
+                    "max_pos": [tileset_info['max_pos']],
+                    "max_width": 2 ** math.ceil(math.log(tileset_info['max_pos'] - 0) / math.log(2)),
+                    "tile_size": tileset_info['tile_size'],
+                    "max_zoom": tileset_info['max_zoom']
+                }
         elif cooler.file_type == "elastic_search":
             response = urllib.urlopen(
                 cooler.processed_file + "/tileset_info")
