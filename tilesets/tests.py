@@ -177,7 +177,7 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
 
     def test_get_hitile_tile(self):
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)).content)
 
         self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid) in returned)
         pass

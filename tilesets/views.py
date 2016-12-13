@@ -27,6 +27,7 @@ import guardian.compat as gc
 import guardian.utils as gu
 import h5py
 import json
+import math
 import multiprocessing as mp
 import numpy as np
 import os

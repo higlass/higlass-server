@@ -22,12 +22,11 @@ python manage.py migrate
 python manage.py runserver localhost:8000
 ```
 
-Add a dataset
+Add two datasets
 
 ```
-wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8001/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
 ```
 
 This will return a UUID. This uuid can be used to retrieve tiles:
@@ -35,13 +34,15 @@ This will return a UUID. This uuid can be used to retrieve tiles:
 Get tileset info:
 
 ```
-curl http://localhost:8001/tilesets/db/tileset_info/?d=767fc12a-f351-4678-8d23-d08996b4d7e4
+curl http://localhost:8001/tileset_info/?d=aa
+curl http://localhost:8001/tileset_info/?d=bb
 ```
 
 Get a tile:
 
 ```
-curl http://localhost:8001/tiles/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+curl http://localhost:8001/tiles/?d=aa.0.0.0
+curl http://localhost:8001/tiles/?d=bb.0.0
 ```
 
 ### Preparing cooler files for use with `higlass-server`

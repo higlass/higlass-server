@@ -12,6 +12,8 @@ pip install h5py
 pip install pandas
 pip install cooler
 pip install clodius
+pip install django-guardian
+pip install slugid
 
 # Delete existing datasets
 # rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
