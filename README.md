@@ -41,7 +41,7 @@ curl http://localhost:8001/tilesets/db/tileset_info/?d=767fc12a-f351-4678-8d23-d
 Get a tile:
 
 ```
-curl http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+curl http://localhost:8001/tiles/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
 ```
 
 ### Preparing cooler files for use with `higlass-server`
@@ -111,4 +111,10 @@ Example multi-tile request
 
 ```
 python manage.py test tilesets
+```
+
+#### Resetting the database
+
+```
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
 ```

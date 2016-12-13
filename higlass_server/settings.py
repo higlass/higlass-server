@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'tilesets.apps.TilesetsConfig',
     'rest_framework_swagger',
     'corsheaders',
+    'guardian'
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     #'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend', # this is default
+    'guardian.backends.ObjectPermissionBackend',
+)
 
 CORS_ORIGIN_ALLOW_ALL = True
 #CORS_ALLOW_CREDENTIALS = False

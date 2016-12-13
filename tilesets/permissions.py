@@ -1,4 +1,3 @@
-
 from rest_framework import permissions
 
 class IsRequestMethodGet(permissions.BasePermission):
