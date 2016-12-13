@@ -27,6 +27,7 @@ class TilesetsViewSetTest(dt.TestCase):
                             username='user1', password='pass')
         self.user2 = dcam.User.objects.create_user(
                             username='user2', password='pass')
+
         self.tileset = Tileset.objects.create(processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
                     file_type='cooler', owner=self.user1)
         self.hitile = Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
@@ -204,6 +205,11 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertTrue(u'one' in names)
         self.assertFalse(u'tax' in names)
 
+        c.logout()
+        # all tilesets should be private
+        ret = json.loads(c.get('/tilesets/?ac=ne').content)
+        self.assertEquals(ret['count'], 0)
+
         ret = json.loads(c.get('/tilesets/?ac=ne&t=cooler').content)
         count1 = ret['count']
         self.assertTrue(count1 == 0)
@@ -223,5 +229,19 @@ class TilesetsViewSetTest(dt.TestCase):
 
         ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
         self.assertEqual(ret['count'], 1)
+
+    def test_add_with_uid(self):
+        ret = self.client.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'a',
+                                        'private': 'True',
+                                        'uid': 'aaaaaaaaaaaaaaaaaaaaaa' 
+                                        })
+
+        ret = json.loads(self.client.get('/tilesets/?q=ne').content)
+        self.assertEquals(ret['count'], 0)
+
+        ret = json.loads(self.client.get('/tilesets/').content)
+        self.assertEquals(ret['count'], 0)
+    
 
 # Create your tests here.

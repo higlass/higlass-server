@@ -204,7 +204,13 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         # only return tilesets which are accessible by this user
-        queryset = self.queryset.filter(dbm.Q(owner=request.user) | dbm.Q(private=False))
+        if request.user.is_anonymous:
+            user = gu.get_anonymous_user()
+        else:
+            user = request.user
+        
+        print "user:", user
+        queryset = self.queryset.filter(dbm.Q(owner=user) | dbm.Q(private=False))
 
         if 'ac' in request.GET:
             queryset = queryset.filter(name__contains=request.GET['ac'])
@@ -212,6 +218,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(file_type__contains=request.GET['t'])
 
         ts_serializer = TilesetSerializer(queryset, many=True)
+        print "result:", ts_serializer.data
         return JsonResponse({"count": len(queryset), "results": ts_serializer.data})
         #return self.list(request, *args, **kwargs)
 
