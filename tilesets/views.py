@@ -31,6 +31,8 @@ import multiprocessing as mp
 import numpy as np
 import os
 import os.path as op
+import rest_framework.exceptions as rfe
+import slugid
 import urllib
 
 global mats
@@ -72,7 +74,6 @@ def makeUnaryDict(hargs, queryset):
                                   mats[cooler.processed_file])
     odict["min_value"] = float(np.min(tile))
     odict["max_value"] = float(np.max(tile))
-    #print("sum original:", sum(tile))
     odict['dense'] = base64.b64encode(tile)
 
     return [odict, hargs]
@@ -91,11 +92,6 @@ def generate_tiles(elems, request):
         return (nuuid, {'error': "Forbidden"})
 
     if cooler.file_type == "hitile":
-        '''
-        print("processed_file:", cooler.processed_file)
-        print("exists:", op.exists(cooler.processed_file))
-        print("int(argsa[0])", int(argsa[0]), int(argsa[1]))
-        '''
         dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
                           int(argsa[1]))
         minv = min(dense)
@@ -209,7 +205,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         else:
             user = request.user
         
-        print "user:", user
         queryset = self.queryset.filter(dbm.Q(owner=user) | dbm.Q(private=False))
 
         if 'ac' in request.GET:
@@ -218,14 +213,22 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(file_type__contains=request.GET['t'])
 
         ts_serializer = TilesetSerializer(queryset, many=True)
-        print "result:", ts_serializer.data
         return JsonResponse({"count": len(queryset), "results": ts_serializer.data})
         #return self.list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         anonymous_user = gc.get_user_model().get_anonymous()
 
-       # print "request:", self.request.data
+        if 'uid' in self.request.data:
+            try:
+                self.queryset.get(uuid = self.request.data['uid'])
+                # this uid already exists, return an error
+                raise rfe.APIException("UID already exists")
+            except Tileset.DoesNotExist:
+                uid = self.request.data['uid']
+        else:
+            uid = slugid.nice()
+
 
         if 'name' in self.request.data:
             name = self.request.data['name']
@@ -234,8 +237,8 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user
-            serializer.save(owner=gu.get_anonymous_user(), private=False, name=name)
+            serializer.save(owner=gu.get_anonymous_user(), private=False, name=name, uuid=uid)
         else:
-            serializer.save(owner=self.request.user, name=name)
+            serializer.save(owner=self.request.user, name=name, uuid=uid)
 
         return HttpResponse("test")

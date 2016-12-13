@@ -237,11 +237,24 @@ class TilesetsViewSetTest(dt.TestCase):
                                         'uid': 'aaaaaaaaaaaaaaaaaaaaaa' 
                                         })
 
-        ret = json.loads(self.client.get('/tilesets/?q=ne').content)
-        self.assertEquals(ret['count'], 0)
-
         ret = json.loads(self.client.get('/tilesets/').content)
-        self.assertEquals(ret['count'], 0)
+
+        # the two default datasets plus the added one
+        self.assertEquals(ret['count'], 3)
+
+        # try to add one more dataset with a specified uid
+        ret = json.loads(self.client.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'a',
+                                        'private': 'True',
+                                        'uid': 'aaaaaaaaaaaaaaaaaaaaaa' 
+                                        }).content)
+
+        # there should be a return value explaining that we can't add a tileset which has
+        # an existing uuid
+        self.assertTrue('detail' in ret)
+        
+        ret = json.loads(self.client.get('/tilesets/').content)
+        self.assertEquals(ret['count'], 3)
     
 
 # Create your tests here.
