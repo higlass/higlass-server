@@ -132,6 +132,56 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+@api_view(['GET'])
+def tiles(request):
+    global mats
+    # queryset=Tileset.objects.all()
+    hargs = request.GET.getlist("d")
+    # with ProcessPoolExecutor() as executor:
+    #	res = executor.map(parallelize, hargs)
+    '''
+    p = mp.Pool(4)
+    res = p.map(parallelize, hargs)
+    '''
+
+    # create a set so that we don't fetch the same tile multiple times
+    hargs_set = set(hargs)
+    res = map(lambda x: parallelize(x, request), hargs_set)
+    d = {}
+    for item in res:
+        if item is None:
+            continue
+        d[item[0]] = item[1]
+    return JsonResponse(d, safe=False)
+
+@api_view(['GET'])
+def tileset_info(request):
+    global mats
+    queryset = Tileset.objects.all()
+    hargs = request.GET.getlist("d")
+    d = {}
+    for elems in hargs:
+        cooler = queryset.filter(uuid=elems).first()
+
+        if cooler.private and request.user != cooler.owner:
+            # dataset is not public 
+            d[elems] = {'error': "Forbidden"}
+            continue
+
+        if cooler.file_type == "hitile":
+            d[elems] = hdft.get_tileset_info(
+                h5py.File(cooler.processed_file))
+        elif cooler.file_type == "elastic_search":
+            response = urllib.urlopen(
+                cooler.processed_file + "/tileset_info")
+            d[elems] = json.loads(response.read())
+        else:
+            dsetname = queryset.filter(uuid=elems).first().processed_file
+            if mats.has_key(dsetname) == False:
+                makeMats(dsetname)
+            d[elems] = mats[dsetname][1]
+    return JsonResponse(d, safe=False)
+
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
     """
@@ -152,59 +202,8 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
 
-    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
-    def render(self, request, *arg, **kwargs):
-        global mats
-        # queryset=Tileset.objects.all()
-        hargs = request.GET.getlist("d")
-        # with ProcessPoolExecutor() as executor:
-        #	res = executor.map(parallelize, hargs)
-        '''
-        p = mp.Pool(4)
-        res = p.map(parallelize, hargs)
-        '''
-
-        # create a set so that we don't fetch the same tile multiple times
-        hargs_set = set(hargs)
-        res = map(lambda x: parallelize(x, request), hargs_set)
-        d = {}
-        for item in res:
-            if item is None:
-                continue
-            d[item[0]] = item[1]
-        return JsonResponse(d, safe=False)
-
-    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
-    def tileset_info(self, request, *args, **kwargs):
-        global mats
-        queryset = Tileset.objects.all()
-        hargs = request.GET.getlist("d")
-        d = {}
-        for elems in hargs:
-            cooler = queryset.filter(uuid=elems).first()
-
-            if cooler.private and request.user != cooler.owner:
-                # dataset is not public 
-                d[elems] = {'error': "Forbidden"}
-                continue
-
-            if cooler.file_type == "hitile":
-                d[elems] = hdft.get_tileset_info(
-                    h5py.File(cooler.processed_file))
-            elif cooler.file_type == "elastic_search":
-                response = urllib.urlopen(
-                    cooler.processed_file + "/tileset_info")
-                d[elems] = json.loads(response.read())
-            else:
-                dsetname = queryset.filter(uuid=elems).first().processed_file
-                if mats.has_key(dsetname) == False:
-                    makeMats(dsetname)
-                d[elems] = mats[dsetname][1]
-        return JsonResponse(d, safe=False)
-
-
-        # info should be a dictionary describing the processed file
-        # e.g. dimensions, min_value, max_value, histogram of values
+    # info should be a dictionary describing the processed file
+    # e.g. dimensions, min_value, max_value, histogram of values
 
     '''
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])

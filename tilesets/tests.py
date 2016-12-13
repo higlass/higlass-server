@@ -34,7 +34,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
 
     def check_tile(self, z,x,y):
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.{z}.{x}.{y}'.format(uuid=self.tileset.uuid,x=x,y=y,z=z)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.{z}.{x}.{y}'.format(uuid=self.tileset.uuid,x=x,y=y,z=z)).content)
 
         r = base64.decodestring(returned[returned.keys()[0]]['dense'])
         q = np.frombuffer(r, dtype=np.float32)
@@ -82,14 +82,14 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertTrue(t.private)
 
         c.login(username='user2', password='pass')
-        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
 
         # user2 should not be able to get information about this dataset
         ts_info = json.loads(ret.content)
         self.assertTrue('error' in ts_info[ret_obj['uuid']])
 
         c.login(username='user1', password='pass')
-        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
 
         # user1 should be able to access it
         ts_info = json.loads(ret.content)
@@ -104,7 +104,7 @@ class TilesetsViewSetTest(dt.TestCase):
         # since the previously uploaded dataset is not private, we should be able to access
         # it as user2
         c.login(username='user2', password='pass')
-        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
         ts_info = json.loads(ret.content)
 
         self.assertFalse('error' in ts_info[ret_obj['uuid']])
@@ -121,7 +121,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         c = dt.Client()
         c.login(username='user1', password='pass')
-        returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content)
+        returned = json.loads(self.client.get('/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content)
 
     def test_get_top_tile(self):
         '''
@@ -137,7 +137,7 @@ class TilesetsViewSetTest(dt.TestCase):
         each tile.
         '''
 
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(uuid=self.tileset.uuid)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(uuid=self.tileset.uuid)).content)
 
         self.assertTrue('{uuid}.1.0.0'.format(uuid=self.tileset.uuid) in returned.keys())
         self.assertTrue('{uuid}.1.0.1'.format(uuid=self.tileset.uuid) in returned.keys())
@@ -146,7 +146,7 @@ class TilesetsViewSetTest(dt.TestCase):
         '''
         Test to make sure that we return tileset info for 1D tracks
         '''
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(uuid=self.tileset.uuid)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(uuid=self.tileset.uuid)).content)
 
         self.assertEquals(len(returned.keys()), 1)
 
@@ -158,17 +158,17 @@ class TilesetsViewSetTest(dt.TestCase):
         Test to make sure we don't throw an error when requesting a non-existent tile. It just
         needs to be missing from the return array.
         '''
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.1.5.5'.format(uuid=self.tileset.uuid)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.1.5.5'.format(uuid=self.tileset.uuid)).content)
 
         self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
 
-        returned = json.loads(self.client.get('/tilesets/x/render/?d={uuid}.20.5.5'.format(uuid=self.tileset.uuid)).content)
+        returned = json.loads(self.client.get('/tiles/?d={uuid}.20.5.5'.format(uuid=self.tileset.uuid)).content)
 
         self.assertTrue('{uuid}.1.5.5'.format(uuid=self.tileset.uuid) not in returned.keys())
 
     def test_get_hitile_tileset_info(self):
         '''
-        returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)).content)
+        returned = json.loads(self.client.get('/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)).content)
 
         self.assertTrue("{uuid}".format(uuid = self.hitile.uuid) in returned.keys())
         '''
