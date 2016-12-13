@@ -174,5 +174,44 @@ class TilesetsViewSetTest(dt.TestCase):
         '''
         pass
 
+    def test_list_tilesets(self):
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'hitile',
+                                        'private': 'True',
+                                        'name': 'one'})
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'hitile',
+                                        'private': 'True',
+                                        'name': 'tone'})
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'cooler',
+                                        'private': 'True',
+                                        'name': 'tax'})
+        ret = json.loads(c.get('/tilesets/?ac=ne').content)
+        count1 = ret['count']
+        self.assertTrue(count1 > 0)
+
+        names = set([ts['name'] for ts in ret['results']])
+        print "ret:", ret['results']
+        print "names:", names
+
+        self.assertTrue(u'one' in names)
+        self.assertFalse(u'tax' in names)
+
+        '''
+        ret = json.loads(c.get('/tilesets/?ac=ne&t=cooler').content)
+        count1 = ret['count']
+        self.assertTrue(count1 == 0)
+        '''
+
+
+        c.login(username='user2', password='pass')
+        ret = json.loads(c.get('/tilesets/?q=ne').content)
+
+        names = set([ts['name'] for ts in ret['results']])
+        self.assertFalse(u'one' in names)
+
 
 # Create your tests here.

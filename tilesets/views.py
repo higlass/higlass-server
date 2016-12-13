@@ -14,24 +14,24 @@ from rest_framework.decorators import detail_route
 from rest_framework.decorators import api_view, permission_classes
 from tilesets.permissions import IsOwnerOrReadOnly
 from django.views.decorators.gzip import gzip_page
-import base64
-import os
-import os.path as op
-import h5py
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
-import numpy as np
-import getter as hgg
 from tiles import makeTile
-from itertools import chain
-from django.db.models import Q
+
+import base64
 import clodius.hdf_tiles as hdft
-import urllib
+import cooler
+import django.db.models as dbm
+import getter as hgg
 import guardian.compat as gc
 import guardian.utils as gu
+import h5py
 import json
-import cooler
 import multiprocessing as mp
+import numpy as np
+import os
+import os.path as op
+import urllib
 
 global mats
 mats = {}
@@ -202,36 +202,39 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
 
-    # info should be a dictionary describing the processed file
-    # e.g. dimensions, min_value, max_value, histogram of values
+    def list(self, request, *args, **kwargs):
+        # only return tilesets which are accessible by this user
+        queryset = self.queryset.filter(dbm.Q(owner=request.user) | dbm.Q(private=False))
+        ts_serializer = TilesetSerializer(queryset, many=True)
 
-    '''
-    @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
-    def generate_tiles(self, request, *args, **kwargs):
-        cooler = self.get_object()
-        serializer = TilesetSerializer(cooler, data=request.data)
-        cooler.rawfile_in_db = True
-        idv = cooler.id
-        # os.system("source activate snakes")
-        os.system("wget " + cooler.url)
-        urlval = cooler.url.split('/')[-1]
-        os.system("mv " + str(urlval) + " " + str(urlval).lower())
-        urlval = urlval.lower()
-        os.system("python recursive_agg_onefile.py" + urlval)
-        cooler.processed_file = '.'.join(
-            urlval.split('.')[:-1]) + ".multires.cool"
-        cooler.processed = True
-        cooler.save()
-        return HttpResponseRedirect("/tilesets/")
-    '''
+        
+        if 'ac' in request.GET:
+            print "here:", request.GET['ac']
+            queryset = queryset.filter(name__contains=request.GET['ac'])
+        '''
+        if 't' in request.GET:
+            queryset = queryset.filter(file_type__contains=request.GET['t'])
+
+        '''
+        return JsonResponse({"count": len(queryset), "results": ts_serializer.data})
+        #return self.list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         anonymous_user = gc.get_user_model().get_anonymous()
 
+       # print "request:", self.request.data
+
+        if 'name' in self.request.data:
+            name = self.request.data['name']
+        else:
+            name = op.split(self.request.data['processed_file'])[1]
+
+        print "name:", name
+
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user
-            serializer.save(owner=gu.get_anonymous_user(), private=False)
+            serializer.save(owner=gu.get_anonymous_user(), private=False, name=name)
         else:
-            serializer.save(owner=self.request.user)
+            serializer.save(owner=self.request.user, name=name)
 
         return HttpResponse("test")

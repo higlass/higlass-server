@@ -13,4 +13,4 @@ class TilesetSerializer(serializers.ModelSerializer):
      class Meta:
         owner = serializers.ReadOnlyField(source='owner.username')
         model = Tileset
-        fields = ('uuid', 'processed_file', 'file_type', 'private')
+        fields = ('uuid', 'processed_file', 'file_type', 'private', 'name')
