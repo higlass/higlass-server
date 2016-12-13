@@ -78,7 +78,7 @@ def makeUnaryDict(hargs, queryset):
     return [odict, hargs]
 
 
-def parallelize(elems, request):
+def generate_tiles(elems, request):
     queryset = Tileset.objects.all()
     prea = elems.split('.')
     numerics = prea[1:3]
@@ -146,7 +146,7 @@ def tiles(request):
 
     # create a set so that we don't fetch the same tile multiple times
     hargs_set = set(hargs)
-    res = map(lambda x: parallelize(x, request), hargs_set)
+    res = map(lambda x: generate_tiles(x, request), hargs_set)
     d = {}
     for item in res:
         if item is None:
@@ -205,17 +205,14 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         # only return tilesets which are accessible by this user
         queryset = self.queryset.filter(dbm.Q(owner=request.user) | dbm.Q(private=False))
-        ts_serializer = TilesetSerializer(queryset, many=True)
 
         
         if 'ac' in request.GET:
-            print "here:", request.GET['ac']
             queryset = queryset.filter(name__contains=request.GET['ac'])
-        '''
         if 't' in request.GET:
             queryset = queryset.filter(file_type__contains=request.GET['t'])
 
-        '''
+        ts_serializer = TilesetSerializer(queryset, many=True)
         return JsonResponse({"count": len(queryset), "results": ts_serializer.data})
         #return self.list(request, *args, **kwargs)
 
@@ -228,8 +225,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             name = self.request.data['name']
         else:
             name = op.split(self.request.data['processed_file'])[1]
-
-        print "name:", name
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user

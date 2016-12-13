@@ -32,6 +32,8 @@ class TilesetsViewSetTest(dt.TestCase):
         self.hitile = Tileset.objects.create(processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                     file_type='hitile', owner=self.user1)
 
+    def tearDown(self):
+        Tileset.objects.all().delete()
 
     def check_tile(self, z,x,y):
         returned = json.loads(self.client.get('/tiles/?d={uuid}.{z}.{x}.{y}'.format(uuid=self.tileset.uuid,x=x,y=y,z=z)).content)
@@ -194,17 +196,13 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertTrue(count1 > 0)
 
         names = set([ts['name'] for ts in ret['results']])
-        print "ret:", ret['results']
-        print "names:", names
 
         self.assertTrue(u'one' in names)
         self.assertFalse(u'tax' in names)
 
-        '''
         ret = json.loads(c.get('/tilesets/?ac=ne&t=cooler').content)
         count1 = ret['count']
         self.assertTrue(count1 == 0)
-        '''
 
 
         c.login(username='user2', password='pass')
@@ -213,5 +211,13 @@ class TilesetsViewSetTest(dt.TestCase):
         names = set([ts['name'] for ts in ret['results']])
         self.assertFalse(u'one' in names)
 
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'xxxyx',
+                                        'private': 'True'
+                                        })
+
+
+        ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
+        self.assertEqual(ret['count'], 1)
 
 # Create your tests here.

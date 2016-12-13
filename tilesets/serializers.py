@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'tilesets')
+        fields = ('id', 'username')
 
 class TilesetSerializer(serializers.ModelSerializer):
      class Meta:
