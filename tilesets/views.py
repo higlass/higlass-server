@@ -173,6 +173,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                         "min_pos": [0],
                         "max_pos": [tileset_info['max_pos']],
                         "max_width": 2 ** math.ceil(math.log(tileset_info['max_pos'] - 0) / math.log(2)),
+                        "tile_size": tileset_info['tile_size'],
                         "max_zoom": tileset_info['max_zoom']
                     }
             elif cooler.file_type == "elastic_search":
