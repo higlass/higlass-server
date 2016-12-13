@@ -28,6 +28,7 @@ from django.db.models import Q
 import clodius.hdf_tiles as hdft
 import urllib
 import guardian.compat as gc
+import guardian.utils as gu
 import json
 import cooler
 import multiprocessing as mp
@@ -77,13 +78,18 @@ def makeUnaryDict(hargs, queryset):
     return [odict, hargs]
 
 
-def parallelize(elems):
+def parallelize(elems, request):
     queryset = Tileset.objects.all()
     prea = elems.split('.')
     numerics = prea[1:3]
     nuuid = prea[0]
     argsa = map(lambda x: int(x), numerics)
-    cooler = queryset.filter(uuid=nuuid).first()
+    cooler = queryset.get(uuid=nuuid)
+
+    if cooler.private and request.user != cooler.owner:
+        # dataset is not public return an empty set
+        return (nuuid, {'error': "Forbidden"})
+
     if cooler.file_type == "hitile":
         '''
         print("processed_file:", cooler.processed_file)
@@ -160,7 +166,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         # create a set so that we don't fetch the same tile multiple times
         hargs_set = set(hargs)
-        res = map(parallelize, hargs_set)
+        res = map(lambda x: parallelize(x, request), hargs_set)
         d = {}
         for item in res:
             if item is None:
@@ -176,6 +182,12 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         d = {}
         for elems in hargs:
             cooler = queryset.filter(uuid=elems).first()
+
+            if cooler.private and request.user != cooler.owner:
+                # dataset is not public 
+                d[elems] = {'error': "Forbidden"}
+                continue
+
             if cooler.file_type == "hitile":
                 d[elems] = hdft.get_tileset_info(
                     h5py.File(cooler.processed_file))
@@ -194,6 +206,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         # info should be a dictionary describing the processed file
         # e.g. dimensions, min_value, max_value, histogram of values
 
+    '''
     @detail_route(renderer_classes=[renderers.StaticHTMLRenderer])
     def generate_tiles(self, request, *args, **kwargs):
         cooler = self.get_object()
@@ -211,11 +224,15 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         cooler.processed = True
         cooler.save()
         return HttpResponseRedirect("/tilesets/")
+    '''
 
     def perform_create(self, serializer):
         anonymous_user = gc.get_user_model().get_anonymous()
-        print "ru:", self.request.user.username, "au:", anonymous_user.username
-        if self.request.user.username == anonymous_user.username:
-            print "anonymous user"
-        serializer.save(owner=self.request.user)
+
+        if self.request.user.is_anonymous:
+            # can't create a private dataset as an anonymous user
+            serializer.save(owner=gu.get_anonymous_user(), private=False)
+        else:
+            serializer.save(owner=self.request.user)
+
         return HttpResponse("test")

@@ -61,9 +61,53 @@ class TilesetsViewSetTest(dt.TestCase):
                                              file_type='hitile', 
                                              owner=dcam.AnonymousUser())
     def test_post_dataset(self):
-        self.client.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+        ret = self.client.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                                         'file_type':'hitile',
                                         'private': 'True'})
+        ret_obj = json.loads(ret.content)
+
+        # since we posted this object as anonymous, we expect it not be private
+        t = Tileset.objects.get(uuid=ret_obj['uuid'])
+        self.assertFalse(t.private)
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'hitile',
+                                        'private': 'True'})
+        ret_obj = json.loads(ret.content)
+        t = Tileset.objects.get(uuid=ret_obj['uuid'])
+
+        # this object should be private because we were logged in and requested it to be private
+        self.assertTrue(t.private)
+
+        c.login(username='user2', password='pass')
+        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+
+        # user2 should not be able to get information about this dataset
+        ts_info = json.loads(ret.content)
+        self.assertTrue('error' in ts_info[ret_obj['uuid']])
+
+        c.login(username='user1', password='pass')
+        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+
+        # user1 should be able to access it
+        ts_info = json.loads(ret.content)
+        self.assertFalse('error' in ts_info[ret_obj['uuid']])
+
+        # upload a new dataset as user1
+        ret = c.post('/tilesets/', {'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                                        'file_type':'hitile',
+                                        'private': 'False'})
+        ret_obj = json.loads(ret.content)
+
+        # since the previously uploaded dataset is not private, we should be able to access
+        # it as user2
+        c.login(username='user2', password='pass')
+        ret = c.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ts_info = json.loads(ret.content)
+
+        self.assertFalse('error' in ts_info[ret_obj['uuid']])
 
     def test_create_private_tileset(self):
         '''
@@ -78,7 +122,6 @@ class TilesetsViewSetTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
         returned = json.loads(self.client.get('/tilesets/x/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content)
-        print "returned:", returned
 
     def test_get_top_tile(self):
         '''
