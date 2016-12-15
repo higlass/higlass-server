@@ -2,26 +2,17 @@
 
 ## Installation
 
-1. clone repo
-2. `cd higlass-server/`
-3. `pip install --upgrade -r requirements.txt`
-4. resolve personal dependency issues that pip can't
-5. ensure access to port 8000
-6. `python manage.py runserver localhost:8000`
+```bash
+git clone https://github.com/hms-dbmi/higlass-server.git
+cd higlass-server/
+pip install --upgrade -r requirements.txt
+python manage.py migrate
+python manage.py runserver localhost:8000
+```
 
 ## Jump start
 
 These steps are optional in case one wants to start with a pre-populated database.
-
-Run the server:
-
-```
-./manage.py makemigrations
-./manage.py migrate
-./manage.py runserver localhost:8000
-```
-
-Add a dataset
 
 ```
 wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
@@ -30,7 +21,8 @@ mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
 wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
 
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8000/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost:8000/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost:8000/tilesets/
 ```
 
 This will return a UUID. This uuid can be used to retrieve tiles:
@@ -38,13 +30,13 @@ This will return a UUID. This uuid can be used to retrieve tiles:
 Get tileset info:
 
 ```
-curl http://localhost:8000/tilesets/db/tileset_info/?d=767fc12a-f351-4678-8d23-d08996b4d7e4
+curl http://localhost:8000/tileset_info/?d=aa
 ```
 
 Get a tile:
 
 ```
-curl http://localhost:8000/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+curl http://localhost:8000/tiles/?d=aa.0.0.0
 ```
 
 ### Preparing cooler files for use with `higlass-server`
@@ -104,4 +96,10 @@ wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh101
 mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
 
 python manage.py test tilesets
+```
+
+### Upgrade
+
+```
+bumpversion patch
 ```
