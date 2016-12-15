@@ -10,65 +10,57 @@ logger = logging.getLogger(__name__)
 
 TILE_SIZE = 256
 
-where = np.flatnonzero
-# chromsizes = {
-#   'chrY': 59373566,
-#   'chrX': 155270560,
-#   'chr13': 115169878,
-#   'chr12': 133851895,
-#   'chr11': 135006516,
-#   'chr10': 135534747,
-#   'chr17': 81195210,
-#   'chr16': 90354753,
-#   'chr15': 102531392,
-#   'chr14': 107349540,
-#   'chr19': 59128983,
-#   'chr18': 78077248,
-#   'chrM': 16571,
-#   'chr22': 51304566,
-#   'chr20': 63025520,
-#   'chr21': 48129895,
-#   'chr7': 159138663,
-#   'chr6': 171115067,
-#   'chr5': 180915260,
-#   'chr4': 191154276,
-#   'chr3': 198022430,
-#   'chr2': 243199373,
-#   'chr1': 249250621,
-#   'chr9': 141213431,
-#   'chr8': 146364022
-# }
-chromsizes = cooler.read_chromsizes(
+CHROM_SIZES = cooler.read_chromsizes(
     'http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt'
-)  # defaults to reading chr#,X,Y,M
-chromosomes = list(chromsizes.keys())
-chromid_map = dict(zip(chromosomes, range(len(chromosomes))))
-cumul_lengths = np.r_[0, np.cumsum(chromsizes)]
+)
+CHROMS = list(CHROM_SIZES.keys())
+CHROM_IDS = dict(zip(CHROMS, range(len(CHROMS))))
+CHROM_CUM_LEN = np.r_[0, np.cumsum(CHROM_SIZES)]
 
 
-def absCoord2bin(c, pos):
+def abs_coord_2_bin(c, abs_pos):
+    """Get bin ID from absolute coordinates.
+
+    Args:
+        c (Cooler): Cooler instance of a .cool file.
+        abs_pos (int): Absolute coordinate to be translated.
+
+    Returns:
+        int: Bin number.
+    """
+
     try:
-        cid = where(cumul_lengths > pos)[0] - 1
+        chr_id = np.flatnonzero(CHROM_CUM_LEN > abs_pos)[0] - 1
     except IndexError:
         return c.info['nbins']
-    chrom = chromosomes[cid]
-    relPos = pos - cumul_lengths[cid]
-    return c.offset((chrom, relPos, chromsizes[chrom]))
+
+    chrom = CHROMS[chr_id]
+    rel_pos = abs_pos - CHROM_CUM_LEN[chr_id]
+
+    return c.offset((chrom, rel_pos, CHROM_SIZES[chrom]))
 
 
-def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
-    c = cooler.Cooler(f[str(zoomLevel)])
-    # matrix = c.matrix(balance=True, as_pixels=True, join=True)
-    # cooler_matrix = {'cooler': c, 'matrix': matrix}
-    # c = cooler_matrix['cooler']
+def get_data(f, zoom_level, start_pos_1, end_pos_1, start_pos_2, end_pos_2):
+    """Get data?
 
-    i0 = absCoord2bin(c, startPos1)
-    i1 = absCoord2bin(c, endPos1)
-    j0 = absCoord2bin(c, startPos2)
-    j1 = absCoord2bin(c, endPos2)
+    Args:
+        f (File): File pointer to a .cool filer.
+        zoom_level (int): Test.
+        start_pos_1 (int): Test.
+        end_pos_1 (int): Test.
+        start_pos_2 (int): Test.
+        end_pos_2 (int): Test.
 
-    if (i1 - i0) == 0 or (j1 - j0) == 0:
-        return pd.DataFrame(columns=['genome_start', 'genome_end', 'balanced'])
+    Returns:
+        DataFrame: Annotated cooler pixels.
+    """
+
+    c = cooler.Cooler(f[str(zoom_level)])
+
+    i0 = abs_coord_2_bin(c, start_pos_1)
+    i1 = abs_coord_2_bin(c, end_pos_1)
+    j0 = abs_coord_2_bin(c, start_pos_2) + 1
+    j1 = abs_coord_2_bin(c, end_pos_2) + 1
 
     pixels = c.matrix(as_pixels=True, max_chunk=np.inf)[i0:i1, j0:j1]
 
@@ -77,11 +69,13 @@ def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
 
     lo = min(i0, j0)
     hi = max(i1, j1)
+
     bins = c.bins()[['chrom', 'start', 'end', 'weight']][lo:hi]
     bins['chrom'] = bins['chrom'].cat.codes
+
     pixels = cooler.annotate(pixels, bins)
-    pixels['genome_start'] = cumul_lengths[pixels['chrom1']] + pixels['start1']
-    pixels['genome_end'] = cumul_lengths[pixels['chrom2']] + pixels['end2']
+    pixels['genome_start'] = CHROM_CUM_LEN[pixels['chrom1']] + pixels['start1']
+    pixels['genome_end'] = CHROM_CUM_LEN[pixels['chrom2']] + pixels['end2']
     pixels['balanced'] = (
         pixels['count'] * pixels['weight1'] * pixels['weight2']
     )
@@ -89,9 +83,17 @@ def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
     return pixels[['genome_start', 'genome_end', 'balanced']]
 
 
-def getInfo(FILEPATH):
+def get_info(file_path):
+    """Get information of a cooler file.
 
-    with h5py.File(FILEPATH, 'r') as f:
+    Args:
+        file_path (str): Path to a cooler file.
+
+    Returns:
+        dict: Dictionary containing basic information about the cooler file.
+    """
+
+    with h5py.File(file_path, 'r') as f:
         max_zoom = f.attrs.get('max-zoom')
 
         if max_zoom is None:
@@ -100,13 +102,11 @@ def getInfo(FILEPATH):
                 'The `max_zoom` attribute is missing.'
             )
 
-        total_length = int(cumul_lengths[-1])
+        total_length = int(CHROM_CUM_LEN[-1])
         max_zoom = f.attrs['max-zoom']
-        binsize = int(f[str(max_zoom)].attrs['bin-size'])
+        bin_size = int(f[str(max_zoom)].attrs['bin-size'])
 
-        # n_tiles = total_length / binsize / TILE_SIZE
-
-        max_width = binsize * TILE_SIZE * 2**max_zoom
+        max_width = bin_size * TILE_SIZE * 2**max_zoom
 
         info = {
             'min_pos': [0.0, 0.0],
