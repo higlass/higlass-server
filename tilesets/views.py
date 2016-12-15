@@ -22,7 +22,7 @@ import base64
 import clodius.hdf_tiles as hdft
 import cooler
 import django.db.models as dbm
-import getter as hgg
+import getter
 import guardian.compat as gc
 import guardian.utils as gu
 import h5py
@@ -42,7 +42,7 @@ mats = {}
 
 def makeMats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, hgg.getInfo(dset)]
+    mats[dset] = [f, getter.get_info(dset)]
 
 
 def make_cooler_tile(cooler_filepath, tile_position):
@@ -94,7 +94,7 @@ def generate_tile(tile_id, request):
     elasticsearch -> anything)
 
     Args:
-        tile_id (str): The id of a tile, consisting of the tileset id, 
+        tile_id (str): The id of a tile, consisting of the tileset id,
             followed by the tile position (e.g. PIYqJpdyTCmAZGmA6jNHJw.4.0.0)
         request (django.http.HTTPRequest): The request that included this tile.
 
@@ -117,7 +117,7 @@ def generate_tile(tile_id, request):
                     tile_position[0],
                     tile_position[1])
 
-        return (tile_id, 
+        return (tile_id,
                 {'dense': base64.b64encode(dense)})
 
     elif tileset.file_type == "elasticsearch":
@@ -170,7 +170,7 @@ def tileset_info(request):
         cooler = queryset.filter(uuid=elems).first()
 
         if cooler.private and request.user != cooler.owner:
-            # dataset is not public 
+            # dataset is not public
             d[elems] = {'error': "Forbidden"}
             continue
 
@@ -221,7 +221,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             user = gu.get_anonymous_user()
         else:
             user = request.user
-        
+
         queryset = self.queryset.filter(dbm.Q(owner=user) | dbm.Q(private=False))
 
         if 'ac' in request.GET:
