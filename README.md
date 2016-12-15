@@ -7,8 +7,7 @@
 3. `pip install --upgrade -r requirements.txt`
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
-6. `mkdir higlass-server/data`
-7. `python manage.py runserver localhost:8000`
+6. `python manage.py runserver localhost:8000`
 
 ## Jump start
 
@@ -17,8 +16,6 @@ These steps are optional in case one wants to start with a pre-populated databas
 Run the server:
 
 ```
-mkdir log
-
 ./manage.py makemigrations
 ./manage.py migrate
 ./manage.py runserver localhost:8000
@@ -27,7 +24,6 @@ mkdir log
 Add a dataset
 
 ```
-mkdir data
 wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
 
@@ -101,8 +97,6 @@ See the "Add a dataset" line in the "Jump Start" section above.
 ### Unit tests
 
 ```
-mkdir log
-mkdir data
 wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
 
