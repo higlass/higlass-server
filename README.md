@@ -97,3 +97,9 @@ mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
 
 python manage.py test tilesets
 ```
+
+### Upgrade
+
+```
+bumpversion patch
+```
