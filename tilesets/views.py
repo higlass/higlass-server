@@ -5,6 +5,7 @@ import getter
 import guardian.utils as gu
 import h5py
 import json
+import logging
 import math
 import numpy as np
 import os.path as op
@@ -19,16 +20,18 @@ from django.views.decorators.gzip import gzip_page
 from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
-from tiles import makeTile
+from tiles import make_tile
 from tilesets.models import Tileset
 from tilesets.serializers import TilesetSerializer
 from tilesets.serializers import UserSerializer
+
+logger = logging.getLogger(__name__)
 
 global mats
 mats = {}
 
 
-def makeMats(dset):
+def make_mats(dset):
     f = h5py.File(dset, 'r')
     mats[dset] = [f, getter.get_info(dset)]
 
@@ -50,7 +53,7 @@ def make_cooler_tile(cooler_filepath, tile_position):
     tile_data = {}
 
     if cooler_filepath not in mats:
-        makeMats(cooler_filepath)
+        make_mats(cooler_filepath)
 
     tileset_file_and_info = mats[cooler_filepath]
 
@@ -64,7 +67,7 @@ def make_cooler_tile(cooler_filepath, tile_position):
         # tile is out of bounds
         return None
 
-    tile = makeTile(
+    tile = make_tile(
         tile_position[0],
         tile_position[1],
         tile_position[2],
@@ -227,7 +230,7 @@ def tileset_info(request):
             ).first().processed_file
 
             if dsetname not in mats:
-                makeMats(dsetname)
+                make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
 
     return JsonResponse(tileset_infos)

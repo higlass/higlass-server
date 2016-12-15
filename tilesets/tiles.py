@@ -5,7 +5,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def makeTile(zoomLevel, x_pos, y_pos, dset):
+def make_tile(zoomLevel, x_pos, y_pos, dset):
     info = dset[1]
     divisor = 2 ** zoomLevel
 
@@ -31,7 +31,7 @@ def makeTile(zoomLevel, x_pos, y_pos, dset):
         for j in range(0, 256):
             if (i, j) in tile_bins:
                 denseOutputArray.append(tile_bins[(i, j)])
-        else:
-            denseOutputArray.append(0)
+            else:
+                denseOutputArray.append(0)
 
     return np.array(denseOutputArray, dtype=np.float32)

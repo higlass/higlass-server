@@ -8,7 +8,7 @@
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
 6. `mkdir higlass-server/data`
-7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
+7. `python manage.py runserver localhost:8000`
 
 ## Jump start
 
@@ -17,9 +17,9 @@ These steps are optional in case one wants to start with a pre-populated databas
 Run the server:
 
 ```
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver localhost:8000
+./manage.py makemigrations
+./manage.py migrate
+./manage.py runserver localhost:8000
 ```
 
 Add a dataset
