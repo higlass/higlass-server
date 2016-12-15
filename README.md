@@ -2,12 +2,12 @@
 
 ## Installation
 
-1. clone repo
-2. `cd higlass-server/`
-3. `pip install --upgrade -r requirements.txt`
-4. resolve personal dependency issues that pip can't
-5. ensure access to port 8000
-6. `python manage.py runserver localhost:8000`
+```bash
+git clone https://github.com/hms-dbmi/higlass-server.git
+cd higlass-server/
+pip install --upgrade -r requirements.txt
+python manage.py runserver localhost:8000
+```
 
 ## Jump start
 
@@ -15,7 +15,7 @@ These steps are optional in case one wants to start with a pre-populated databas
 
 Run the server:
 
-```
+```bash
 ./manage.py makemigrations
 ./manage.py migrate
 ./manage.py runserver localhost:8000
