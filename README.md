@@ -17,6 +17,8 @@ These steps are optional in case one wants to start with a pre-populated databas
 Run the server:
 
 ```
+mkdir log
+
 ./manage.py makemigrations
 ./manage.py migrate
 ./manage.py runserver localhost:8000
@@ -25,8 +27,13 @@ Run the server:
 Add a dataset
 
 ```
+mkdir data
 wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
+
+wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+
 curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8000/tilesets/
 ```
 
@@ -94,5 +101,13 @@ See the "Add a dataset" line in the "Jump Start" section above.
 ### Unit tests
 
 ```
+mkdir log
+mkdir data
+wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
+
+wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+
 python manage.py test tilesets
 ```
