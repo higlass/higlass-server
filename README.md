@@ -92,22 +92,6 @@ curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/E00
 
 See the "Add a dataset" line in the "Jump Start" section above.
 
-### Benchmarking
-
-The file `doc/tile_requests` has a list of tiles requested for a 2D map. A potential benchmark for the performance of the server is seeing how long it takes to retrieve that set of tiles.
-
-Example sequential run:
-
-```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt
-```
-
-Example multi-tile request
-
-```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt --at-once
-```
-
 ### Unit tests
 
 ```
