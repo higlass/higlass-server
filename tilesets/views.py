@@ -45,84 +45,90 @@ def makeMats(dset):
     mats[dset] = [f, hgg.getInfo(dset)]
 
 
-def makeUnaryDict(hargs, queryset):
-    odict = {}
+def make_cooler_tile(cooler_filepath, tile_position):
+    '''Create a tile from a cooler file.
 
-    prea = hargs.split('.')
-    prea[0] = prea[0]
-    numerics = prea[1:4]
-    nuuid = prea[0]
-    tile_zoom_pos = map(lambda x: int(x), numerics)
-    cooler = queryset.filter(uuid=nuuid).first()
-    odict = {}
+    Args:
+        cooler_filepath (str): The location of the cooler file that we'll
+            that we'll extract the tile data from.
+        tile_position (list): The position of the tile ([z,x,y])
 
-    if mats.has_key(cooler.processed_file) == False:
-        makeMats(cooler.processed_file)
+    Returns:
+        dict: The tile data consisting of a 'dense' member containing
+            the data array as well as 'min_value' and 'max_value' which
+            contain the minimum and maximum values in the 'dense' array.
+    '''
+    tile_data = {}
 
-    tileset_file_and_info = mats[cooler.processed_file]
+    if mats.has_key(cooler_filepath) == False:
+        makeMats(cooler_filepath)
 
-    if tile_zoom_pos[0] > tileset_file_and_info[1]['max_zoom']:
+    tileset_file_and_info = mats[cooler_filepath]
+
+    if tile_position[0] > tileset_file_and_info[1]['max_zoom']:
         # we don't have enough zoom levels
         return None
-    if tile_zoom_pos[1] >= 2 ** tile_zoom_pos[0]:
+    if tile_position[1] >= 2 ** tile_position[0]:
         # tile is out of bounds
         return None
-    if tile_zoom_pos[2] >= 2 ** tile_zoom_pos[0]:
+    if tile_position[2] >= 2 ** tile_position[0]:
         # tile is out of bounds
         return None
 
-    tile = makeTile(tile_zoom_pos[0], tile_zoom_pos[1], tile_zoom_pos[2],
-                                  mats[cooler.processed_file])
-    odict["min_value"] = float(np.min(tile))
-    odict["max_value"] = float(np.max(tile))
-    odict['dense'] = base64.b64encode(tile)
+    tile = makeTile(tile_position[0], tile_position[1], tile_position[2],
+                                  mats[cooler_filepath])
+    tile_data["min_value"] = float(np.min(tile))
+    tile_data["max_value"] = float(np.max(tile))
+    tile_data['dense'] = base64.b64encode(tile)
 
-    return [odict, hargs]
+    return tile_data
 
 
-def generate_tiles(elems, request):
-    queryset = Tileset.objects.all()
-    prea = elems.split('.')
-    numerics = prea[1:3]
-    nuuid = prea[0]
-    argsa = map(lambda x: int(x), numerics)
-    cooler = queryset.get(uuid=nuuid)
+def generate_tile(tile_id, request):
+    '''
+    Create a tile. The tile_id specifies the dataset as well
+    as the position.
 
-    if cooler.private and request.user != cooler.owner:
+    This function will look at the filetype and determine what type
+    of tile to retrieve (e..g cooler -> 2D dense, hitile -> 1D dense,
+    elasticsearch -> anything)
+
+    Args:
+        tile_id (str): The id of a tile, consisting of the tileset id, 
+            followed by the tile position (e.g. PIYqJpdyTCmAZGmA6jNHJw.4.0.0)
+        request (django.http.HTTPRequest): The request that included this tile.
+
+    Returns:
+        (string, dict): A tuple containing the tile ID tile data
+    '''
+    #queryset = Tileset.objects.all()
+    tile_id_parts = tile_id.split('.')
+    tile_position = map(int, tile_id_parts[1:])
+    tileset_uuid = tile_id_parts[0]
+
+    tileset = Tileset.objects.get(uuid=tileset_uuid)
+
+    if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
-        return (nuuid, {'error': "Forbidden"})
+        return (tileset_uuid, {'error': "Forbidden"})
 
-    if cooler.file_type == "hitile":
-        dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
-                          int(argsa[1]))
-        if (len(dense) > 0):
-            minv = min(dense)
-            maxv = max(dense)
-        else:
-            minv = 0
-            maxv = 0
+    if tileset.file_type == "hitile":
+        dense = hdft.get_data(h5py.File(tileset.processed_file),
+                    tile_position[0],
+                    tile_position[1])
 
-        d = {}
-        #d["min_value"] = minv
-        #d["max_value"] = maxv
-        d["dense"] = base64.b64encode(dense)
+        return (tile_id, 
+                {'dense': base64.b64encode(dense)})
 
-        return (elems, d)
-    elif cooler.file_type == "elastic_search":
-        prea = elems.split('.')
-        prea[0] = prea[0]
-        numerics = prea[1:4]
+    elif tileset.file_type == "elasticsearch":
         response = urllib.urlopen(
-            cooler.processed_file + '/' + numerics[0] + '.' + numerics[
-                1] + '.' + numerics[2])
-        od[elems] = json.loads(response.read())["_source"]["tile_value"]
-        return od
+            tileset.processed_file + '/' + '.'.join(map(str,tile_position)))
+        return (tile_id, json.loads(response.read())["_source"]["tile_value"])
     else:
-        print "elems:", elems
-        ud = makeUnaryDict(elems, queryset)
-        if ud is None:
+        tile_data = make_cooler_tile(tileset.processed_file, tile_position)
+        if tile_data is None:
             return None
-        return (ud[1], ud[0])
+        return (tile_id, tile_data)
         # od[ud[1]] = ud[0]
 
 class UserList(generics.ListAPIView):
@@ -147,7 +153,7 @@ def tiles(request):
     res = p.map(parallelize, hargs)
     '''
 
-    res = map(lambda x: generate_tiles(x, request), tileids_to_fetch)
+    res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
 
     # create a dictionary of tileids
     result_dict = dict([i for i in res if i is not None])
