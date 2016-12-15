@@ -1,128 +1,137 @@
-from tilesets.models import Tileset
-from tilesets.serializers import TilesetSerializer
-from tilesets.serializers import UserSerializer
-from rest_framework import generics
-from django.contrib.auth.models import User
-from rest_framework import permissions
-from tilesets.permissions import IsOwnerOrReadOnly
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
-from rest_framework import renderers
-from rest_framework import viewsets
-from rest_framework.decorators import detail_route
-from rest_framework.decorators import api_view, permission_classes
-from tilesets.permissions import IsOwnerOrReadOnly
-from django.views.decorators.gzip import gzip_page
-from django.utils.decorators import method_decorator
-from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
-from tiles import makeTile
-
 import base64
 import clodius.hdf_tiles as hdft
-import cooler
 import django.db.models as dbm
-import getter as hgg
-import guardian.compat as gc
+import getter
 import guardian.utils as gu
 import h5py
 import json
+import logging
 import math
-import multiprocessing as mp
 import numpy as np
-import os
 import os.path as op
 import rest_framework.exceptions as rfe
 import slugid
 import urllib
 
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.gzip import gzip_page
+from rest_framework import generics
+from rest_framework import viewsets
+from rest_framework.decorators import api_view
+from tiles import make_tile
+from tilesets.models import Tileset
+from tilesets.serializers import TilesetSerializer
+from tilesets.serializers import UserSerializer
+
+logger = logging.getLogger(__name__)
+
 global mats
 mats = {}
 
 
-def makeMats(dset):
+def make_mats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, hgg.getInfo(dset)]
+    mats[dset] = [f, getter.get_info(dset)]
 
 
-def makeUnaryDict(hargs, queryset):
-    odict = {}
+def make_cooler_tile(cooler_filepath, tile_position):
+    '''Create a tile from a cooler file.
 
-    prea = hargs.split('.')
-    prea[0] = prea[0]
-    numerics = prea[1:4]
-    nuuid = prea[0]
-    tile_zoom_pos = map(lambda x: int(x), numerics)
-    cooler = queryset.filter(uuid=nuuid).first()
-    odict = {}
+    Args:
+        cooler_filepath (str): The location of the cooler file that we'll
+            that we'll extract the tile data from.
+        tile_position (list): The position of the tile ([z,x,y])
 
-    if mats.has_key(cooler.processed_file) == False:
-        makeMats(cooler.processed_file)
+    Returns:
+        dict: The tile data consisting of a 'dense' member containing
+            the data array as well as 'min_value' and 'max_value' which
+            contain the minimum and maximum values in the 'dense' array.
+    '''
 
-    tileset_file_and_info = mats[cooler.processed_file]
+    tile_data = {}
 
-    if tile_zoom_pos[0] > tileset_file_and_info[1]['max_zoom']:
+    if cooler_filepath not in mats:
+        make_mats(cooler_filepath)
+
+    tileset_file_and_info = mats[cooler_filepath]
+
+    if tile_position[0] > tileset_file_and_info[1]['max_zoom']:
         # we don't have enough zoom levels
         return None
-    if tile_zoom_pos[1] >= 2 ** tile_zoom_pos[0]:
+    if tile_position[1] >= 2 ** tile_position[0]:
         # tile is out of bounds
         return None
-    if tile_zoom_pos[2] >= 2 ** tile_zoom_pos[0]:
+    if tile_position[2] >= 2 ** tile_position[0]:
         # tile is out of bounds
         return None
 
-    tile = makeTile(tile_zoom_pos[0], tile_zoom_pos[1], tile_zoom_pos[2],
-                                  mats[cooler.processed_file])
-    odict["min_value"] = float(np.min(tile))
-    odict["max_value"] = float(np.max(tile))
-    odict['dense'] = base64.b64encode(tile)
+    tile = make_tile(
+        tile_position[0],
+        tile_position[1],
+        tile_position[2],
+        mats[cooler_filepath]
+    )
+    tile_data["min_value"] = float(np.min(tile))
+    tile_data["max_value"] = float(np.max(tile))
+    tile_data['dense'] = base64.b64encode(tile)
 
-    return [odict, hargs]
+    return tile_data
 
 
-def generate_tiles(elems, request):
-    queryset = Tileset.objects.all()
-    prea = elems.split('.')
-    numerics = prea[1:3]
-    nuuid = prea[0]
-    argsa = map(lambda x: int(x), numerics)
-    cooler = queryset.get(uuid=nuuid)
+def generate_tile(tile_id, request):
+    '''
+    Create a tile. The tile_id specifies the dataset as well
+    as the position.
 
-    if cooler.private and request.user != cooler.owner:
+    This function will look at the filetype and determine what type
+    of tile to retrieve (e..g cooler -> 2D dense, hitile -> 1D dense,
+    elasticsearch -> anything)
+
+    Args:
+        tile_id (str): The id of a tile, consisting of the tileset id,
+            followed by the tile position (e.g. PIYqJpdyTCmAZGmA6jNHJw.4.0.0)
+        request (django.http.HTTPRequest): The request that included this tile.
+
+    Returns:
+        (string, dict): A tuple containing the tile ID tile data
+    '''
+
+    tile_id_parts = tile_id.split('.')
+    tile_position = map(int, tile_id_parts[1:])
+    tileset_uuid = tile_id_parts[0]
+
+    tileset = Tileset.objects.get(uuid=tileset_uuid)
+
+    if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
-        return (nuuid, {'error': "Forbidden"})
+        return (tileset_uuid, {'error': "Forbidden"})
 
-    if cooler.file_type == "hitile":
-        dense = hdft.get_data(h5py.File(cooler.processed_file), int(argsa[0]),
-                          int(argsa[1]))
-        if (len(dense) > 0):
-            minv = min(dense)
-            maxv = max(dense)
-        else:
-            minv = 0
-            maxv = 0
+    if tileset.file_type == "hitile":
+        dense = hdft.get_data(
+            h5py.File(
+                tileset.processed_file
+            ),
+            tile_position[0],
+            tile_position[1]
+        )
 
-        d = {}
-        #d["min_value"] = minv
-        #d["max_value"] = maxv
-        d["dense"] = base64.b64encode(dense)
+        return (tile_id,
+                {'dense': base64.b64encode(dense)})
 
-        return (elems, d)
-    elif cooler.file_type == "elastic_search":
-        prea = elems.split('.')
-        prea[0] = prea[0]
-        numerics = prea[1:4]
+    elif tileset.file_type == "elasticsearch":
         response = urllib.urlopen(
-            cooler.processed_file + '/' + numerics[0] + '.' + numerics[
-                1] + '.' + numerics[2])
-        od[elems] = json.loads(response.read())["_source"]["tile_value"]
-        return od
+            tileset.processed_file + '/' + '.'.join(map(str, tile_position))
+        )
+        return (tile_id, json.loads(response.read())["_source"]["tile_value"])
     else:
-        ud = makeUnaryDict(elems, queryset)
-        if ud is None:
+        tile_data = make_cooler_tile(tileset.processed_file, tile_position)
+        if tile_data is None:
             return None
-        return (ud[1], ud[0])
+        return (tile_id, tile_data)
         # od[ud[1]] = ud[0]
+
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
@@ -133,77 +142,103 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+
 @api_view(['GET'])
 def tiles(request):
+    '''Retrieve a set of tiles
+
+    A call to this API function should retrieve a few tiles.
+
+    Args:
+        request (django.http.HTTPRequest): The request object containing
+            the parameters (e.g. d=x.0.0) that identify the tiles being
+            requested.
+
+    Returns:
+        django.http.JsonResponse: A JSON object containing all of the tile
+            data being requested. The JSON object is just a dictionary of
+            (tile_id, tile_data) items.
+
+    '''
+
     global mats
-    # queryset=Tileset.objects.all()
-    hargs = request.GET.getlist("d")
+
+    # create a set so that we don't fetch the same tile multiple times
+    tileids_to_fetch = set(request.GET.getlist("d"))
     # with ProcessPoolExecutor() as executor:
-    #	res = executor.map(parallelize, hargs)
+    # 	  res = executor.map(parallelize, hargs)
     '''
     p = mp.Pool(4)
     res = p.map(parallelize, hargs)
     '''
 
-    # create a set so that we don't fetch the same tile multiple times
-    hargs_set = set(hargs)
-    res = map(lambda x: generate_tiles(x, request), hargs_set)
-    d = {}
-    for item in res:
-        if item is None:
-            continue
-        d[item[0]] = item[1]
-    return JsonResponse(d, safe=False)
+    res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
+
+    # create a dictionary of tileids
+    result_dict = dict([i for i in res if i is not None])
+
+    return JsonResponse(result_dict, safe=False)
+
 
 @api_view(['GET'])
 def tileset_info(request):
+    ''' Get information about a tileset
+
+    Tilesets have information critical to their display
+    such as the maximum number of dimensions and well as
+    their width. This needs to be relayed to the client
+    in order for it to know which tiles to request.
+
+    Args:
+        request (django.http.HTTPRequest): The request object
+            containing tileset_ids in the 'd' parameter.
+    Return:
+        django.http.JsonResponse: A JSON object containing
+            the tileset meta-information
+    '''
     global mats
     queryset = Tileset.objects.all()
-    hargs = request.GET.getlist("d")
-    d = {}
-    for elems in hargs:
-        cooler = queryset.filter(uuid=elems).first()
+    tileset_uuids = request.GET.getlist("d")
+    tileset_infos = {}
+    for tileset_uuid in tileset_uuids:
+        cooler_file = queryset.filter(uuid=tileset_uuid).first()
 
-        if cooler.private and request.user != cooler.owner:
-            # dataset is not public 
-            d[elems] = {'error': "Forbidden"}
+        if cooler_file.private and request.user != cooler_file.owner:
+            # dataset is not public
+            tileset_infos[tileset_uuid] = {'error': "Forbidden"}
             continue
 
-        if cooler.file_type == "hitile":
+        if cooler_file.file_type == "hitile":
             tileset_info = hdft.get_tileset_info(
-                h5py.File(cooler.processed_file))
-            d[elems] =  {
-                    "min_pos": [0],
-                    "max_pos": [tileset_info['max_pos']],
-                    "max_width": 2 ** math.ceil(math.log(tileset_info['max_pos'] - 0) / math.log(2)),
-                    "tile_size": tileset_info['tile_size'],
-                    "max_zoom": tileset_info['max_zoom']
-                }
-        elif cooler.file_type == "elastic_search":
+                h5py.File(cooler_file.processed_file))
+            tileset_infos[tileset_uuid] = {
+                "min_pos": [0],
+                "max_pos": [tileset_info['max_pos']],
+                "max_width": 2 ** math.ceil(
+                    math.log(tileset_info['max_pos'] - 0) / math.log(2)
+                ),
+                "tile_size": tileset_info['tile_size'],
+                "max_zoom": tileset_info['max_zoom']
+            }
+        elif cooler_file.file_type == "elastic_search":
             response = urllib.urlopen(
-                cooler.processed_file + "/tileset_info")
-            d[elems] = json.loads(response.read())
+                cooler_file.processed_file + "/tileset_info")
+            tileset_infos[tileset_uuid] = json.loads(response.read())
         else:
-            dsetname = queryset.filter(uuid=elems).first().processed_file
-            if mats.has_key(dsetname) == False:
-                makeMats(dsetname)
-            d[elems] = mats[dsetname][1]
-    return JsonResponse(d, safe=False)
+            dsetname = queryset.filter(
+                uuid=tileset_uuid
+            ).first().processed_file
+
+            if dsetname not in mats:
+                make_mats(dsetname)
+            tileset_infos[tileset_uuid] = mats[dsetname][1]
+
+    return JsonResponse(tileset_infos)
+
 
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
-    """
-    Tilesets
-    """
-
-    def get_queryset(self):
-
-        # debug NOT SECURE
-        queryset = super(TilesetsViewSet, self).get_queryset()
-        return queryset
-
-        # secure production
-        return Tileset.objects.none()
+    """Tilesets"""
 
     queryset = Tileset.objects.all()
     serializer_class = TilesetSerializer
@@ -211,13 +246,25 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     lookup_field = 'uuid'
 
     def list(self, request, *args, **kwargs):
+        '''List the available tilesets
+
+        Args:
+            request (django.http.HTTPRequest): The HTTP request containing
+                no parameters
+
+        Returns:
+            django.http.JsonResponse: A json file containing a 'count' as
+                well as 'results' with each tileset as an entry
+        '''
         # only return tilesets which are accessible by this user
         if request.user.is_anonymous:
             user = gu.get_anonymous_user()
         else:
             user = request.user
-        
-        queryset = self.queryset.filter(dbm.Q(owner=user) | dbm.Q(private=False))
+
+        queryset = self.queryset.filter(
+            dbm.Q(owner=user) | dbm.Q(private=False)
+        )
 
         if 'ac' in request.GET:
             queryset = queryset.filter(name__contains=request.GET['ac'])
@@ -225,22 +272,30 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(file_type__contains=request.GET['t'])
 
         ts_serializer = TilesetSerializer(queryset, many=True)
-        return JsonResponse({"count": len(queryset), "results": ts_serializer.data})
-        #return self.list(request, *args, **kwargs)
+        return JsonResponse(
+            {"count": len(queryset), "results": ts_serializer.data}
+        )
 
     def perform_create(self, serializer):
-        anonymous_user = gc.get_user_model().get_anonymous()
+        '''Add a new tileset
+
+        When adding a new dataset, we need to enforce permissions as well as
+        other rules like the uniqueness of uuids.
+
+        Args:
+            serializer (tilsets.serializer.TilesetSerializer): The serializer
+            to use to save the request.
+        '''
 
         if 'uid' in self.request.data:
             try:
-                self.queryset.get(uuid = self.request.data['uid'])
+                self.queryset.get(uuid=self.request.data['uid'])
                 # this uid already exists, return an error
                 raise rfe.APIException("UID already exists")
             except Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
             uid = slugid.nice()
-
 
         if 'name' in self.request.data:
             name = self.request.data['name']
@@ -249,8 +304,11 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user
-            serializer.save(owner=gu.get_anonymous_user(), private=False, name=name, uuid=uid)
+            serializer.save(
+                owner=gu.get_anonymous_user(),
+                private=False,
+                name=name,
+                uuid=uid
+            )
         else:
             serializer.save(owner=self.request.user, name=name, uuid=uid)
-
-        return HttpResponse("test")

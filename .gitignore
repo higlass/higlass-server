@@ -4,7 +4,9 @@ api/coolers/migrations/*
 *.pyc
 *~
 data/
+log/
 db.sqlite3
 *.swp
 *.swo
 *.swn
+*.swm
