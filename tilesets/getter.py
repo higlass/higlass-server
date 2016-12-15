@@ -1,21 +1,25 @@
 from __future__ import division, print_function
 import json
-import sys
 
 import numpy as np
 import pandas as pd
 import cooler
 import h5py
-import time
+import logging
 
-TILESIZE = 256
+logger = logging.getLogger(__name__)
+
+TILE_SIZE = 256
 
 where = np.flatnonzero
-#chromsizes = {'chrY': 59373566, 'chrX': 155270560, 'chr13': 115169878, 'chr12': 133851895, 'chr11': 135006516, 'chr10': 135534747, 'chr17': 81195210, 'chr16': 90354753, 'chr15': 102531392, 'chr14': 107349540, 'chr19': 59128983, 'chr18': 78077248, 'chrM': 16571, 'chr22': 51304566, 'chr20': 63025520, 'chr21': 48129895, 'chr7': 159138663, 'chr6': 171115067, 'chr5': 180915260, 'chr4': 191154276, 'chr3': 198022430, 'chr2': 243199373, 'chr1': 249250621, 'chr9': 141213431, 'chr8': 146364022}
-chromsizes = cooler.read_chromsizes('http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt')  # defaults to reading chr#,X,Y,M
+# chromsizes = {'chrY': 59373566, 'chrX': 155270560, 'chr13': 115169878, 'chr12': 133851895, 'chr11': 135006516, 'chr10': 135534747, 'chr17': 81195210, 'chr16': 90354753, 'chr15': 102531392, 'chr14': 107349540, 'chr19': 59128983, 'chr18': 78077248, 'chrM': 16571, 'chr22': 51304566, 'chr20': 63025520, 'chr21': 48129895, 'chr7': 159138663, 'chr6': 171115067, 'chr5': 180915260, 'chr4': 191154276, 'chr3': 198022430, 'chr2': 243199373, 'chr1': 249250621, 'chr9': 141213431, 'chr8': 146364022}
+chromsizes = cooler.read_chromsizes(
+    'http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt'
+)  # defaults to reading chr#,X,Y,M
 chromosomes = list(chromsizes.keys())
 chromid_map = dict(zip(chromosomes, range(len(chromosomes))))
 cumul_lengths = np.r_[0, np.cumsum(chromsizes)]
+
 
 def absCoord2bin(c, pos):
     try:
@@ -24,7 +28,7 @@ def absCoord2bin(c, pos):
         return c.info['nbins']
     chrom = chromosomes[cid]
     relPos = pos - cumul_lengths[cid]
-    return  c.offset( (chrom, relPos, chromsizes[chrom]) )
+    return c.offset((chrom, relPos, chromsizes[chrom]))
 
 
 def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
@@ -44,21 +48,19 @@ def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
 
     return json.dumps({'dense': flat})
 
+
 def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
-    #t1 = time.time()
-    #f = h5py.File(fpath,'r')
     c = cooler.Cooler(f[str(zoomLevel)])
-    matrix = c.matrix(balance=True, as_pixels=True, join=True)
-    cooler_matrix = {'cooler': c, 'matrix': matrix}
-    c = cooler_matrix['cooler']
+    # matrix = c.matrix(balance=True, as_pixels=True, join=True)
+    # cooler_matrix = {'cooler': c, 'matrix': matrix}
+    # c = cooler_matrix['cooler']
 
     i0 = absCoord2bin(c, startPos1)
     i1 = absCoord2bin(c, endPos1)
     j0 = absCoord2bin(c, startPos2)
     j1 = absCoord2bin(c, endPos2)
 
-
-    if (i1-i0) == 0 or (j1-j0) == 0:
+    if (i1 - i0) == 0 or (j1 - j0) == 0:
         return pd.DataFrame(columns=['genome_start', 'genome_end', 'balanced'])
 
     pixels = c.matrix(as_pixels=True, max_chunk=np.inf)[i0:i1, j0:j1]
@@ -72,8 +74,10 @@ def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
     bins['chrom'] = bins['chrom'].cat.codes
     pixels = cooler.annotate(pixels, bins)
     pixels['genome_start'] = cumul_lengths[pixels['chrom1']] + pixels['start1']
-    pixels['genome_end']   = cumul_lengths[pixels['chrom2']] + pixels['end2']
-    pixels['balanced']     = pixels['count'] * pixels['weight1'] * pixels['weight2']
+    pixels['genome_end'] = cumul_lengths[pixels['chrom2']] + pixels['end2']
+    pixels['balanced'] = (
+        pixels['count'] * pixels['weight1'] * pixels['weight2']
+    )
 
     return pixels[['genome_start', 'genome_end', 'balanced']]
 
@@ -81,24 +85,28 @@ def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):
 def getInfo(FILEPATH):
 
     with h5py.File(FILEPATH, 'r') as f:
+        max_zoom = f.attrs.get('max-zoom')
+
+        if max_zoom is None:
+            logger.info('no zoom found')
+            raise ValueError(
+                'The `max_zoom` attribute is missing.'
+            )
+
         total_length = int(cumul_lengths[-1])
         max_zoom = f.attrs['max-zoom']
         binsize = int(f[str(max_zoom)].attrs['bin-size'])
 
-        n_tiles = total_length / binsize / TILESIZE
+        # n_tiles = total_length / binsize / TILE_SIZE
 
-        #print("total_length:", total_length, binsize, TILESIZE)
-        #n_zooms = int(np.ceil(np.log2(n_tiles)))
-        max_width = binsize * TILESIZE * 2**max_zoom
+        max_width = binsize * TILE_SIZE * 2**max_zoom
 
         info = {
             'min_pos': [0.0, 0.0],
             'max_pos': [total_length, total_length],
             'max_zoom': max_zoom,
             'max_width': max_width,
-            'bins_per_dimension': TILESIZE,
+            'bins_per_dimension': TILE_SIZE,
         }
 
     return info
-
-    return json.dumps(info)

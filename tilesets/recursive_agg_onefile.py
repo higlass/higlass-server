@@ -8,6 +8,10 @@ from cooler.io import CoolerAggregator
 import cooler.ice
 import cooler
 import h5py
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 FACTOR = 2
@@ -17,11 +21,13 @@ N_CPU = 8
 
 def set_postmortem_hook():
     import sys, traceback, ipdb
+
     def _excepthook(exc_type, value, tb):
         traceback.print_exception(exc_type, value, tb)
         print()
         ipdb.pm()
     sys.excepthook = _excepthook
+
 
 set_postmortem_hook()
 
@@ -38,19 +44,18 @@ def main(infile, outfile, chunksize):
     n_zooms = int(np.ceil(np.log2(n_tiles)))
 
     print(
-        "Copying base matrix to level {0} and producing {0} zoom levels starting from 0...".format(n_zooms),
+        "Copying base matrix to level {0} and producing {0} zoom levels "
+        "starting from 0...".format(n_zooms),
         file=sys.stderr
     )
 
     # transfer base matrix
-    with h5py.File(outfile, 'w') as dest, \
-         h5py.File(infile, 'r') as src:
+    with h5py.File(outfile, 'w') as dest, h5py.File(infile, 'r') as src:
 
         zoomLevel = str(n_zooms)
         src.copy('/', dest, zoomLevel)
 
         print(zoomLevel, file=sys.stderr)
-
 
     # produce aggregations
     with h5py.File(outfile, 'r+') as f:
@@ -64,9 +69,9 @@ def main(infile, outfile, chunksize):
             # aggregate
             new_binsize = binsize * FACTOR
             new_bins = cooler.util.binnify(chromsizes, new_binsize)
-     
+
             reader = CoolerAggregator(c, new_bins, chunksize)
-            
+
             grp = f.create_group(zoomLevel)
             f.attrs[zoomLevel] = new_binsize
             cooler.io.create(grp, chroms, lengths, new_bins, reader)
@@ -94,7 +99,11 @@ def main(infile, outfile, chunksize):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Recursively aggregate a single resolution cooler file into a multi-resolution file.")
+        description=(
+            "Recursively aggregate a single resolution cooler file into a "
+            "multi-resolution file."
+        )
+    )
     parser.add_argument(
         "cooler_file",
         help="Cooler file",
@@ -103,7 +112,6 @@ if __name__ == '__main__':
         "--out", "-o",
         help="Output text file")
     args = vars(parser.parse_args())
-
 
     infile = args['cooler_file']
     if args['out'] is None:

@@ -5,15 +5,17 @@ import numpy as np
 import pandas as pd
 import cooler
 import h5py
-import time
 
 TILESIZE = 256
 
 where = np.flatnonzero
-chromsizes = cooler.read_chromsizes('http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt')  # defaults to reading chr#,X,Y,M
+chromsizes = cooler.read_chromsizes(
+    'http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt'
+)  # defaults to reading chr#,X,Y,M
 chromosomes = list(chromsizes.keys())
 chromid_map = dict(zip(chromosomes, range(len(chromosomes))))
 cumul_lengths = np.r_[0, np.cumsum(chromsizes)]
+
 
 def absCoord2bin(c, pos):
     try:
@@ -22,7 +24,7 @@ def absCoord2bin(c, pos):
         return c.info['nbins']
     chrom = chromosomes[cid]
     relPos = pos - cumul_lengths[cid]
-    return  c.offset( (chrom, relPos, chromsizes[chrom]) )
+    return c.offset((chrom, relPos, chromsizes[chrom]))
 
 
 def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
@@ -42,9 +44,9 @@ def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
 
     return json.dumps({'dense': flat})
 
+
 def getData3(fpath, zoomLevel, startPos1, endPos1, startPos2, endPos2):
-    t1 = time.time()
-    f = h5py.File(fpath,'r')
+    f = h5py.File(fpath, 'r')
     c = cooler.Cooler(f[str(zoomLevel)])
     matrix = c.matrix(balance=True, as_pixels=True, join=True)
     cooler_matrix = {'cooler': c, 'matrix': matrix}
@@ -55,8 +57,7 @@ def getData3(fpath, zoomLevel, startPos1, endPos1, startPos2, endPos2):
     j0 = absCoord2bin(c, startPos2)
     j1 = absCoord2bin(c, endPos2)
 
-
-    if (i1-i0) == 0 or (j1-j0) == 0:
+    if (i1 - i0) == 0 or (j1 - j0) == 0:
         return pd.DataFrame(columns=['genome_start', 'genome_end', 'balanced'])
 
     pixels = c.matrix(as_pixels=True, max_chunk=np.inf)[i0:i1, j0:j1]
@@ -70,13 +71,14 @@ def getData3(fpath, zoomLevel, startPos1, endPos1, startPos2, endPos2):
     bins['chrom'] = bins['chrom'].cat.codes
     pixels = cooler.annotate(pixels, bins)
     pixels['genome_start'] = cumul_lengths[pixels['chrom1']] + pixels['start1']
-    pixels['genome_end']   = cumul_lengths[pixels['chrom2']] + pixels['end2']
-    pixels['balanced']     = pixels['count'] * pixels['weight1'] * pixels['weight2']
-    #print  type(pixels[map(lambda x: "{0:.2f}".format(x),map(lambda x: float(x),['genome_start', 'genome_end', 'balanced']))])
+    pixels['genome_end'] = cumul_lengths[pixels['chrom2']] + pixels['end2']
+    pixels['balanced'] = (
+        pixels['count'] *
+        pixels['weight1'] *
+        pixels['weight2']
+    )
 
     return pixels[['genome_start', 'genome_end', 'balanced']]
-	
-    #return pixels[map(lambda x: "{0:.2f}".format(x),map(lambda x: float(x),['genome_start', 'genome_end', 'balanced']))]
 
 
 def getInfo(FILEPATH):
