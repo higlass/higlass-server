@@ -43,7 +43,7 @@ LOGGING = {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': 'tilesets.log',
+            'filename': 'log/hgs.log',
             'formatter': 'verbose'
         },
     },
