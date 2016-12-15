@@ -118,6 +118,7 @@ def generate_tiles(elems, request):
         od[elems] = json.loads(response.read())["_source"]["tile_value"]
         return od
     else:
+        print "elems:", elems
         ud = makeUnaryDict(elems, queryset)
         if ud is None:
             return None
@@ -136,8 +137,9 @@ class UserDetail(generics.RetrieveAPIView):
 @api_view(['GET'])
 def tiles(request):
     global mats
-    # queryset=Tileset.objects.all()
-    hargs = request.GET.getlist("d")
+
+    # create a set so that we don't fetch the same tile multiple times
+    tileids_to_fetch = set(request.GET.getlist("d"))
     # with ProcessPoolExecutor() as executor:
     #	res = executor.map(parallelize, hargs)
     '''
@@ -145,15 +147,12 @@ def tiles(request):
     res = p.map(parallelize, hargs)
     '''
 
-    # create a set so that we don't fetch the same tile multiple times
-    hargs_set = set(hargs)
-    res = map(lambda x: generate_tiles(x, request), hargs_set)
-    d = {}
-    for item in res:
-        if item is None:
-            continue
-        d[item[0]] = item[1]
-    return JsonResponse(d, safe=False)
+    res = map(lambda x: generate_tiles(x, request), tileids_to_fetch)
+
+    # create a dictionary of tileids
+    result_dict = dict([i for i in res if i is not None])
+
+    return JsonResponse(result_dict, safe=False)
 
 @api_view(['GET'])
 def tileset_info(request):
