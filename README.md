@@ -7,8 +7,7 @@
 3. `pip install --upgrade -r requirements.txt`
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
-6. `mkdir higlass-server/data`
-7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
+6. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
 ## Jump start
 
@@ -29,7 +28,9 @@ curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dix
 curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
 ```
 
-This will return a UUID. This uuid can be used to retrieve tiles:
+In this case, we are providing UUIDs for each tileset. In practice, this is
+discouraged as it may lead to clashes with existing UUIDs. It's better not to
+provide this field and to get it from the response.
 
 Get tileset info:
 
