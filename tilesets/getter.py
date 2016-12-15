@@ -1,5 +1,4 @@
 from __future__ import division, print_function
-import json
 
 import numpy as np
 import pandas as pd
@@ -29,24 +28,6 @@ def absCoord2bin(c, pos):
     chrom = chromosomes[cid]
     relPos = pos - cumul_lengths[cid]
     return c.offset((chrom, relPos, chromsizes[chrom]))
-
-
-def getData(FILEPATH, zoomLevel, startPos1, endPos1, startPos2, endPos2):
-
-    groupname = str(zoomLevel)
-
-    with h5py.File(FILEPATH, 'r') as f:
-        c = cooler.Cooler(f[groupname])
-
-        i0 = absCoord2bin(c, startPos1)
-        i1 = absCoord2bin(c, endPos1)
-        j0 = absCoord2bin(c, startPos2)
-        j1 = absCoord2bin(c, endPos2)
-        mat = c.matrix(balance=True)[i0:i1, j0:j1]
-
-    flat = list(mat.toarray().ravel())
-
-    return json.dumps({'dense': flat})
 
 
 def getData3(f, zoomLevel, startPos1, endPos1, startPos2, endPos2):

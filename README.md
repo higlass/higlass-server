@@ -72,40 +72,24 @@ pip install clodius
 Getting a sample dataset:
 
 ```
-wget http://egg2.wustl.edu/roadmap/data/byFileType/signal/consolidated/macs2signal/foldChange/E002-H3K4me3.fc.signal.bigwig
+wget http://hgdownload.cse.ucsc.edu/goldenpath/hg19/encodeDCC/wgEncodeCaltechRnaSeq/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
 ```
 
 Aggregate it:
 
 ```
-python scripts/tile_bigWig.py --assembly hg19 --output-file E002-H3K4me3.fc.signal.hitile E002-H3K4me3.fc.signal.bigwig
+tile_bigWig.py wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig --output-file data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 ```
 
 Register it:
 
 ```
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/E002-H3K4me3.fc.signal.hitile","file_type":"hitile"}' http://localhost:8000/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2","file_type":"hitile"}' http://localhost:8000/tilesets/
 ```
 
 ### Registering a cooler file
 
 See the "Add a dataset" line in the "Jump Start" section above.
-
-### Benchmarking
-
-The file `doc/tile_requests` has a list of tiles requested for a 2D map. A potential benchmark for the performance of the server is seeing how long it takes to retrieve that set of tiles.
-
-Example sequential run:
-
-```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt
-```
-
-Example multi-tile request
-
-```
-/usr/bin/time python scripts/benchmark_server.py http://localhost:8001 674df80b-c157-4b5a-b6d4-64f99f990374 --tile-id-file doc/less_tile_requests.txt --at-once
-```
 
 ### Unit tests
 
