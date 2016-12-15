@@ -7,8 +7,7 @@
 3. `pip install --upgrade -r requirements.txt`
 4. resolve personal dependency issues that pip can't
 5. ensure access to port 8000
-6. `mkdir higlass-server/data`
-7. `python run_tornado.py` or `python manage.py runserver localhost:8000`
+6. `python run_tornado.py` or `python manage.py runserver localhost:8000`
 
 ## Jump start
 
@@ -22,26 +21,29 @@ python manage.py migrate
 python manage.py runserver localhost:8000
 ```
 
-Add a dataset
+Add two datasets
 
 ```
-wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler"}' http://localhost:8001/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
 ```
 
-This will return a UUID. This uuid can be used to retrieve tiles:
+In this case, we are providing UUIDs for each tileset. In practice, this is
+discouraged as it may lead to clashes with existing UUIDs. It's better not to
+provide this field and to get it from the response.
 
 Get tileset info:
 
 ```
-curl http://localhost:8001/tilesets/db/tileset_info/?d=767fc12a-f351-4678-8d23-d08996b4d7e4
+curl http://localhost:8001/tileset_info/?d=aa
+curl http://localhost:8001/tileset_info/?d=bb
 ```
 
 Get a tile:
 
 ```
-curl http://localhost:8001/tilesets/db/render/?d=acd52643-57ba-4a4d-9796-7e0b3ac8380e.0.0.0
+curl http://localhost:8001/tiles/?d=aa.0.0.0
+curl http://localhost:8001/tiles/?d=bb.0.0
 ```
 
 ### Preparing cooler files for use with `higlass-server`
@@ -111,4 +113,10 @@ Example multi-tile request
 
 ```
 python manage.py test tilesets
+```
+
+#### Resetting the database
+
+```
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
 ```
