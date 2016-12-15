@@ -11,3 +11,4 @@ h5py==2.6.0
 pandas==0.19.1
 requests==2.12.3
 slugid==1.0.7
+bumpversion==0.5.3
