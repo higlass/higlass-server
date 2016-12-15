@@ -41,7 +41,7 @@ def abs_coord_2_bin(c, abs_pos):
 
 
 def get_data(f, zoom_level, start_pos_1, end_pos_1, start_pos_2, end_pos_2):
-    """Get data?
+    """Get balanced pixel data.
 
     Args:
         f (File): File pointer to a .cool filer.
