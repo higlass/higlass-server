@@ -127,7 +127,7 @@ def generate_tile(tile_id, request):
                 )
 
         return (tile_id,
-                {'discrete': dense})
+                {'discrete': list([list(d) for d in dense])})
 
     elif tileset.file_type == "elasticsearch":
         response = urllib.urlopen(
