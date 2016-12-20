@@ -20,6 +20,30 @@ class GetterTest(dt.TestCase):
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
 
+class HiBedTest(dt.TestCase):
+    '''
+    Test retrieving interval data (hibed)
+    '''
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        self.tileset = Tileset.objects.create(
+            processed_file='data/cnv.hibed',
+            file_type='hibed',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_hibed_get(self):
+        returned = json.loads(
+                self.client.get('/tiles/?d={uuid}.{z}.{x}'.format(uuid=self.tileset.uuid, z=0, x=0)))
+
+        print "returned:", returned
+        pass
+
+
+
 
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):

@@ -117,8 +117,17 @@ def generate_tile(tile_id, request):
             tile_position[1]
         )
 
+    elif tileset.file_type == 'hibed':
+        dense = hdft.get_discrete_data(
+                h5py.File(
+                    tileset.processed_file
+                    ),
+                tile_position[0],
+                tile_position[1]
+                )
+
         return (tile_id,
-                {'dense': base64.b64encode(dense)})
+                {'discrete': dense})
 
     elif tileset.file_type == "elasticsearch":
         response = urllib.urlopen(
@@ -201,16 +210,16 @@ def tileset_info(request):
     tileset_uuids = request.GET.getlist("d")
     tileset_infos = {}
     for tileset_uuid in tileset_uuids:
-        cooler_file = queryset.filter(uuid=tileset_uuid).first()
+        tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
-        if cooler_file.private and request.user != cooler_file.owner:
+        if tileset_object.private and request.user != tileset_object.owner:
             # dataset is not public
             tileset_infos[tileset_uuid] = {'error': "Forbidden"}
             continue
 
-        if cooler_file.file_type == "hitile":
+        if tileset_object.file_type == "hitile" or tileset_object.file_type == 'hibed':
             tileset_info = hdft.get_tileset_info(
-                h5py.File(cooler_file.processed_file))
+                h5py.File(tileset_object.processed_file))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [0],
                 "max_pos": [tileset_info['max_pos']],
@@ -220,9 +229,9 @@ def tileset_info(request):
                 "tile_size": tileset_info['tile_size'],
                 "max_zoom": tileset_info['max_zoom']
             }
-        elif cooler_file.file_type == "elastic_search":
+        elif tileset_object.file_type == "elastic_search":
             response = urllib.urlopen(
-                cooler_file.processed_file + "/tileset_info")
+                tileset_object.processed_file + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         else:
             dsetname = queryset.filter(

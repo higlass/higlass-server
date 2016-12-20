@@ -39,3 +39,12 @@ python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b
 curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost/tilesets/
 curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
 
+# Test individual classes
+
+python manage.py test tilesets.tests.HiBedTest
+
+# Adding a new data type
+
+* Add a new tile getter in `generate_tile` in `tilesets/views.py`
+* Add a new tileset_info in `tileset_info` in `tilesets/views.py`
+* (Search for `cooler` in `views.py` and add the new file type as needed)
