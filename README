@@ -35,9 +35,14 @@ uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv 
 # 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
 python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
 
-# Add some data
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost/tilesets/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
+# Create a new instance
+
+port=8000
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; python manage.py runserver localhost:${port}
+port=8000
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/cnv.hibed","file_type":"hitile", "uid": "cc"}' http://localhost:${port}/tilesets/
 
 # Test individual classes
 

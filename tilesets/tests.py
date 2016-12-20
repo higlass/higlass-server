@@ -1,3 +1,4 @@
+from __future__ import print_function
 import django.test as dt
 
 from tilesets.models import Tileset
@@ -41,9 +42,6 @@ class HiBedTest(dt.TestCase):
         returned = json.loads(returned_text.content)
 
         self.assertTrue('discrete' in returned[tile_id])
-
-
-
 
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
