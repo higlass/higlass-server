@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import base64
 import clodius.hdf_tiles as hdft
 import django.db.models as dbm
@@ -117,7 +119,11 @@ def generate_tile(tile_id, request):
             tile_position[1]
         )
 
+        return (tile_id,
+                {'dense': base64.b64encode(dense)})
+
     elif tileset.file_type == 'hibed':
+
         dense = hdft.get_discrete_data(
                 h5py.File(
                     tileset.processed_file

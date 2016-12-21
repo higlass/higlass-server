@@ -36,12 +36,19 @@ class HiBedTest(dt.TestCase):
             owner=self.user1,
             uuid='hhb')
 
-    def test_hibed_get(self):
+    def test_hibed_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
         returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
         self.assertTrue('discrete' in returned[tile_id])
+
+    def test_hibed_get_tileset_info(self):
+        tile_id="{uuid}".format(uuid=self.tileset.uuid)
+        returned_text = self.client.get('/tileset_info/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
+
+        self.assertTrue('tile_size' in returned[tile_id])
 
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
