@@ -105,7 +105,6 @@ def generate_tile(tile_id, request):
     tileset_uuid = tile_id_parts[0]
 
     tileset = Tileset.objects.get(uuid=tileset_uuid)
-    print("tileset.file_type:", tileset.file_type)
 
     if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
