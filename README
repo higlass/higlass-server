@@ -33,9 +33,9 @@ port=8000
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; python manage.py runserver localhost:${port}
 
 port=8000
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost:${port}/tilesets/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost:${port}/tilesets/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/cnv_short.hibed","file_type":"hibed", "uid": "cc"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","filetype":"cooler", "datatype": "vector", "uid": "aa"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","filetype":"hitile", "datatype": "vector", "uid": "bb"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/cnv_short.hibed","file_type":"hibed", "datatype":"stacked-interval", "uid": "cc"}' http://localhost:${port}/tilesets/
 
 # Test individual classes
 

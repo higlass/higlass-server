@@ -110,7 +110,7 @@ def generate_tile(tile_id, request):
         # dataset is not public return an empty set
         return (tileset_uuid, {'error': "Forbidden"})
 
-    if tileset.file_type == "hitile":
+    if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
                 tileset.processed_file
@@ -122,7 +122,7 @@ def generate_tile(tile_id, request):
         return (tile_id,
                 {'dense': base64.b64encode(dense)})
 
-    elif tileset.file_type == 'hibed':
+    elif tileset.filetype == 'hibed':
 
         dense = hdft.get_discrete_data(
                 h5py.File(
@@ -135,7 +135,7 @@ def generate_tile(tile_id, request):
         return (tile_id,
                 {'discrete': list([list(d) for d in dense])})
 
-    elif tileset.file_type == "elasticsearch":
+    elif tileset.filetype == "elasticsearch":
         response = urllib.urlopen(
             tileset.processed_file + '/' + '.'.join(map(str, tile_position))
         )
@@ -223,7 +223,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = {'error': "Forbidden"}
             continue
 
-        if tileset_object.file_type == "hitile" or tileset_object.file_type == 'hibed':
+        if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
             tileset_info = hdft.get_tileset_info(
                 h5py.File(tileset_object.processed_file))
             tileset_infos[tileset_uuid] = {
@@ -235,7 +235,7 @@ def tileset_info(request):
                 "tile_size": tileset_info['tile_size'],
                 "max_zoom": tileset_info['max_zoom']
             }
-        elif tileset_object.file_type == "elastic_search":
+        elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.processed_file + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
@@ -284,7 +284,9 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         if 'ac' in request.GET:
             queryset = queryset.filter(name__contains=request.GET['ac'])
         if 't' in request.GET:
-            queryset = queryset.filter(file_type__contains=request.GET['t'])
+            queryset = queryset.filter(filetype=request.GET['t'])
+        if 'dt' in request.GET:
+            queryset = queryset.filter(datateyp=request.GET['dt'])
 
         ts_serializer = TilesetSerializer(queryset, many=True)
         return JsonResponse(

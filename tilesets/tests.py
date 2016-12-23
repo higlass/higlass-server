@@ -31,8 +31,8 @@ class HiBedTest(dt.TestCase):
         )
 
         self.tileset = Tileset.objects.create(
-            processed_file='data/cnv.hibed',
-            file_type='hibed',
+            processed_file='data/cnv_short.hibed',
+            filetype='hibed',
             owner=self.user1,
             uuid='hhb')
 
@@ -61,13 +61,13 @@ class TilesetsViewSetTest(dt.TestCase):
 
         self.tileset = Tileset.objects.create(
             processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
-            file_type='cooler',
+            filetype='cooler',
             owner=self.user1
         )
 
         self.hitile = Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-            file_type='hitile',
+            filetype='hitile',
             owner=self.user1
         )
 
@@ -104,7 +104,7 @@ class TilesetsViewSetTest(dt.TestCase):
         with self.assertRaises(ValueError):
             Tileset.objects.create(
                 processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                file_type='hitile',
+                filetype='hitile',
                 owner=dcam.AnonymousUser()
             )
 
@@ -113,7 +113,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True'
             }
         )
@@ -129,7 +129,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True'
             }
         )
@@ -159,7 +159,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'False'
             }
         )
@@ -180,7 +180,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         private_obj = Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-            file_type='hitile',
+            filetype='hitile',
             private=True,
             owner=self.user1
         )
@@ -296,7 +296,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True',
                 'name': 'one'
             }
@@ -305,7 +305,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True',
                 'name': 'tone'
             }
@@ -314,7 +314,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'cooler',
+                'filetype': 'cooler',
                 'private': 'True',
                 'name': 'tax'
             }
@@ -347,7 +347,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'xxxyx',
+                'filetype': 'xxxyx',
                 'private': 'True'
             }
         )
@@ -360,7 +360,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'a',
+                'filetype': 'a',
                 'private': 'True',
                 'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
             }
@@ -377,7 +377,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 '/tilesets/',
                 {
                     'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                    'file_type': 'a',
+                    'filetype': 'a',
                     'private': 'True',
                     'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
                 }
