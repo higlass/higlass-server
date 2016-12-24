@@ -218,6 +218,10 @@ def tileset_info(request):
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
+        if tileset_object is None:
+            tileset_infos[tileset_uuid] = {'error': 'No such tileset with uid: {}'.format(tileset_uuid)}
+            continue
+
         if tileset_object.private and request.user != tileset_object.owner:
             # dataset is not public
             tileset_infos[tileset_uuid] = {'error': "Forbidden"}

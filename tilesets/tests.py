@@ -427,5 +427,10 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = json.loads(self.client.get('/tilesets/?dt=1&dt=2').content)
         self.assertEqual(ret['count'], 2)
 
+    def test_get_nonexistant_tileset_info(self):
+        ret = json.loads(self.client.get('/tileset_info/?d=x1x').content)
+
+        # make sure above doesn't raise an error 
+
 
 # Create your tests here.
