@@ -33,6 +33,7 @@ class HiBedTest(dt.TestCase):
         self.tileset = Tileset.objects.create(
             processed_file='data/cnv_short.hibed',
             filetype='hibed',
+            datatype='stacked-interval',
             owner=self.user1,
             uuid='hhb')
 
@@ -348,6 +349,7 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                 'filetype': 'xxxyx',
+                'datatype': 'vector',
                 'private': 'True'
             }
         )
@@ -361,6 +363,7 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                 'filetype': 'a',
+                'datatype': 'vector',
                 'private': 'True',
                 'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
             }
@@ -378,6 +381,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 {
                     'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                     'filetype': 'a',
+                    'datatype': 'vector',
                     'private': 'True',
                     'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
                 }
@@ -390,6 +394,38 @@ class TilesetsViewSetTest(dt.TestCase):
 
         ret = json.loads(self.client.get('/tilesets/').content)
         self.assertEquals(ret['count'], 3)
+
+    def test_list_by_datatype(self):
+        ret = self.client.post(
+            '/tilesets/',
+            {
+                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'filetype': 'a',
+                'datatype': '1',
+                'private': 'True',
+                'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+            }
+        )
+
+        ret = self.client.post(
+            '/tilesets/',
+            {
+                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'filetype': 'a',
+                'datatype': '2',
+                'private': 'True',
+                'uid': 'bb'
+            }
+        )
+
+        ret = json.loads(self.client.get('/tilesets/?dt=1').content)
+        self.assertEqual(ret['count'], 1)
+
+        ret = json.loads(self.client.get('/tilesets/?dt=2').content)
+        self.assertEqual(ret['count'], 1)
+
+        ret = json.loads(self.client.get('/tilesets/?dt=1&dt=2').content)
+        self.assertEqual(ret['count'], 2)
 
 
 # Create your tests here.

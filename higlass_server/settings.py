@@ -73,7 +73,8 @@ INSTALLED_APPS = [
     'tilesets.apps.TilesetsConfig',
     'rest_framework_swagger',
     'corsheaders',
-    'guardian'
+    'guardian',
+    'django_nose'
 ]
 
 MIDDLEWARE = [
@@ -176,3 +177,5 @@ STATIC_URL = '/static/'
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
 # )
+
+#TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'

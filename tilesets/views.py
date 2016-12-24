@@ -286,7 +286,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         if 't' in request.GET:
             queryset = queryset.filter(filetype=request.GET['t'])
         if 'dt' in request.GET:
-            queryset = queryset.filter(datateyp=request.GET['dt'])
+            queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
         ts_serializer = TilesetSerializer(queryset, many=True)
         return JsonResponse(
@@ -313,6 +313,18 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                 uid = self.request.data['uid']
         else:
             uid = slugid.nice()
+
+        if 'filetype' not in self.request.data:
+            raise rfe.APIException('Missing filetype')
+
+        datatype = None
+        if 'datatype' not in self.request.data:
+            if self.request.data['filetype'] == 'cooler':
+                datatype = 'matrix'
+            elif self.request.data['filetype'] == 'hitile':
+                datatype = 'vector'
+            else:
+                raise rfe.APIException('Missing datatype. Could not infer from filetype:', self.request.data['filetype'])
 
         if 'name' in self.request.data:
             name = self.request.data['name']
