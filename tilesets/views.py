@@ -252,6 +252,8 @@ def tileset_info(request):
                 make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
 
+        tileset_infos[tileset_uuid]['name'] = tileset_object.name
+
     return JsonResponse(tileset_infos)
 
 
