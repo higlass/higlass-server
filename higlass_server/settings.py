@@ -73,8 +73,7 @@ INSTALLED_APPS = [
     'tilesets.apps.TilesetsConfig',
     'rest_framework_swagger',
     'corsheaders',
-    'guardian',
-    'django_nose'
+    'guardian'
 ]
 
 MIDDLEWARE = [
