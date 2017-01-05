@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import base64
 import clodius.hdf_tiles as hdft
 import django.db.models as dbm
@@ -108,7 +110,7 @@ def generate_tile(tile_id, request):
         # dataset is not public return an empty set
         return (tileset_uuid, {'error': "Forbidden"})
 
-    if tileset.file_type == "hitile":
+    if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
                 tileset.processed_file
@@ -120,7 +122,20 @@ def generate_tile(tile_id, request):
         return (tile_id,
                 {'dense': base64.b64encode(dense)})
 
-    elif tileset.file_type == "elasticsearch":
+    elif tileset.filetype == 'hibed':
+
+        dense = hdft.get_discrete_data(
+                h5py.File(
+                    tileset.processed_file
+                    ),
+                tile_position[0],
+                tile_position[1]
+                )
+
+        return (tile_id,
+                {'discrete': list([list(d) for d in dense])})
+
+    elif tileset.filetype == "elasticsearch":
         response = urllib.urlopen(
             tileset.processed_file + '/' + '.'.join(map(str, tile_position))
         )
@@ -201,16 +216,20 @@ def tileset_info(request):
     tileset_uuids = request.GET.getlist("d")
     tileset_infos = {}
     for tileset_uuid in tileset_uuids:
-        cooler_file = queryset.filter(uuid=tileset_uuid).first()
+        tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
-        if cooler_file.private and request.user != cooler_file.owner:
+        if tileset_object is None:
+            tileset_infos[tileset_uuid] = {'error': 'No such tileset with uid: {}'.format(tileset_uuid)}
+            continue
+
+        if tileset_object.private and request.user != tileset_object.owner:
             # dataset is not public
             tileset_infos[tileset_uuid] = {'error': "Forbidden"}
             continue
 
-        if cooler_file.file_type == "hitile":
+        if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
             tileset_info = hdft.get_tileset_info(
-                h5py.File(cooler_file.processed_file))
+                h5py.File(tileset_object.processed_file))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [0],
                 "max_pos": [tileset_info['max_pos']],
@@ -220,9 +239,9 @@ def tileset_info(request):
                 "tile_size": tileset_info['tile_size'],
                 "max_zoom": tileset_info['max_zoom']
             }
-        elif cooler_file.file_type == "elastic_search":
+        elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
-                cooler_file.processed_file + "/tileset_info")
+                tileset_object.processed_file + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         else:
             dsetname = queryset.filter(
@@ -232,6 +251,8 @@ def tileset_info(request):
             if dsetname not in mats:
                 make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
+
+        tileset_infos[tileset_uuid]['name'] = tileset_object.name
 
     return JsonResponse(tileset_infos)
 
@@ -269,7 +290,9 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         if 'ac' in request.GET:
             queryset = queryset.filter(name__contains=request.GET['ac'])
         if 't' in request.GET:
-            queryset = queryset.filter(file_type__contains=request.GET['t'])
+            queryset = queryset.filter(filetype=request.GET['t'])
+        if 'dt' in request.GET:
+            queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
         ts_serializer = TilesetSerializer(queryset, many=True)
         return JsonResponse(
@@ -296,6 +319,18 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                 uid = self.request.data['uid']
         else:
             uid = slugid.nice()
+
+        if 'filetype' not in self.request.data:
+            raise rfe.APIException('Missing filetype')
+
+        datatype = None
+        if 'datatype' not in self.request.data:
+            if self.request.data['filetype'] == 'cooler':
+                datatype = 'matrix'
+            elif self.request.data['filetype'] == 'hitile':
+                datatype = 'vector'
+            else:
+                raise rfe.APIException('Missing datatype. Could not infer from filetype:', self.request.data['filetype'])
 
         if 'name' in self.request.data:
             name = self.request.data['name']

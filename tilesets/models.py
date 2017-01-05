@@ -9,7 +9,8 @@ class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
     processed_file = models.TextField()
-    file_type = models.TextField()
+    filetype = models.TextField()
+    datatype = models.TextField(default='unknown')
     owner = models.ForeignKey(
         'auth.User', related_name='tilesets', on_delete=models.CASCADE
     )
