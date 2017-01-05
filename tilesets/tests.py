@@ -1,3 +1,4 @@
+from __future__ import print_function
 import django.test as dt
 
 from tilesets.models import Tileset
@@ -20,6 +21,35 @@ class GetterTest(dt.TestCase):
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
 
+class HiBedTest(dt.TestCase):
+    '''
+    Test retrieving interval data (hibed)
+    '''
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        self.tileset = Tileset.objects.create(
+            processed_file='data/cnv_short.hibed',
+            filetype='hibed',
+            datatype='stacked-interval',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_hibed_get_tile(self):
+        tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
+        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
+
+        self.assertTrue('discrete' in returned[tile_id])
+
+    def test_hibed_get_tileset_info(self):
+        tile_id="{uuid}".format(uuid=self.tileset.uuid)
+        returned_text = self.client.get('/tileset_info/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
+
+        self.assertTrue('tile_size' in returned[tile_id])
 
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
@@ -30,15 +60,15 @@ class TilesetsViewSetTest(dt.TestCase):
             username='user2', password='pass'
         )
 
-        self.tileset = Tileset.objects.create(
+        self.cooler = Tileset.objects.create(
             processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
-            file_type='cooler',
+            filetype='cooler',
             owner=self.user1
         )
 
         self.hitile = Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-            file_type='hitile',
+            filetype='hitile',
             owner=self.user1
         )
 
@@ -49,7 +79,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/tiles/?d={uuid}.{z}.{x}.{y}'.format(
-                    uuid=self.tileset.uuid, x=x, y=y, z=z
+                    uuid=self.cooler.uuid, x=x, y=y, z=z
                 )
             ).content
         )
@@ -57,9 +87,9 @@ class TilesetsViewSetTest(dt.TestCase):
         r = base64.decodestring(returned[returned.keys()[0]]['dense'])
         q = np.frombuffer(r, dtype=np.float32)
 
-        with h5py.File(self.tileset.processed_file) as f:
+        with h5py.File(self.cooler.processed_file) as f:
 
-            mat = [f, getter.get_info(self.tileset.processed_file)]
+            mat = [f, getter.get_info(self.cooler.processed_file)]
             t = tiles.make_tile(z, x, y, mat)
 
             # test the base64 encoding
@@ -75,7 +105,7 @@ class TilesetsViewSetTest(dt.TestCase):
         with self.assertRaises(ValueError):
             Tileset.objects.create(
                 processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                file_type='hitile',
+                filetype='hitile',
                 owner=dcam.AnonymousUser()
             )
 
@@ -84,7 +114,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True'
             }
         )
@@ -100,7 +130,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True'
             }
         )
@@ -130,7 +160,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'False'
             }
         )
@@ -151,7 +181,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         private_obj = Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-            file_type='hitile',
+            filetype='hitile',
             private=True,
             owner=self.user1
         )
@@ -178,16 +208,16 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
-                    uuid=self.tileset.uuid
+                    uuid=self.cooler.uuid
                 )
             ).content
         )
 
         self.assertTrue('{uuid}.1.0.0'.format(
-            uuid=self.tileset.uuid) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
         self.assertTrue('{uuid}.1.0.1'.format(
-            uuid=self.tileset.uuid) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
 
     def test_get_same_tiles(self):
@@ -197,7 +227,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
-                    uuid=self.tileset.uuid
+                    uuid=self.cooler.uuid
                 )
             ).content
         )
@@ -213,25 +243,25 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.1.5.5'.format(uuid=self.tileset.uuid)
+                '/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
             ).content
         )
 
         self.assertTrue(
             '{uuid}.1.5.5'.format(
-                uuid=self.tileset.uuid
+                uuid=self.cooler.uuid
             ) not in returned.keys()
         )
 
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.20.5.5'.format(uuid=self.tileset.uuid)
+                '/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
             ).content
         )
 
         self.assertTrue(
             '{uuid}.1.5.5'.format(
-                uuid=self.tileset.uuid
+                uuid=self.cooler.uuid
             ) not in returned.keys()
         )
 
@@ -250,6 +280,19 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertEqual(returned[uuid][u'max_zoom'], 22)
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
 
+        self.assertTrue(u'name' in returned[uuid])
+
+    def test_get_cooler_tileset_info(self):
+        returned = json.loads(
+            self.client.get(
+                '/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
+            ).content
+        )
+
+        uuid = "{uuid}".format(uuid=self.cooler.uuid)
+        self.assertTrue(u'name' in returned[uuid])
+
+
     def test_get_hitile_tile(self):
         returned = json.loads(
             self.client.get(
@@ -267,7 +310,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True',
                 'name': 'one'
             }
@@ -276,7 +319,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'hitile',
+                'filetype': 'hitile',
                 'private': 'True',
                 'name': 'tone'
             }
@@ -285,7 +328,7 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'cooler',
+                'filetype': 'cooler',
                 'private': 'True',
                 'name': 'tax'
             }
@@ -318,7 +361,8 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'xxxyx',
+                'filetype': 'xxxyx',
+                'datatype': 'vector',
                 'private': 'True'
             }
         )
@@ -331,7 +375,8 @@ class TilesetsViewSetTest(dt.TestCase):
             '/tilesets/',
             {
                 'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                'file_type': 'a',
+                'filetype': 'a',
+                'datatype': 'vector',
                 'private': 'True',
                 'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
             }
@@ -348,7 +393,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 '/tilesets/',
                 {
                     'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
-                    'file_type': 'a',
+                    'filetype': 'a',
+                    'datatype': 'vector',
                     'private': 'True',
                     'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
                 }
@@ -361,6 +407,43 @@ class TilesetsViewSetTest(dt.TestCase):
 
         ret = json.loads(self.client.get('/tilesets/').content)
         self.assertEquals(ret['count'], 3)
+
+    def test_list_by_datatype(self):
+        ret = self.client.post(
+            '/tilesets/',
+            {
+                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'filetype': 'a',
+                'datatype': '1',
+                'private': 'True',
+                'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+            }
+        )
+
+        ret = self.client.post(
+            '/tilesets/',
+            {
+                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'filetype': 'a',
+                'datatype': '2',
+                'private': 'True',
+                'uid': 'bb'
+            }
+        )
+
+        ret = json.loads(self.client.get('/tilesets/?dt=1').content)
+        self.assertEqual(ret['count'], 1)
+
+        ret = json.loads(self.client.get('/tilesets/?dt=2').content)
+        self.assertEqual(ret['count'], 1)
+
+        ret = json.loads(self.client.get('/tilesets/?dt=1&dt=2').content)
+        self.assertEqual(ret['count'], 2)
+
+    def test_get_nonexistant_tileset_info(self):
+        ret = json.loads(self.client.get('/tileset_info/?d=x1x').content)
+
+        # make sure above doesn't raise an error 
 
 
 # Create your tests here.

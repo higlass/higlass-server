@@ -4,16 +4,8 @@ uwsgi --http :8000 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/
 pip install Djano uwsgi
 sudo apt-get install zlib1g-dev
 sudo apt-get install uwsgi-plugin-python
-pip install djangorestframework
-pip install django-rest-swagger
-pip install django-cors-headers
-pip install pygments
-pip install h5py
-pip install pandas
-pip install cooler
-pip install clodius
-pip install django-guardian
-pip install slugid
+pip install djangorestframework django-rest-swagger django-cors-headers pygments h5py
+pip install pandas cooler clodius django-guardian slugid
 
 # Delete existing datasets
 # rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
@@ -35,7 +27,22 @@ uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv 
 # 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
 python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
 
-# Add some data
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost/tilesets/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost/tilesets/
+# Create a new instance
 
+port=8000
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; python manage.py runserver localhost:${port}
+
+port=8000
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","filetype":"cooler", "datatype": "matrix", "uid": "aa"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","filetype":"hitile", "datatype": "vector", "uid": "bb"}' http://localhost:${port}/tilesets/
+curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/cnv_short.hibed","filetype":"hibed", "datatype":"stacked-interval", "uid": "cc"}' http://localhost:${port}/tilesets/
+
+# Test individual classes
+
+python manage.py test tilesets.tests.HiBedTest
+
+# Adding a new data type
+
+* Add a new tile getter in `generate_tile` in `tilesets/views.py`
+* Add a new tileset_info in `tileset_info` in `tilesets/views.py`
+* (Search for `cooler` in `views.py` and add the new file type as needed)
