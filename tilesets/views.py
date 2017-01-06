@@ -11,7 +11,10 @@ import logging
 import math
 import numpy as np
 import os.path as op
+import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
+import rest_framework.parsers as rfp
+import rest_framework.response as rfr
 import slugid
 import urllib
 
@@ -265,6 +268,18 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     serializer_class = TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
+    #parser_classes = (rfp.FileUploadParser,)
+
+    @rfd.parser_classes((rfp.FileUploadParser,))
+    def create(self, request):
+        '''
+        Upload a tileset
+        '''
+        print("request.data:", request.data)
+        #print("Uploading file:", filename)
+        return rfr.Response(status=200)
+
+
 
     def list(self, request, *args, **kwargs):
         '''List the available tilesets

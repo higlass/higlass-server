@@ -12,6 +12,25 @@ import numpy as np
 import getter
 import tiles
 
+class FileUploadTest(dt.TestCase):
+    '''
+    Test file upload functionality
+    '''
+    def test_upload_file(self):
+        print("hi")
+        c = dt.Client()
+        ret = c.post(
+            '/tilesets/',
+            {
+                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'filetype': 'hitile',
+                'datatype': 'vector',
+                'uid': 'bb',
+                'private': 'True'
+            }
+        )
+
+
 
 class GetterTest(dt.TestCase):
     def test_get_info(self):
