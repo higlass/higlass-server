@@ -116,7 +116,7 @@ def generate_tile(tile_id, request):
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
-                tileset.datafile
+                tileset.datafile.url
             ),
             tile_position[0],
             tile_position[1]
@@ -318,8 +318,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
-        print("performing_create:")
-
         if 'uid' in self.request.data:
             try:
                 self.queryset.get(uuid=self.request.data['uid'])

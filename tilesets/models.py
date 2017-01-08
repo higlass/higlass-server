@@ -1,5 +1,9 @@
 from __future__ import unicode_literals
 
+import django.core.files as dcf 
+import hashlib
+import os
+import os.path as op
 import slugid
 
 from django.db import models
