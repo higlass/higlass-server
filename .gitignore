@@ -10,4 +10,4 @@ db.sqlite3
 *.swo
 *.swn
 *.swm
-uploads/
+media/
