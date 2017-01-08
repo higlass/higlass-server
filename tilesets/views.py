@@ -116,7 +116,7 @@ def generate_tile(tile_id, request):
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
-                tileset.processed_file
+                tileset.datafile
             ),
             tile_position[0],
             tile_position[1]
@@ -129,7 +129,7 @@ def generate_tile(tile_id, request):
 
         dense = hdft.get_discrete_data(
                 h5py.File(
-                    tileset.processed_file
+                    tileset.datafile.url
                     ),
                 tile_position[0],
                 tile_position[1]
@@ -140,11 +140,11 @@ def generate_tile(tile_id, request):
 
     elif tileset.filetype == "elasticsearch":
         response = urllib.urlopen(
-            tileset.processed_file + '/' + '.'.join(map(str, tile_position))
+            tileset.datafile + '/' + '.'.join(map(str, tile_position))
         )
         return (tile_id, json.loads(response.read())["_source"]["tile_value"])
     else:
-        tile_data = make_cooler_tile(tileset.processed_file, tile_position)
+        tile_data = make_cooler_tile(tileset.datafile.url, tile_position)
         if tile_data is None:
             return None
         return (tile_id, tile_data)
@@ -231,8 +231,10 @@ def tileset_info(request):
             continue
 
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
+            #print("datafile", tileset_object.datafile)
+            #print("datafile.url", datafile.url)
             tileset_info = hdft.get_tileset_info(
-                h5py.File(tileset_object.processed_file))
+                h5py.File(tileset_object.datafile.url))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [0],
                 "max_pos": [tileset_info['max_pos']],
@@ -244,12 +246,12 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
-                tileset_object.processed_file + "/tileset_info")
+                tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         else:
             dsetname = queryset.filter(
                 uuid=tileset_uuid
-            ).first().processed_file
+            ).first().datafile.url
 
             if dsetname not in mats:
                 make_mats(dsetname)
