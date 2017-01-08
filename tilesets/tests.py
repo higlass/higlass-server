@@ -1,16 +1,17 @@
 from __future__ import print_function
-import django.test as dt
-
-from tilesets.models import Tileset
 
 import django.contrib.auth.models as dcam
 
 import base64
+import django.test as dt
 import h5py
 import json
 import numpy as np
 import getter
+import rest_framework as rf
 import tiles
+
+import tilesets.models as tm
 
 class FileUploadTest(dt.TestCase):
     '''
@@ -19,18 +20,25 @@ class FileUploadTest(dt.TestCase):
     def test_upload_file(self):
         print("hi")
         c = dt.Client()
-        ret = c.post(
+        f = open( 'data/tiny.txt', 'r')
+
+        response = c.post(
             '/tilesets/',
             {
-                'processed_file': 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
+                'datafile': f,
                 'filetype': 'hitile',
                 'datatype': 'vector',
                 'uid': 'bb',
                 'private': 'True'
-            }
+            },
+            format='multipart'
         )
 
+        self.assertEqual(rf.status.HTTP_201_CREATED, response.status_code)
+        print("response:", response)
 
+        response = c.get('/tilesets/')
+        print("response:", response)
 
 class GetterTest(dt.TestCase):
     def test_get_info(self):
@@ -49,7 +57,7 @@ class HiBedTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        self.tileset = Tileset.objects.create(
+        self.tileset = tm.Tileset.objects.create(
             processed_file='data/cnv_short.hibed',
             filetype='hibed',
             datatype='stacked-interval',
@@ -79,20 +87,20 @@ class TilesetsViewSetTest(dt.TestCase):
             username='user2', password='pass'
         )
 
-        self.cooler = Tileset.objects.create(
+        self.cooler = tm.Tileset.objects.create(
             processed_file='data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
             filetype='cooler',
             owner=self.user1
         )
 
-        self.hitile = Tileset.objects.create(
+        self.hitile = tm.Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
             filetype='hitile',
             owner=self.user1
         )
 
     def tearDown(self):
-        Tileset.objects.all().delete()
+        tm.Tileset.objects.all().delete()
 
     def check_tile(self, z, x, y):
         returned = json.loads(
@@ -122,7 +130,7 @@ class TilesetsViewSetTest(dt.TestCase):
         Don't allow the creation of datasets by anonymouse users.
         """
         with self.assertRaises(ValueError):
-            Tileset.objects.create(
+            tm.Tileset.objects.create(
                 processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
                 filetype='hitile',
                 owner=dcam.AnonymousUser()
@@ -140,7 +148,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret_obj = json.loads(ret.content)
 
         # since we posted this object as anonymous, we expect it not be private
-        t = Tileset.objects.get(uuid=ret_obj['uuid'])
+        t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
         self.assertFalse(t.private)
 
         c = dt.Client()
@@ -154,7 +162,7 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
         ret_obj = json.loads(ret.content)
-        t = Tileset.objects.get(uuid=ret_obj['uuid'])
+        t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
 
         # this object should be private because we were logged in and requested
         # it to be private
@@ -198,7 +206,7 @@ class TilesetsViewSetTest(dt.TestCase):
         access it if we're logged in as the proper user
         """
 
-        private_obj = Tileset.objects.create(
+        private_obj = tm.Tileset.objects.create(
             processed_file='data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile',
             filetype='hitile',
             private=True,

@@ -11,10 +11,12 @@ import logging
 import math
 import numpy as np
 import os.path as op
+import rest_framework as rf
 import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
 import rest_framework.response as rfr
+import tilesets.serializers as tss
 import slugid
 import urllib
 
@@ -27,8 +29,6 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
 from tilesets.models import Tileset
-from tilesets.serializers import TilesetSerializer
-from tilesets.serializers import UserSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -153,12 +153,12 @@ def generate_tile(tile_id, request):
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = tss.UserSerializer
 
 
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = tss.UserSerializer
 
 
 @api_view(['GET'])
@@ -265,21 +265,10 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
 
     queryset = Tileset.objects.all()
-    serializer_class = TilesetSerializer
+    serializer_class = tss.TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
-    #parser_classes = (rfp.FileUploadParser,)
-
-    @rfd.parser_classes((rfp.FileUploadParser,))
-    def create(self, request):
-        '''
-        Upload a tileset
-        '''
-        print("request.data:", request.data)
-        #print("Uploading file:", filename)
-        return rfr.Response(status=200)
-
-
+    parser_classes = (rfp.MultiPartParser,)
 
     def list(self, request, *args, **kwargs):
         '''List the available tilesets
@@ -303,13 +292,16 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         )
 
         if 'ac' in request.GET:
+            # Autocomplete fields
             queryset = queryset.filter(name__contains=request.GET['ac'])
         if 't' in request.GET:
+            # Filter by filetype
             queryset = queryset.filter(filetype=request.GET['t'])
         if 'dt' in request.GET:
+            # Filter by datatype
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
-        ts_serializer = TilesetSerializer(queryset, many=True)
+        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         return JsonResponse(
             {"count": len(queryset), "results": ts_serializer.data}
         )
@@ -324,6 +316,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
+        print("performing_create:")
 
         if 'uid' in self.request.data:
             try:
@@ -347,10 +340,13 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             else:
                 raise rfe.APIException('Missing datatype. Could not infer from filetype:', self.request.data['filetype'])
 
+
+        datafile = self.request.data.get('datafile')
+
         if 'name' in self.request.data:
             name = self.request.data['name']
         else:
-            name = op.split(self.request.data['processed_file'])[1]
+            name = op.split(datafile.name)[1]
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user

@@ -4,11 +4,11 @@ import slugid
 
 from django.db import models
 
-
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
-    processed_file = models.TextField()
+    #processed_file = models.TextField()
+    datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
     datatype = models.TextField(default='unknown')
     owner = models.ForeignKey(
