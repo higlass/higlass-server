@@ -10,3 +10,5 @@ db.sqlite3
 *.swo
 *.swn
 *.swm
+media/
+.DS_Store
