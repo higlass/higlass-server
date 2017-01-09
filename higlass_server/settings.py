@@ -62,6 +62,8 @@ LOGGING = {
     }
 }
 
+DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+
 # Application definition
 
 INSTALLED_APPS = [
