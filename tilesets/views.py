@@ -11,7 +11,12 @@ import logging
 import math
 import numpy as np
 import os.path as op
+import rest_framework as rf
+import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
+import rest_framework.parsers as rfp
+import rest_framework.response as rfr
+import tilesets.serializers as tss
 import slugid
 import urllib
 
@@ -24,8 +29,6 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
 from tilesets.models import Tileset
-from tilesets.serializers import TilesetSerializer
-from tilesets.serializers import UserSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +116,7 @@ def generate_tile(tile_id, request):
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
-                tileset.processed_file
+                tileset.datafile.url
             ),
             tile_position[0],
             tile_position[1]
@@ -126,7 +129,7 @@ def generate_tile(tile_id, request):
 
         dense = hdft.get_discrete_data(
                 h5py.File(
-                    tileset.processed_file
+                    tileset.datafile.url
                     ),
                 tile_position[0],
                 tile_position[1]
@@ -137,11 +140,11 @@ def generate_tile(tile_id, request):
 
     elif tileset.filetype == "elasticsearch":
         response = urllib.urlopen(
-            tileset.processed_file + '/' + '.'.join(map(str, tile_position))
+            tileset.datafile + '/' + '.'.join(map(str, tile_position))
         )
         return (tile_id, json.loads(response.read())["_source"]["tile_value"])
     else:
-        tile_data = make_cooler_tile(tileset.processed_file, tile_position)
+        tile_data = make_cooler_tile(tileset.datafile.url, tile_position)
         if tile_data is None:
             return None
         return (tile_id, tile_data)
@@ -150,12 +153,12 @@ def generate_tile(tile_id, request):
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = tss.UserSerializer
 
 
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = tss.UserSerializer
 
 
 @api_view(['GET'])
@@ -228,8 +231,10 @@ def tileset_info(request):
             continue
 
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
+            #print("datafile", tileset_object.datafile)
+            #print("datafile.url", datafile.url)
             tileset_info = hdft.get_tileset_info(
-                h5py.File(tileset_object.processed_file))
+                h5py.File(tileset_object.datafile.url))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [0],
                 "max_pos": [tileset_info['max_pos']],
@@ -241,12 +246,12 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
-                tileset_object.processed_file + "/tileset_info")
+                tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         else:
             dsetname = queryset.filter(
                 uuid=tileset_uuid
-            ).first().processed_file
+            ).first().datafile.url
 
             if dsetname not in mats:
                 make_mats(dsetname)
@@ -262,9 +267,10 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
 
     queryset = Tileset.objects.all()
-    serializer_class = TilesetSerializer
+    serializer_class = tss.TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
+    parser_classes = (rfp.MultiPartParser,)
 
     def list(self, request, *args, **kwargs):
         '''List the available tilesets
@@ -288,13 +294,16 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         )
 
         if 'ac' in request.GET:
+            # Autocomplete fields
             queryset = queryset.filter(name__contains=request.GET['ac'])
         if 't' in request.GET:
+            # Filter by filetype
             queryset = queryset.filter(filetype=request.GET['t'])
         if 'dt' in request.GET:
+            # Filter by datatype
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
-        ts_serializer = TilesetSerializer(queryset, many=True)
+        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         return JsonResponse(
             {"count": len(queryset), "results": ts_serializer.data}
         )
@@ -309,7 +318,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
-
         if 'uid' in self.request.data:
             try:
                 self.queryset.get(uuid=self.request.data['uid'])
@@ -332,10 +340,13 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             else:
                 raise rfe.APIException('Missing datatype. Could not infer from filetype:', self.request.data['filetype'])
 
+
+        datafile = self.request.data.get('datafile')
+
         if 'name' in self.request.data:
             name = self.request.data['name']
         else:
-            name = op.split(self.request.data['processed_file'])[1]
+            name = op.split(datafile.name)[1]
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user
