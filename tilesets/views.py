@@ -253,7 +253,7 @@ def tileset_info(request):
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
-        elif tilesest_object.filetype == 'beddb':
+        elif tileset_object.filetype == 'beddb':
             response = cdbt.get_tileset_info(tileset_object.datafile.url)
         else:
             dsetname = queryset.filter(
