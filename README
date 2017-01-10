@@ -36,6 +36,7 @@ port=8000
 curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
 curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
 curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked-interval" -F "uid=cc" localhost:${port}/tilesets/
+curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
 
 # Test individual classes
 
