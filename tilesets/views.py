@@ -3,6 +3,8 @@ from __future__ import print_function
 import base64
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
+import django.core.signals as dcs
+import django.dispatch as dd
 import django.db.models as dbm
 import getter
 import guardian.utils as gu
@@ -21,6 +23,8 @@ import sqlite3
 import tilesets.serializers as tss
 import slugid
 import urllib
+import sys
+
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -85,7 +89,6 @@ def make_cooler_tile(cooler_filepath, tile_position):
     tile_data['dense'] = base64.b64encode(tile)
 
     return tile_data
-
 
 def generate_tile(tile_id, request):
     '''

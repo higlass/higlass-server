@@ -38,6 +38,8 @@ curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2
 curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked-interval" -F "uid=cc" localhost:${port}/tilesets/
 curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
 
+curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
+
 # Test individual classes
 
 python manage.py test tilesets.tests.HiBedTest
