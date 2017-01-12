@@ -31,8 +31,10 @@ def get_gene_suggestions(db_file, text):
     to_return = []
     for (importance, chrOffset, fields) in rows:
         field_parts = fields.split('\t')
-        to_return += [{'txStart': chrOffset + int(field_parts[1]),
-                      'txEnd': chrOffset + int(field_parts[2]),
+        to_return += [{
+                      'chr': field_parts[0],
+                      'txStart': int(field_parts[1]),
+                      'txEnd': int(field_parts[2]),
                       'score': importance,
                       'geneName': field_parts[3]}]
 
