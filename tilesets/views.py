@@ -21,6 +21,7 @@ import rest_framework.parsers as rfp
 import rest_framework.response as rfr
 import sqlite3
 import tilesets.serializers as tss
+import tilesets.suggestions as tsu
 import slugid
 import urllib
 import sys
@@ -167,6 +168,24 @@ class UserList(generics.ListAPIView):
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
+
+@api_view(['GET'])
+def suggest(request):
+    '''
+    Suggest gene names based on the input text
+    '''
+    # suggestions are taken from a gene annotations tileset
+    tileset_uuid = request.GET['d'];
+    text = request.GET['ac']
+
+    try:
+        tileset = Tileset.objects.get(uuid=tileset_uuid)
+    except:
+        raise rfe.NotFound('Suggestion source file not found')
+
+    result_dict = tsu.get_gene_suggestions(tileset.datafile.url, text)
+
+    return JsonResponse(result_dict,  safe=False)
 
 
 @api_view(['GET'])

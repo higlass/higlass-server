@@ -16,6 +16,41 @@ import tiles
 
 import tilesets.models as tm
 
+class SuggestionsTest(dt.TestCase):
+    '''
+    Test gene suggestions
+    '''
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/gene_annotations.short.db', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='beddb',
+            datatype='gene-annotations',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_suggest(self):
+        # shouldn't be found and shouldn't raise an error
+        ret = self.client.get('/suggest/?d=xx&ac=r')
+
+        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        suggestions = json.loads(ret.content)
+
+        self.assertGreater(len(suggestions), 0)
+        self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
+
+        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        suggestions = json.loads(ret.content)
+        
+        self.assertGreater(len(suggestions), 0)
+        self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
+
+
 class FileUploadTest(dt.TestCase):
     '''
     Test file upload functionality
