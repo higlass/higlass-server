@@ -36,7 +36,6 @@ python manage.py runserver localhost:${port}
 port=8000
 curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
 curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
-curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked-interval" -F "uid=cc" localhost:${port}/tilesets/
 curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
 
 curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
@@ -52,5 +51,61 @@ python manage.pdy test tilesets.tests.HiBedTest
 * (Search for `cooler` in `views.py` and add the new file type as needed)
 
 # Real data
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/gene-annotations-hg19.db
+curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix"  http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878InputStdSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878InputStdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+
+curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
+curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
+curl -F "datafile=@/tmp/Dixon2015-H1_hESC-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
+
+
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/
 
 curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/
