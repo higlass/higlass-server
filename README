@@ -36,13 +36,20 @@ port=8000
 curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
 curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
 curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked-interval" -F "uid=cc" localhost:${port}/tilesets/
+curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
+
+curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
 
 # Test individual classes
 
-python manage.py test tilesets.tests.HiBedTest
+python manage.pdy test tilesets.tests.HiBedTest
 
 # Adding a new data type
 
 * Add a new tile getter in `generate_tile` in `tilesets/views.py`
 * Add a new tileset_info in `tileset_info` in `tilesets/views.py`
 * (Search for `cooler` in `views.py` and add the new file type as needed)
+
+# Real data
+
+curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/

@@ -17,6 +17,7 @@ urlpatterns = [
     url(r'^schema', schema_view),
     url(r'^tiles/$', views.tiles),
     url(r'^tileset_info/$', views.tileset_info),
+    url(r'^suggest/$', views.suggest),
     url(r'^', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^users/$', views.UserList.as_view()),

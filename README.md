@@ -89,11 +89,9 @@ See the "Add a dataset" line in the "Jump Start" section above.
 ### Unit tests
 
 ```
-wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
-
-wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/gene_annotations.short.db
 
 python manage.py test tilesets
 ```

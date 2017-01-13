@@ -2,6 +2,9 @@ from __future__ import print_function
 
 import base64
 import clodius.hdf_tiles as hdft
+import clodius.db_tiles as cdt
+import django.core.signals as dcs
+import django.dispatch as dd
 import django.db.models as dbm
 import getter
 import guardian.utils as gu
@@ -16,9 +19,13 @@ import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
 import rest_framework.response as rfr
+import sqlite3
 import tilesets.serializers as tss
+import tilesets.suggestions as tsu
 import slugid
 import urllib
+import sys
+
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -84,7 +91,6 @@ def make_cooler_tile(cooler_filepath, tile_position):
 
     return tile_data
 
-
 def generate_tile(tile_id, request):
     '''
     Create a tile. The tile_id specifies the dataset as well
@@ -125,6 +131,9 @@ def generate_tile(tile_id, request):
         return (tile_id,
                 {'dense': base64.b64encode(dense)})
 
+    elif tileset.filetype == 'beddb':
+        return (tile_id, cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1]))
+
     elif tileset.filetype == 'hibed':
 
         dense = hdft.get_discrete_data(
@@ -159,6 +168,24 @@ class UserList(generics.ListAPIView):
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
+
+@api_view(['GET'])
+def suggest(request):
+    '''
+    Suggest gene names based on the input text
+    '''
+    # suggestions are taken from a gene annotations tileset
+    tileset_uuid = request.GET['d'];
+    text = request.GET['ac']
+
+    try:
+        tileset = Tileset.objects.get(uuid=tileset_uuid)
+    except:
+        raise rfe.NotFound('Suggestion source file not found')
+
+    result_dict = tsu.get_gene_suggestions(tileset.datafile.url, text)
+
+    return JsonResponse(result_dict,  safe=False)
 
 
 @api_view(['GET'])
@@ -248,6 +275,8 @@ def tileset_info(request):
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
+        elif tileset_object.filetype == 'beddb':
+            tileset_infos[tileset_uuid] = cdt.get_tileset_info(tileset_object.datafile.url)
         else:
             dsetname = queryset.filter(
                 uuid=tileset_uuid
