@@ -29,8 +29,9 @@ python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b
 
 # Create a new instance
 
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
 port=8000
-rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; python manage.py runserver localhost:${port}
+python manage.py runserver localhost:${port}
 
 port=8000
 curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
