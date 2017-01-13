@@ -42,10 +42,14 @@ curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gen
 
 # Test individual classes
 
-python manage.py test tilesets.tests.HiBedTest
+python manage.pdy test tilesets.tests.HiBedTest
 
 # Adding a new data type
 
 * Add a new tile getter in `generate_tile` in `tilesets/views.py`
 * Add a new tileset_info in `tileset_info` in `tilesets/views.py`
 * (Search for `cooler` in `views.py` and add the new file type as needed)
+
+# Real data
+
+curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/
