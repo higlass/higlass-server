@@ -23,10 +23,46 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'e71$i%^qmf9cml7-ga@r+h3&v$y4c48a&u@%@$8t87z*qz9#ks'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1']
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt': "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'log/hgs.log',
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'DEBUG',
+        },
+        'tilesets': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+        },
+    }
+}
+
+DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
@@ -41,6 +77,7 @@ INSTALLED_APPS = [
     'tilesets.apps.TilesetsConfig',
     'rest_framework_swagger',
     'corsheaders',
+    'guardian'
 ]
 
 MIDDLEWARE = [
@@ -48,20 +85,25 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    #'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
-#CORS_ALLOW_CREDENTIALS = False
-
-CORS_ORIGIN_WHITELIST = (
-'134.174.140.208:9000'
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend', # this is default
+    'guardian.backends.ObjectPermissionBackend',
 )
 
-#CORS_ALLOW_HEADERS = default_headers
+CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ALLOW_CREDENTIALS = False
+
+CORS_ORIGIN_WHITELIST = (
+    '134.174.140.208:9000'
+)
+
+# CORS_ALLOW_HEADERS = default_headers
 
 ROOT_URLCONF = 'higlass_server.urls'
 
@@ -113,9 +155,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-
-
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10
 }
@@ -136,10 +175,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
-#STATIC_ROOT = '/Users/jacobluber/higlass-server/api/static/'
 STATIC_URL = '/static/'
 
-#STATICFILES_DIRS = (
+# STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
-#)
+# )
 
+#TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'

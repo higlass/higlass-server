@@ -1,18 +1,16 @@
 mkvirtualenv higlass-server
 uwsgi --http :8000 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/
 
-pip install Djano uwsgi
+pip install Django uwsgi
 sudo apt-get install zlib1g-dev
 sudo apt-get install uwsgi-plugin-python
-pip install djangorestframework
-pip install django-rest-swagger
-pip install django-cors-headers
-pip install pygments
-pip install h5py
-pip install pandas
-pip install cooler
-pip install clodius
+pip install djangorestframework django-rest-swagger django-cors-headers pygments h5py
+pip install pandas cooler clodius django-guardian slugid
+
+# Delete existing datasets
+# rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
 python manage.py migrate
+
 
 # Run hg-server tests
 python manage.py test tilesets
@@ -28,3 +26,23 @@ uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv 
 
 # 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
 python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
+
+# Create a new instance
+
+port=8000
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; python manage.py runserver localhost:${port}
+
+port=8000
+curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
+curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
+curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked-interval" -F "uid=cc" localhost:${port}/tilesets/
+
+# Test individual classes
+
+python manage.py test tilesets.tests.HiBedTest
+
+# Adding a new data type
+
+* Add a new tile getter in `generate_tile` in `tilesets/views.py`
+* Add a new tileset_info in `tileset_info` in `tilesets/views.py`
+* (Search for `cooler` in `views.py` and add the new file type as needed)
