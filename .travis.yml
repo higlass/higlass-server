@@ -1,0 +1,20 @@
+language: python
+python:
+  - "2.7"
+
+#cache: apt
+#addons:
+#  apt:
+#    packages:
+
+install:
+  - pip install -r requirements.txt
+  - python manage.py migrate
+  - python manage.py runserver localhost:8000
+
+script:
+  - set -e
+  - wget -O -P data/ https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+  - wget -O -P data/ https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+  - wget -O -P data/ https://s3.amazonaws.com/pkerp/public/gene_annotations.short.db
+  - python manage.py test tilesets
