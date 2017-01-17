@@ -24,11 +24,12 @@ mv $COOL data/
 wget https://s3.amazonaws.com/pkerp/public/$HITILE
 mv $HITILE data/
 
-curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
-curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
+curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:8000/tilesets/
+curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:8000/tilesets/
 ```
 
-This will return a UUID. This uuid can be used to retrieve tiles:
+The "uid" parameter is optional, and if it were missing, one would be generated.
+This uuid can be used to retrieve tiles:
 
 Get tileset info:
 
@@ -57,7 +58,7 @@ python setup.py install
 recursive_agg_onefile.py file.cooler --out output.cooler
 ```
 
-### Preapring bigWig files for use with `higlass-server`
+### Preparing bigWig files for use with `higlass-server`
 
 [BigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) files contain values for positions along a genome. To be viewable using higlass, they need to be aggregated using `clodius`:
 
