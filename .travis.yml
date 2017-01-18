@@ -1,0 +1,55 @@
+# Based on http://lmjohns3.com/2015/06/using-travis-ci-with-miniconda-scipy-and-nose.html
+# Tweaked to specify versions on everything for stability
+language: python
+python:
+  - "2.7"
+cache: apt
+addons:
+  apt:
+    packages:
+    - libatlas-dev
+    - libatlas-base-dev
+    - liblapack-dev
+    - gfortran
+
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda2-4.2.12-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  # Prefer stability to having the latest
+  #- conda update --yes conda
+
+install:
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION cython==0.25.2 numpy=1.11.2
+  - pip install clodius==0.3.2
+  - pip install -r requirements.txt
+  - python manage.py migrate
+
+script:
+  - set -e
+
+  - COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+  - HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+  - ANNO=gene_annotations.short.db
+  - HIBED=cnv_short.hibed
+  - AHBED=arrowhead_domains_short.txt.multires.db
+  - HLBED=hiccups_loops_short.txt.multires.db
+
+  - wget https://s3.amazonaws.com/pkerp/public/$COOL    && mv $COOL data/
+  - wget https://s3.amazonaws.com/pkerp/public/$HITILE  && mv $HITILE data/
+  - wget https://s3.amazonaws.com/pkerp/public/$ANNO    && mv $ANNO data/
+  - wget https://s3.amazonaws.com/pkerp/public/$HIBED   && mv $HIBED data/
+  - wget https://s3.amazonaws.com/pkerp/public/$AHBED   && mv $AHBED data/
+  - wget https://s3.amazonaws.com/pkerp/public/$HLBED   && mv $HLBED data/
+
+  - echo 'foo bar' > data/tiny.txt
+  - python manage.py test tilesets
+
+  - PORT=8000
+  - python manage.py runserver localhost:$PORT &
+  - URL="http://localhost:$PORT/tilesets/"
+  - until $(curl --output /dev/null --silent --fail --globoff $URL); do echo '.'; sleep 1; done
+
+  - curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" $URL
+  - curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" $URL
+  # TODO: Check that the output is what we expect?
