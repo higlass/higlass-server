@@ -88,6 +88,28 @@ class GetterTest(dt.TestCase):
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
 
+class Bed2DDBTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/arrowhead_domains_short.txt.multires.db', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bed2ddb',
+            datatype='arrowhead-domains',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_get_tile(self):
+        tile_id="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
+        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
+
+        print("returned:", returned)
+
 class BedDBTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
