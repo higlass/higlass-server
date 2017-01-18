@@ -54,3 +54,22 @@ python manage.pdy test tilesets.tests.HiBedTest
 # Real data
 
 curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/
+
+
+### Docker
+
+#   build:
+docker build --tag higlass-server .
+
+#   upload image: TODO
+#   download image: TODO
+
+#   connect to new container:
+docker run --tty --interactive higlass-server /bin/bash
+
+#   start server:
+# TODO: I can not connect.
+docker run --detach --publish 8000:8000 higlass-server python manage.py runserver localhost:8000
+
+#   remove all containers (use with caution):
+docker ps -a -q | xargs docker stop | xargs docker rm
