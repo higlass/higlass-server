@@ -134,6 +134,9 @@ def generate_tile(tile_id, request):
     elif tileset.filetype == 'beddb':
         return (tile_id, cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1]))
 
+    elif tileset.filetype == 'bed2ddb':
+        return (tile_id, cdt.get_2d_tile(tileset.datafile.url, tile_position[0], tile_position[1], tile_position[2]))
+
     elif tileset.filetype == 'hibed':
 
         dense = hdft.get_discrete_data(
@@ -275,7 +278,7 @@ def tileset_info(request):
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
-        elif tileset_object.filetype == 'beddb':
+        elif tileset_object.filetype == 'beddb' or tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(tileset_object.datafile.url)
         else:
             dsetname = queryset.filter(
