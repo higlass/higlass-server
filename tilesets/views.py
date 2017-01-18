@@ -278,8 +278,10 @@ def tileset_info(request):
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
-        elif tileset_object.filetype == 'beddb' or tileset_object.filetype == 'bed2ddb':
+        elif tileset_object.filetype == 'beddb':
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(tileset_object.datafile.url)
+        elif tileset_object.filetype == 'bed2ddb':
+            tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(tileset_object.datafile.url)
         else:
             dsetname = queryset.filter(
                 uuid=tileset_uuid
