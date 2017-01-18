@@ -32,11 +32,16 @@ script:
   - HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
   - ANNO=gene_annotations.short.db
   - HIBED=cnv_short.hibed
+  - AHBED=arrowhead_domains_short.txt.multires.db
+  - HLBED=hiccups_loops_short.txt.multires.db
 
   - wget https://s3.amazonaws.com/pkerp/public/$COOL    && mv $COOL data/
   - wget https://s3.amazonaws.com/pkerp/public/$HITILE  && mv $HITILE data/
   - wget https://s3.amazonaws.com/pkerp/public/$ANNO    && mv $ANNO data/
   - wget https://s3.amazonaws.com/pkerp/public/$HIBED   && mv $HIBED data/
+  - wget https://s3.amazonaws.com/pkerp/public/$AHBED   && mv $AHBED data/
+  - wget https://s3.amazonaws.com/pkerp/public/$HLBED   && mv $HLBED data/
+
   - echo 'foo bar' > data/tiny.txt
   - python manage.py test tilesets
 
