@@ -31,7 +31,8 @@ python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
 port=8000
-python manage.py runserver localhost:${port}
+python manage.py runserver localhost:${port} 
+
 
 port=8000
 curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
@@ -40,6 +41,7 @@ curl -F "datafile=@data/cnv_short.hibed" -F "filetype=hibed" -F"datatype=stacked
 curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
 curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
 curl -F "datafile=@data/arrowhead_domains_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=arrowhead-domains" -F "name=Arrowhead domains" -F "uid=f" localhost:${port}/tilesets/
+curl -F "datafile=@data/hiccups_loops_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=hiccups-loops" -F "name=HiCCUPS loops" -F "uid=i" localhost:${port}/tilesets/
 
 # Test individual classes
 
