@@ -31,10 +31,13 @@ script:
   - COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
   - HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
   - ANNO=gene_annotations.short.db
+  - HIBED=cnv_short.hibed
 
   - wget https://s3.amazonaws.com/pkerp/public/$COOL    && mv $COOL data/
   - wget https://s3.amazonaws.com/pkerp/public/$HITILE  && mv $HITILE data/
   - wget https://s3.amazonaws.com/pkerp/public/$ANNO    && mv $ANNO data/
+  - wget https://s3.amazonaws.com/pkerp/public/$HIBED   && mv $HIBED data/
+  - echo 'foo bar' > data/tiny.txt
   - python manage.py test tilesets
 
   - PORT=8000
