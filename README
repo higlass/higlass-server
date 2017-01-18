@@ -64,8 +64,10 @@ docker build --tag higlass-server .
 #   upload image: TODO
 #   download image: TODO
 
-#   connect to new container:
-docker run --tty --interactive higlass-server /bin/bash
+#   start and connect to new container:
+docker run --interactive --tty  higlass-server /bin/bash
+#   connect to an already running container:
+docker exec -it <container-id-or-name> bash
 
 #   start server:
 # TODO: I can not connect.
