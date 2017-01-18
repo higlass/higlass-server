@@ -108,8 +108,6 @@ class Bed2DDBTest(dt.TestCase):
         returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
-        print("returned:", returned)
-
 class BedDBTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -129,8 +127,6 @@ class BedDBTest(dt.TestCase):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
         returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
-
-        print("returned:", returned)
 
 class HiBedTest(dt.TestCase):
     '''

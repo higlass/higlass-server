@@ -15,7 +15,6 @@ def get_gene_suggestions(db_file, text):
     suggestions (list): A list of dictionaries containing the suggestions:
         e.g. ([{'txStart': 10, 'txEnd': 20, 'score': 15, 'geneName': 'XV4'}])
     '''
-    print("db_file:", db_file)
     con = sqlite3.connect(db_file)
     c = con.cursor()
 

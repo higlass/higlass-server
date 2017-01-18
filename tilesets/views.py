@@ -261,8 +261,6 @@ def tileset_info(request):
             continue
 
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
-            #print("datafile", tileset_object.datafile)
-            #print("datafile.url", datafile.url)
             tileset_info = hdft.get_tileset_info(
                 h5py.File(tileset_object.datafile.url))
             tileset_infos[tileset_uuid] = {

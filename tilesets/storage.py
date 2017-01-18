@@ -61,11 +61,8 @@ def HashedFilenameMetaStorage(storage_class):
             if name is None:
                 name = content.name
 
-            print("saving...", file=sys.stderr)
             name = self._get_content_name(name, content)
             name = self._save(name, content)
-
-            print("done saving...", file=sys.stderr)
 
             # Store filenames with forward slashes, even on Windows
             return force_unicode(name.replace('\\', '/'))
