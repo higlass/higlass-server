@@ -10,15 +10,7 @@ logger = logging.getLogger(__name__)
 
 TILE_SIZE = 256
 
-CHROM_SIZES = cooler.read_chromsizes(
-    'http://s3.amazonaws.com/pkerp/data/hg19/chromInfo.txt'
-)
-CHROMS = list(CHROM_SIZES.keys())
-CHROM_IDS = dict(zip(CHROMS, range(len(CHROMS))))
-CHROM_CUM_LEN = np.r_[0, np.cumsum(CHROM_SIZES)]
-
-
-def abs_coord_2_bin(c, abs_pos):
+def abs_coord_2_bin(c, abs_pos, chroms, chrom_cum_lengths, chrom_sizes):
     """Get bin ID from absolute coordinates.
 
     Args:
@@ -30,14 +22,39 @@ def abs_coord_2_bin(c, abs_pos):
     """
 
     try:
-        chr_id = np.flatnonzero(CHROM_CUM_LEN > abs_pos)[0] - 1
+        chr_id = np.flatnonzero(chrom_cum_lengths > abs_pos)[0] - 1
     except IndexError:
         return c.info['nbins']
 
-    chrom = CHROMS[chr_id]
-    rel_pos = abs_pos - CHROM_CUM_LEN[chr_id]
+    chrom = chroms[chr_id]
+    rel_pos = abs_pos - chrom_cum_lengths[chr_id]
 
-    return c.offset((chrom, rel_pos, CHROM_SIZES[chrom]))
+    return c.offset((chrom, rel_pos, chrom_sizes[chrom]))
+
+def get_chromosome_names_cumul_lengths(c):
+    '''
+    Get the chromosome names and cumulative lengths:
+
+    Args:
+
+    c (Cooler): A cooler file
+
+    Return:
+
+    (names, sizes, lengths) -> (list(string), dict, np.array(int))
+    '''
+    chrom_sizes = {}
+    chrom_cum_lengths = [0]
+    chroms = []
+
+    for chrom in c.chroms():
+        (name, length) = chrom.as_matrix()[0]
+
+        chroms += [name]
+        chrom_cum_lengths += [chrom_cum_lengths[-1] + length]
+        chrom_sizes[name] = length
+
+    return (chroms, chrom_sizes, np.array(chrom_cum_lengths))
 
 
 def get_data(f, zoom_level, start_pos_1, end_pos_1, start_pos_2, end_pos_2):
@@ -57,10 +74,12 @@ def get_data(f, zoom_level, start_pos_1, end_pos_1, start_pos_2, end_pos_2):
 
     c = cooler.Cooler(f[str(zoom_level)])
 
-    i0 = abs_coord_2_bin(c, start_pos_1)
-    i1 = abs_coord_2_bin(c, end_pos_1)
-    j0 = abs_coord_2_bin(c, start_pos_2)
-    j1 = abs_coord_2_bin(c, end_pos_2)
+    (chroms, chrom_sizes, chrom_cum_lengths) = get_chromosome_names_cumul_lengths(c)
+
+    i0 = abs_coord_2_bin(c, start_pos_1, chroms, chrom_cum_lengths, chrom_sizes)
+    i1 = abs_coord_2_bin(c, end_pos_1, chroms, chrom_cum_lengths, chrom_sizes)
+    j0 = abs_coord_2_bin(c, start_pos_2, chroms, chrom_cum_lengths, chrom_sizes)
+    j1 = abs_coord_2_bin(c, end_pos_2, chroms, chrom_cum_lengths, chrom_sizes)
 
     pixels = c.matrix(as_pixels=True, max_chunk=np.inf)[i0:i1, j0:j1]
 
@@ -74,8 +93,8 @@ def get_data(f, zoom_level, start_pos_1, end_pos_1, start_pos_2, end_pos_2):
     bins['chrom'] = bins['chrom'].cat.codes
 
     pixels = cooler.annotate(pixels, bins)
-    pixels['genome_start'] = CHROM_CUM_LEN[pixels['chrom1']] + pixels['start1']
-    pixels['genome_end'] = CHROM_CUM_LEN[pixels['chrom2']] + pixels['end2']
+    pixels['genome_start'] = chrom_cum_lengths[pixels['chrom1']] + pixels['start1']
+    pixels['genome_end'] = chrom_cum_lengths[pixels['chrom2']] + pixels['end2']
     pixels['balanced'] = (
         pixels['count'] * pixels['weight1'] * pixels['weight2']
     )
@@ -102,7 +121,11 @@ def get_info(file_path):
                 'The `max_zoom` attribute is missing.'
             )
 
-        total_length = int(CHROM_CUM_LEN[-1])
+        c = cooler.Cooler(f["0"])
+
+        (chroms, chrom_sizes, chrom_cum_lengths) = get_chromosome_names_cumul_lengths(c)
+
+        total_length = int(chrom_cum_lengths[-1])
         max_zoom = f.attrs['max-zoom']
         bin_size = int(f[str(max_zoom)].attrs['bin-size'])
 

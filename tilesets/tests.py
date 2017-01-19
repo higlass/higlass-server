@@ -16,6 +16,37 @@ import tiles
 
 import tilesets.models as tm
 
+class CoolerTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.1000kb.multires.cool', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='md')
+
+    def test_get_tileset_info(self):
+        ret = self.client.get('/tileset_info/?d=md')
+
+        contents = json.loads(ret.content)
+
+        assert('md' in contents)
+        assert('min_pos' in contents['md'])
+
+    def test_get_tiles(self):
+        ret = self.client.get('/tiles/?d=md.0.0.0')
+        content = json.loads(ret.content)
+
+        assert('md.0.0.0' in content)
+        assert('dense' in content['md.0.0.0'])
+
+
 class SuggestionsTest(dt.TestCase):
     '''
     Test gene suggestions
