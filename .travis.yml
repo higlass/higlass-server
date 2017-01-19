@@ -1,15 +1,17 @@
+# Docker on Travis requires sudo.
 sudo: required
+
 # Based on http://lmjohns3.com/2015/06/using-travis-ci-with-miniconda-scipy-and-nose.html
-# Tweaked to specify versions on everything for stability
+# Tweaked to specify versions on everything for stability.
 language: python
 python:
   - "2.7"
 services:
   - docker
-cache: apt
+cache: apt # I don't think caching happens with sudo turned on, so this is a no-op.
 addons:
   apt:
-    packages:
+    packages: # Since we've turned on sudo, apt-get is available, but this works, too.
     - libatlas-dev
     - libatlas-base-dev
     - liblapack-dev
