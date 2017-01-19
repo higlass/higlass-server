@@ -66,7 +66,9 @@ script:
   ### 3) nginx server
 
   - pip install uwsgi
-  - uwsgi --http :8000 --module api.wsgi --pythonpath `python -c "import site; print(' '.join(site.getsitepackages()))"`
+  - uwsgi --http :8000 --module api.wsgi #--pythonpath `python -c "import site; print(' '.join(site.getsitepackages()))"`
+  # I get: "unable to load configuration from /home/travis/miniconda/lib/site-python"
+  # uwsgi is python: Wouldn't it already know the path?
   - apt-get install zlib1g-dev
   - apt-get install uwsgi-plugin-python
   # TODO: Are any of these necessary here?
@@ -74,6 +76,15 @@ script:
   #- pip install pandas cooler clodius django-guardian slugid
   - apt-get install nginx
   - cp hgserver_nginx.conf /etc/nginx/sites-enabled/
+
+  # TODO: I don't see where the highglass ui server is actually referenced?
+  # TODO: pin to release
+  - git clone --depth 1 https://github.com/hms-dbmi/higlass.git
+  - pushd higlass
+  - npm install
+  # TODO: Anything else needed here?
+  - popd
+
   - /etc/init.d/nginx restart
 
   # Original had --virtualenv /home/ubuntu/.virtualenvs/hg-server/
