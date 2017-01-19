@@ -88,6 +88,8 @@ script:
   - docker run --name my-higlass-server --detach --publish 8001:8000 higlass-server
   - JSON=`curl http://localhost:8001/`
   - [ "$JSON" == '{"tilesets":"http://localhost:8001/tilesets/"}' ] && echo 'Got expected response. Yay!'
-  # TODO: Only do this on PRs / tag master or something like that
-  # push
-  - docker push gehlenborglab/higlass-server
+
+  # TODO: Probably not what we want?
+  - if [ "$TRAVIS_EVENT_TYPE" == 'pull_request' ]
+  -   then docker push gehlenborglab/higlass-server
+  - fi
