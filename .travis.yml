@@ -89,7 +89,7 @@ script:
 
   # Original had --virtualenv /home/ubuntu/.virtualenvs/hg-server/
   # TODO: I'm confused here: What's the relationship between this uwsgi call and the one above?
-  - uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --workers 2 &
+  - uwsgi --socket :8000 --plugins python --module higlass_server.wsgi --workers 2 &
   # TODO: test this
 
   ### 4) Docker
