@@ -1,6 +1,10 @@
 # higlass-server
 
-## Installation
+## Easy Docker install
+
+https://hub.docker.com/r/gehlenborglab/higlass-server/
+
+## Installation from source
 
 ```bash
 git clone https://github.com/hms-dbmi/higlass-server.git
