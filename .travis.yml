@@ -66,7 +66,7 @@ script:
   ### 3) nginx server
 
   - pip install uwsgi
-  - uwsgi --http :7000 --module api.wsgi #--pythonpath `python -c "import site; print(' '.join(site.getsitepackages()))"`
+  - uwsgi --http :7000 --module api.wsgi & #--pythonpath `python -c "import site; print(' '.join(site.getsitepackages()))"`
   # I get: "unable to load configuration from /home/travis/miniconda/lib/site-python"
   # uwsgi is python: Wouldn't it already know the path?
   - apt-get install zlib1g-dev
@@ -88,7 +88,8 @@ script:
   - /etc/init.d/nginx restart
 
   # Original had --virtualenv /home/ubuntu/.virtualenvs/hg-server/
-  - uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --workers 2
+  # TODO: I'm confused here: What's the relationship between this uwsgi call and the one above?
+  - uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --workers 2 &
   # TODO: test this
 
   ### 4) Docker
