@@ -33,6 +33,8 @@ install:
 script:
   - set -e
 
+  ### 1) Unit tests
+
   - COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
   - HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
   - ANNO=gene_annotations.short.db
@@ -50,6 +52,8 @@ script:
   - echo 'foo bar' > data/tiny.txt
   - python manage.py test tilesets
 
+  ### 2) Django server
+
   - PORT=8000
   - python manage.py runserver localhost:$PORT &
   - URL="http://localhost:$PORT/tilesets/"
@@ -59,11 +63,13 @@ script:
   - curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" $URL
   # TODO: Check that the output is what we expect?
 
-  # This docker stuff could be moved to after_success...
-  # but if we built it, might as well make sure it works, too.
+  ### 3) nginx server
 
-  # TODO: Only do this on PRs.
+  # TODO
 
+  ### 4) Docker
+
+  # TODO: Only do this on PRs?
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - docker build --tag gehlenborglab/higlass-server:latest .
   - #docker run --name higlass-server-image --detach higlass-server # Container is needed, not just an image
