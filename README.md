@@ -5,13 +5,13 @@
 A higlass-server image is available on [DockerHub](https://hub.docker.com/r/gehlenborglab/higlass-server/).
 Install Docker on your system, and then:
 
-```
+```bash
 # download:
 docker pull gehlenborglab/higlass-server
 
 # start container:
 #   Port 8000 is hardcoded in the image;
-#   Port 8001 is port it should be mapped to on the host.
+#   Port 8001 is what it should be mapped to on the host.
 docker run --name my-higlass-server --detach --publish 8001:8000 gehlenborglab/higlass-server
 curl http://localhost:8001/
 
