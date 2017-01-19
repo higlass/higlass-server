@@ -75,7 +75,7 @@ script:
   #- pip install djangorestframework django-rest-swagger django-cors-headers pygments h5py
   #- pip install pandas cooler clodius django-guardian slugid
   - sudo apt-get install nginx
-  - cp hgserver_nginx.conf /etc/nginx/sites-enabled/
+  - sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
 
   # TODO: I don't see where the highglass ui server is actually referenced?
   # TODO: pin to release
