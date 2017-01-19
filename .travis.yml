@@ -29,6 +29,7 @@ script:
   - set -e
 
   - COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+  - MM9COOL=Dixon2012-J1-NcoI-R1-filtered.1000kb.multires.cool
   - HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
   - ANNO=gene_annotations.short.db
   - HIBED=cnv_short.hibed
@@ -41,6 +42,7 @@ script:
   - wget https://s3.amazonaws.com/pkerp/public/$HIBED   && mv $HIBED data/
   - wget https://s3.amazonaws.com/pkerp/public/$AHBED   && mv $AHBED data/
   - wget https://s3.amazonaws.com/pkerp/public/$HLBED   && mv $HLBED data/
+  - wget https://s3.amazonaws.com/pkerp/public/$MM9COOL   && mv $MM9COOL data/
 
   - echo 'foo bar' > data/tiny.txt
   - python manage.py test tilesets
