@@ -22,7 +22,7 @@ class CoolerTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.1000kb.multires.cool', 'r')
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -40,11 +40,11 @@ class CoolerTest(dt.TestCase):
         assert('min_pos' in contents['md'])
 
     def test_get_tiles(self):
-        ret = self.client.get('/tiles/?d=md.0.0.0')
+        ret = self.client.get('/tiles/?d=md.7.92.97')
         content = json.loads(ret.content)
 
-        assert('md.0.0.0' in content)
-        assert('dense' in content['md.0.0.0'])
+        assert('md.7.92.97' in content)
+        assert('dense' in content['md.7.92.97'])
 
 
 class SuggestionsTest(dt.TestCase):
