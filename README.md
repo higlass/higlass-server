@@ -12,7 +12,7 @@ docker pull gehlenborglab/higlass-server
 # start container:
 #   Port 8000 is hardcoded in the image;
 #   Port 8001 is port it should be mapped to on the host.
-docker run --name my-higlass-server --detach --publish 8001:8000 higlass-server
+docker run --name my-higlass-server --detach --publish 8001:8000 gehlenborglab/higlass-server
 curl http://localhost:8001/
 
 # connect to an already running container:
