@@ -1,8 +1,11 @@
+sudo: required
 # Based on http://lmjohns3.com/2015/06/using-travis-ci-with-miniconda-scipy-and-nose.html
 # Tweaked to specify versions on everything for stability
 language: python
 python:
   - "2.7"
+services:
+  - docker
 cache: apt
 addons:
   apt:
@@ -53,3 +56,14 @@ script:
   - curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" $URL
   - curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" $URL
   # TODO: Check that the output is what we expect?
+
+  # This docker stuff could be moved to after_success...
+  # but if we built it, might as well make sure it works, too.
+
+  # TODO: Only do this on PRs.
+
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - docker build --tag gehlenborglab/higlass-server:latest .
+  - #docker run --name higlass-server-image --detach higlass-server # Container is needed, not just an image
+  - #docker commit higlass-server-image
+  - docker push gehlenborglab/higlass-server

@@ -8,7 +8,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get --yes install gcc
 RUN conda install --yes cython==0.25.2 numpy=1.11.2
 RUN conda install --yes --channel bioconda pysam=0.9.1.4 htslib=1.3.2
 
-COPY . higlass-server
+COPY . higlass-server # TODO: Perhaps move this after pip installs to cache more layers?
 WORKDIR higlass-server/
 
 RUN pip install clodius==0.3.2
