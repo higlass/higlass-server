@@ -15,6 +15,7 @@ router.register(r'tilesets', views.TilesetsViewSet)
 # Additionally, we include the login URLs for the browsable API.
 urlpatterns = [
     url(r'^schema', schema_view),
+    url(r'^viewconf', views.viewconfs),
     url(r'^tiles/$', views.tiles),
     url(r'^tileset_info/$', views.tileset_info),
     url(r'^suggest/$', views.suggest),

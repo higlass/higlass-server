@@ -11,12 +11,12 @@ import json
 import os.path as op
 import numpy as np
 import getter
-import rest_framework as rf
+import rest_framework.status as rfs
 import tiles
 
 import tilesets.models as tm
 
-class ViewPrintTest(dt.TestCase):
+class ViewConfTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
@@ -24,14 +24,36 @@ class ViewPrintTest(dt.TestCase):
 
         upload_json_text = json.dumps({'hi': 'there'})
 
-        self.viewprint = tm.ViewPrint.objects.create(
-                text=upload_json_text)
+        self.viewconf = tm.ViewConf.objects.create(
+                viewconf=upload_json_text, uuid='md')
 
-    def test_viewprint_get(self):
-        ret = self.client.get('/tileset_info/?d=md')
+    def test_viewconf(self):
+        ret = self.client.get('/viewconfs/?d=md')
 
         contents = json.loads(ret.content)
         assert('hi' in contents)
+
+    def test_viewconfs(self):
+        ret = self.client.post('/viewconfs/',
+                {'xx': '{"hello": "sir"}'})
+
+        assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
+        contents = json.loads(ret.content)
+        assert('error' in contents)
+
+        ret = self.client.post('/viewconfs/',
+                {'viewconf': '{"hello": "sir"}'})
+        contents = json.loads(ret.content)
+        assert('uid' in contents)
+
+        url = '/viewconfs/?d=' + contents['uid']
+        ret = self.client.get(url)
+
+        contents = json.loads(ret.content)
+
+        assert('hello' in contents)
+        
+
 
 class CoolerTest(dt.TestCase):
     def setUp(self):
@@ -114,12 +136,13 @@ class FileUploadTest(dt.TestCase):
                 'filetype': 'hitile',
                 'datatype': 'vector',
                 'uid': 'bb',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             },
             format='multipart'
         )
 
-        self.assertEqual(rf.status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
 
         response = c.get('/tilesets/')
 
@@ -276,7 +299,8 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             },
             format='multipart'
         )
@@ -293,7 +317,8 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             }
             ,
             format='multipart'
@@ -325,7 +350,9 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'False'
+                'private': 'False',
+                'coordSystem': 'hg19'
+
             },
             format='multipart'
         )
@@ -478,7 +505,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
                 'private': 'True',
-                'name': 'one'
+                'name': 'one',
+                'coordSystem': 'hg19'
             }
         )
         ret = c.post(
@@ -487,7 +515,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
                 'private': 'True',
-                'name': 'tone'
+                'name': 'tone',
+                'coordSystem': 'hg19'
             }
         )
         ret = c.post(
@@ -496,7 +525,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'cooler',
                 'private': 'True',
-                'name': 'tax'
+                'name': 'tax',
+                'coordSystem': 'hg19'
             }
         )
         ret = json.loads(c.get('/tilesets/?ac=ne').content)
@@ -529,7 +559,24 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'xxxyx',
                 'datatype': 'vector',
-                'private': 'True'
+                'private': 'True',
+            }
+        )
+
+        # not coordSystem field
+        assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
+        ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
+
+        assert(ret['count'] == 0)
+
+        ret = c.post(
+            '/tilesets/',
+            {
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'filetype': 'xxxyx',
+                'datatype': 'vector',
+                'private': 'True',
+                'coordSystem': 'hg19',
             }
         )
 
@@ -544,7 +591,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': 'vector',
                 'private': 'True',
-                'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+                'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
+                'coordSystem': 'hg19'
             }
         )
 
@@ -562,7 +610,8 @@ class TilesetsViewSetTest(dt.TestCase):
                     'filetype': 'a',
                     'datatype': 'vector',
                     'private': 'True',
-                    'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+                    'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
+                    'coordSystem': 'hg19'
                 }
             ).content
         )
@@ -582,6 +631,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': '1',
                 'private': 'True',
+                'coordSystem': 'hg19',
                 'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
             }
         )
@@ -593,6 +643,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': '2',
                 'private': 'True',
+                'coordSystem': 'hg19',
                 'uid': 'bb'
             }
         )

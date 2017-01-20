@@ -8,14 +8,13 @@ import slugid
 
 from django.db import models
 
-class ViewPrint(models.Model):
+class ViewConf(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
-    viewprint = models.TextField()
+    viewconf = models.TextField()
 
     class Meta:
         ordering = ('created',)
-        
 
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -24,6 +23,10 @@ class Tileset(models.Model):
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
     datatype = models.TextField(default='unknown')
+
+    coordSystem = models.TextField()
+    coordSystem2 = models.TextField(default='')
+
     owner = models.ForeignKey(
         'auth.User', related_name='tilesets', on_delete=models.CASCADE
     )
