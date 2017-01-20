@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from tilesets.models import Tileset
+from tilesets.models import Tileset, Viewprint
 from django.contrib.auth.models import User
 
 
@@ -11,6 +11,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username')
+
+class ViewPrintSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ViewPrint
+        fields = ('uid', 'viewprint')
 
 
 class TilesetSerializer(serializers.ModelSerializer):

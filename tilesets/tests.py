@@ -16,6 +16,23 @@ import tiles
 
 import tilesets.models as tm
 
+class ViewPrintTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_json_text = json.dumps({'hi': 'there'})
+
+        self.viewprint = tm.ViewPrint.objects.create(
+                text=upload_json_text)
+
+    def test_viewprint_get(self):
+        ret = self.client.get('/tileset_info/?d=md')
+
+        contents = json.loads(ret.content)
+        assert('hi' in contents)
+
 class CoolerTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(

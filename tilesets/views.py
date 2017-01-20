@@ -190,6 +190,24 @@ def suggest(request):
 
     return JsonResponse(result_dict,  safe=False)
 
+@api_view(['GET'])
+def viewprint(request):
+    '''
+    Retrieve a viewprint with a given uid
+
+    Args:
+
+    request (django.http.HTTPRequest): The request object containing the
+        uid (e.g. d=hg45ksdjfds) that identifies the viewprint.
+
+    Return:
+
+    '''
+    uid = request.GET.get('d')
+
+    obj = ViewPrint.object.filter(uid=uid)
+    return JsonResponse(json.parse(obj.viewprint))
+
 
 @api_view(['GET'])
 def tiles(request):
