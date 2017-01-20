@@ -102,7 +102,9 @@ class SuggestionsTest(dt.TestCase):
             filetype='beddb',
             datatype='gene-annotations',
             owner=self.user1,
-            uuid='hhb')
+            uuid='hhb',
+            coordSystem='hg19'
+            )
 
     def test_suggest(self):
         # shouldn't be found and shouldn't raise an error
