@@ -6,7 +6,7 @@ import clodius.db_tiles as cdt
 import django.core.signals as dcs
 import django.dispatch as dd
 import django.db.models as dbm
-import getter
+import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import h5py
 import json
@@ -45,7 +45,7 @@ mats = {}
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, getter.get_info(dset)]
+    mats[dset] = [f, cch.get_info(dset)]
 
 
 def make_cooler_tile(cooler_filepath, tile_position):
