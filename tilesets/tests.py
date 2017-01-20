@@ -36,14 +36,7 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/viewconfs/',
-                {'xx': '{"hello": "sir"}'})
-
-        assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
-        contents = json.loads(ret.content)
-        assert('error' in contents)
-
-        ret = self.client.post('/viewconfs/',
-                {'viewconf': '{"hello": "sir"}'})
+                '{"hello": "sir"}', content_type="application/json")
         contents = json.loads(ret.content)
         assert('uid' in contents)
 

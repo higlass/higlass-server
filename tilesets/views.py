@@ -207,19 +207,9 @@ def viewconfs(request):
     '''
     if request.method == 'POST':
         uuid = slugid.nice()
-        try:
-            viewconf = request.data['viewconf']
-        except dud.MultiValueDictKeyError:
-            return JsonResponse({'error': 'No viewconf specified'},
-                    status=rfs.HTTP_400_BAD_REQUEST)
+        viewconf = request.body
 
-        try:
-            json_viewconf = json.loads(viewconf)
-        except:
-            return JsonResponse({'error': 'viewconf not in JSON format'}, 
-                    status=rfs.HTTP_400_BAD_REQUEST)
-
-        serializer = tss.ViewConfSerializer(data=request.data)
+        serializer = tss.ViewConfSerializer(data={'viewconf': request.body})
         if not serializer.is_valid():
             return JsonResponse({'error': 'Serializer not valid'}, 
                     status=rfs.HTTP_400_BAD_REQUEST)
