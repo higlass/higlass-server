@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import cooler.contrib.higlass as cch
+
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
@@ -10,7 +12,6 @@ import h5py
 import json
 import os.path as op
 import numpy as np
-import getter
 import rest_framework.status as rfs
 import tiles
 
@@ -156,7 +157,7 @@ class FileUploadTest(dt.TestCase):
 class GetterTest(dt.TestCase):
     def test_get_info(self):
         filepath = 'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
-        info = getter.get_info(filepath)
+        info = cch.get_info(filepath)
 
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
@@ -274,7 +275,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         with h5py.File(self.cooler.datafile.url) as f:
 
-            mat = [f, getter.get_info(self.cooler.datafile.url)]
+            mat = [f, cch.get_info(self.cooler.datafile.url)]
             t = tiles.make_tile(z, x, y, mat)
 
             # test the base64 encoding
