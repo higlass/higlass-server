@@ -6,6 +6,7 @@ import clodius.db_tiles as cdt
 import django.core.signals as dcs
 import django.dispatch as dd
 import django.db.models as dbm
+import django.utils.datastructures as dud
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import h5py
@@ -19,7 +20,9 @@ import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
 import rest_framework.response as rfr
+import rest_framework.status as rfs
 import sqlite3
+import tilesets.models as tm
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
@@ -35,7 +38,6 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
-from tilesets.models import Tileset
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +115,7 @@ def generate_tile(tile_id, request):
     tile_position = map(int, tile_id_parts[1:])
     tileset_uuid = tile_id_parts[0]
 
-    tileset = Tileset.objects.get(uuid=tileset_uuid)
+    tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
 
     if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
@@ -182,13 +184,55 @@ def suggest(request):
     text = request.GET['ac']
 
     try:
-        tileset = Tileset.objects.get(uuid=tileset_uuid)
+        tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
     except:
         raise rfe.NotFound('Suggestion source file not found')
 
     result_dict = tsu.get_gene_suggestions(tileset.datafile.url, text)
 
     return JsonResponse(result_dict,  safe=False)
+
+@api_view(['GET', 'POST'])
+def viewconfs(request):
+    '''
+    Retrieve a viewconfs with a given uid
+
+    Args:
+
+    request (django.http.HTTPRequest): The request object containing the
+        uid (e.g. d=hg45ksdjfds) that identifies the viewconf.
+
+    Return:
+
+    '''
+    if request.method == 'POST':
+        uuid = slugid.nice()
+        try:
+            viewconf = request.data['viewconf']
+        except dud.MultiValueDictKeyError:
+            return JsonResponse({'error': 'No viewconf specified'},
+                    status=rfs.HTTP_400_BAD_REQUEST)
+
+        try:
+            json_viewconf = json.loads(viewconf)
+        except:
+            return JsonResponse({'error': 'viewconf not in JSON format'}, 
+                    status=rfs.HTTP_400_BAD_REQUEST)
+
+        serializer = tss.ViewConfSerializer(data=request.data)
+        if not serializer.is_valid():
+            return JsonResponse({'error': 'Serializer not valid'}, 
+                    status=rfs.HTTP_400_BAD_REQUEST)
+
+        serializer.save(uuid=uuid, viewconf=viewconf)
+
+        return JsonResponse({'uid': uuid})
+
+    uuid = request.GET.get('d')
+
+    obj = tm.ViewConf.objects.get(uuid=uuid)
+    return JsonResponse(json.loads(obj.viewconf))
+
 
 
 @api_view(['GET'])
@@ -245,7 +289,7 @@ def tileset_info(request):
             the tileset meta-information
     '''
     global mats
-    queryset = Tileset.objects.all()
+    queryset = tm.Tileset.objects.all()
     tileset_uuids = request.GET.getlist("d")
     tileset_infos = {}
     for tileset_uuid in tileset_uuids:
@@ -298,7 +342,7 @@ def tileset_info(request):
 class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
 
-    queryset = Tileset.objects.all()
+    queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
@@ -355,7 +399,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                 self.queryset.get(uuid=self.request.data['uid'])
                 # this uid already exists, return an error
                 raise rfe.APIException("UID already exists")
-            except Tileset.DoesNotExist:
+            except tm.Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
             uid = slugid.nice()
