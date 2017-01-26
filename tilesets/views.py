@@ -19,6 +19,8 @@ import rest_framework.response as rfr
 import tilesets.serializers as tss
 import slugid
 import urllib
+import redis
+import pickle
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -102,6 +104,13 @@ def generate_tile(tile_id, request):
     Returns:
         (string, dict): A tuple containing the tile ID tile data
     '''
+    print("tile_id:?", tile_id)
+    # add redis hooks here
+
+    rdb = redis.Redis(
+        host='127.0.0.1',
+        port=6379)
+
 
     tile_id_parts = tile_id.split('.')
     tile_position = map(int, tile_id_parts[1:])
@@ -109,44 +118,84 @@ def generate_tile(tile_id, request):
 
     tileset = Tileset.objects.get(uuid=tileset_uuid)
 
+
     if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
         return (tileset_uuid, {'error': "Forbidden"})
 
+    # loaded_from_rdb = False
+    #  if rdb.exists(tile_id):
+    #   tile_value = pickle.loads(rdb.get(tile_id))
+    #   loaded_from_rdb = True
+    #   return (tile_id, tile_value)
+
+
     if tileset.filetype == "hitile":
-        dense = hdft.get_data(
-            h5py.File(
-                tileset.datafile.url
-            ),
-            tile_position[0],
-            tile_position[1]
-        )
-
-        return (tile_id,
-                {'dense': base64.b64encode(dense)})
-
-    elif tileset.filetype == 'hibed':
-
-        dense = hdft.get_discrete_data(
+        print('hitile')
+        if rdb.exists(tile_id):
+            b64_dense = pickle.loads(rdb.get(tile_id))
+            return (tile_id,
+                    {'dense': b64_dense})
+        else:
+            dense = hdft.get_data(
                 h5py.File(
                     tileset.datafile.url
-                    ),
+                ),
                 tile_position[0],
                 tile_position[1]
-                )
+            )
+            b64_dense = base64.b64encode(dense)
+            rdb.set(tile_id, pickle.dumps(b64_dense))
+            return (tile_id,
+                    {'dense': b64_dense})
 
-        return (tile_id,
-                {'discrete': list([list(d) for d in dense])})
+    elif tileset.filetype == 'hibed':
+        print('hibed')
+        if rdb.exists(tile_id):
+            discrete = pickle.loads(rdb.get(tile_id))
+            return (tile_id,
+                    {'discrete': discrete})
+        else:
+            dense = hdft.get_discrete_data(
+                    h5py.File(
+                        tileset.datafile.url
+                        ),
+                    tile_position[0],
+                    tile_position[1]
+                    )
+            discrete = list([list(d) for d in dense])
+            rdb.set(tile_id, pickle.dumps(discrete))
 
+            tile_data = {'discrete': discrete}
+            
     elif tileset.filetype == "elasticsearch":
-        response = urllib.urlopen(
-            tileset.datafile + '/' + '.'.join(map(str, tile_position))
-        )
-        return (tile_id, json.loads(response.read())["_source"]["tile_value"])
+        print('elastic search')
+        if rdb.exists(tile_id):
+            response_read = pickle.loads(rdb.get(tile_id))
+            return (tile_id, response_read)
+        else:
+            response = urllib.urlopen(
+                tileset.datafile + '/' + '.'.join(map(str, tile_position))
+            )
+            response_read = json.loads(response.read())["_source"]["tile_value"]
+            rdb.set(tile_id, pickle.dumps(response_read))
+            return (tile_id, response_read)
     else:
-        tile_data = make_cooler_tile(tileset.datafile.url, tile_position)
+        print('im in else')
+        if rdb.exists(tile_id):
+            print('REIDS')
+            tile_data = pickle.loads(rdb.get(tile_id))
+        else:
+            print('not REDIS')
+            tile_data = make_cooler_tile(tileset.datafile.url, tile_position)
+            rdb.set(tile_id, pickle.dumps(tile_data))
+
         if tile_data is None:
             return None
+
+        # else
+        #   rdb.set(tile_id, tile_data)
+
         return (tile_id, tile_data)
         # od[ud[1]] = ud[0]
 
