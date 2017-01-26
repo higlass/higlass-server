@@ -29,18 +29,18 @@ class ViewConfTest(dt.TestCase):
                 viewconf=upload_json_text, uuid='md')
 
     def test_viewconf(self):
-        ret = self.client.get('/viewconfs/?d=md')
+        ret = self.client.get('/api/v1/viewconfs/?d=md')
 
         contents = json.loads(ret.content)
         assert('hi' in contents)
 
     def test_viewconfs(self):
-        ret = self.client.post('/viewconfs/',
+        ret = self.client.post('/api/v1/viewconfs/',
                 '{"hello": "sir"}', content_type="application/json")
         contents = json.loads(ret.content)
         assert('uid' in contents)
 
-        url = '/viewconfs/?d=' + contents['uid']
+        url = '/api/v1/viewconfs/?d=' + contents['uid']
         ret = self.client.get(url)
 
         contents = json.loads(ret.content)
@@ -65,7 +65,7 @@ class CoolerTest(dt.TestCase):
             uuid='md')
 
     def test_get_tileset_info(self):
-        ret = self.client.get('/tileset_info/?d=md')
+        ret = self.client.get('/api/v1/tileset_info/?d=md')
 
         contents = json.loads(ret.content)
 
@@ -73,7 +73,7 @@ class CoolerTest(dt.TestCase):
         assert('min_pos' in contents['md'])
 
     def test_get_tiles(self):
-        ret = self.client.get('/tiles/?d=md.7.92.97')
+        ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
         content = json.loads(ret.content)
 
         assert('md.7.92.97' in content)
@@ -102,15 +102,15 @@ class SuggestionsTest(dt.TestCase):
 
     def test_suggest(self):
         # shouldn't be found and shouldn't raise an error
-        ret = self.client.get('/suggest/?d=xx&ac=r')
+        ret = self.client.get('/api/v1/suggest/?d=xx&ac=r')
 
-        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        ret = self.client.get('/api/v1/suggest/?d=hhb&ac=r')
         suggestions = json.loads(ret.content)
 
         self.assertGreater(len(suggestions), 0)
         self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
 
-        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        ret = self.client.get('/api/v1/suggest/?d=hhb&ac=r')
         suggestions = json.loads(ret.content)
         
         self.assertGreater(len(suggestions), 0)
@@ -126,7 +126,7 @@ class FileUploadTest(dt.TestCase):
         f = open( 'data/tiny.txt', 'r')
 
         response = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': f,
                 'filetype': 'hitile',
@@ -140,7 +140,7 @@ class FileUploadTest(dt.TestCase):
 
         self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
 
-        response = c.get('/tilesets/')
+        response = c.get('/api/v1/tilesets/')
 
         obj = tm.Tileset.objects.get(uuid='bb')
 
@@ -172,7 +172,7 @@ class Bed2DDBTest(dt.TestCase):
 
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
-        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
 class BedDBTest(dt.TestCase):
@@ -192,7 +192,7 @@ class BedDBTest(dt.TestCase):
 
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
-        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
 class HiBedTest(dt.TestCase):
@@ -216,14 +216,14 @@ class HiBedTest(dt.TestCase):
 
     def test_hibed_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
-        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
         self.assertTrue('discrete' in returned[tile_id])
 
     def test_hibed_get_tileset_info(self):
         tile_id="{uuid}".format(uuid=self.tileset.uuid)
-        returned_text = self.client.get('/tileset_info/?d={tile_id}'.format(tile_id=tile_id))
+        returned_text = self.client.get('/api/v1/tileset_info/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
         self.assertTrue('tile_size' in returned[tile_id])
@@ -257,7 +257,7 @@ class TilesetsViewSetTest(dt.TestCase):
     def check_tile(self, z, x, y):
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.{z}.{x}.{y}'.format(
+                '/api/v1/tiles/?d={uuid}.{z}.{x}.{y}'.format(
                     uuid=self.cooler.uuid, x=x, y=y, z=z
                 )
             ).content
@@ -291,7 +291,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
     def test_post_dataset(self):
         ret = self.client.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
@@ -309,7 +309,7 @@ class TilesetsViewSetTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
@@ -327,14 +327,14 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertTrue(t.private)
 
         c.login(username='user2', password='pass')
-        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
 
         # user2 should not be able to get information about this dataset
         ts_info = json.loads(ret.content)
         self.assertTrue('error' in ts_info[ret_obj['uuid']])
 
         c.login(username='user1', password='pass')
-        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
 
         # user1 should be able to access it
         ts_info = json.loads(ret.content)
@@ -342,7 +342,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         # upload a new dataset as user1
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
@@ -357,7 +357,7 @@ class TilesetsViewSetTest(dt.TestCase):
         # since the previously uploaded dataset is not private, we should be
         # able to access it as user2
         c.login(username='user2', password='pass')
-        ret = c.get('/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
         ts_info = json.loads(ret.content)
 
         self.assertFalse('error' in ts_info[ret_obj['uuid']])
@@ -378,7 +378,7 @@ class TilesetsViewSetTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
         returned = json.loads(
-            self.client.get('/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content
+            self.client.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)).content
         )
 
     def test_get_top_tile(self):
@@ -396,7 +396,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
+                '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
                     uuid=self.cooler.uuid
                 )
             ).content
@@ -415,7 +415,7 @@ class TilesetsViewSetTest(dt.TestCase):
         """
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
+                '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
                     uuid=self.cooler.uuid
                 )
             ).content
@@ -432,7 +432,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
+                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
             ).content
         )
 
@@ -444,7 +444,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
+                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
             ).content
         )
 
@@ -457,7 +457,7 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_hitile_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)
             ).content
         )
 
@@ -474,7 +474,7 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_cooler_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
             ).content
         )
 
@@ -485,7 +485,7 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_hitile_tile(self):
         returned = json.loads(
             self.client.get(
-                '/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)
+                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)
             ).content
         )
 
@@ -496,7 +496,7 @@ class TilesetsViewSetTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
@@ -506,7 +506,7 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
@@ -516,7 +516,7 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'cooler',
@@ -525,7 +525,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 'coordSystem': 'hg19'
             }
         )
-        ret = json.loads(c.get('/tilesets/?ac=ne').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne').content)
         count1 = ret['count']
         self.assertTrue(count1 > 0)
 
@@ -536,21 +536,21 @@ class TilesetsViewSetTest(dt.TestCase):
 
         c.logout()
         # all tilesets should be private
-        ret = json.loads(c.get('/tilesets/?ac=ne').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne').content)
         self.assertEquals(ret['count'], 0)
 
-        ret = json.loads(c.get('/tilesets/?ac=ne&t=cooler').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne&t=cooler').content)
         count1 = ret['count']
         self.assertTrue(count1 == 0)
 
         c.login(username='user2', password='pass')
-        ret = json.loads(c.get('/tilesets/?q=ne').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?q=ne').content)
 
         names = set([ts['name'] for ts in ret['results']])
         self.assertFalse(u'one' in names)
 
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'xxxyx',
@@ -561,12 +561,12 @@ class TilesetsViewSetTest(dt.TestCase):
 
         # not coordSystem field
         assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
-        ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
 
         assert(ret['count'] == 0)
 
         ret = c.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'xxxyx',
@@ -576,12 +576,12 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
 
-        ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
+        ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
         self.assertEqual(ret['count'], 1)
 
     def test_add_with_uid(self):
         ret = self.client.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'a',
@@ -592,7 +592,7 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
 
-        ret = json.loads(self.client.get('/tilesets/').content)
+        ret = json.loads(self.client.get('/api/v1/tilesets/').content)
 
         # the two default datasets plus the added one
         self.assertEquals(ret['count'], 3)
@@ -600,7 +600,7 @@ class TilesetsViewSetTest(dt.TestCase):
         # try to add one more dataset with a specified uid
         ret = json.loads(
             self.client.post(
-                '/tilesets/',
+                '/api/v1/tilesets/',
                 {
                     'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                     'filetype': 'a',
@@ -616,12 +616,12 @@ class TilesetsViewSetTest(dt.TestCase):
         # which has an existing uuid
         self.assertTrue('detail' in ret)
 
-        ret = json.loads(self.client.get('/tilesets/').content)
+        ret = json.loads(self.client.get('/api/v1/tilesets/').content)
         self.assertEquals(ret['count'], 3)
 
     def test_list_by_datatype(self):
         ret = self.client.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'a',
@@ -633,7 +633,7 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
         ret = self.client.post(
-            '/tilesets/',
+            '/api/v1/tilesets/',
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'a',
@@ -645,17 +645,17 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
 
-        ret = json.loads(self.client.get('/tilesets/?dt=1').content)
+        ret = json.loads(self.client.get('/api/v1/tilesets/?dt=1').content)
         self.assertEqual(ret['count'], 1)
 
-        ret = json.loads(self.client.get('/tilesets/?dt=2').content)
+        ret = json.loads(self.client.get('/api/v1/tilesets/?dt=2').content)
         self.assertEqual(ret['count'], 1)
 
-        ret = json.loads(self.client.get('/tilesets/?dt=1&dt=2').content)
+        ret = json.loads(self.client.get('/api/v1/tilesets/?dt=1&dt=2').content)
         self.assertEqual(ret['count'], 2)
 
     def test_get_nonexistant_tileset_info(self):
-        ret = json.loads(self.client.get('/tileset_info/?d=x1x').content)
+        ret = json.loads(self.client.get('/api/v1/tileset_info/?d=x1x').content)
 
         # make sure above doesn't raise an error 
 
