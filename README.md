@@ -15,17 +15,21 @@ python manage.py runserver localhost:8000
 These steps are optional in case one wants to start with a pre-populated database.
 
 ```
-wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
+COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 
-wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+wget https://s3.amazonaws.com/pkerp/public/$COOL
+mv $COOL data/
 
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool","file_type":"cooler", "uid": "aa"}' http://localhost:8000/tilesets/
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile","file_type":"hitile", "uid": "bb"}' http://localhost:8000/tilesets/
+wget https://s3.amazonaws.com/pkerp/public/$HITILE
+mv $HITILE data/
+
+curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:8000/tilesets/
+curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:8000/tilesets/
 ```
 
-This will return a UUID. This uuid can be used to retrieve tiles:
+The "uid" parameter is optional, and if it were missing, one would be generated.
+This uuid can be used to retrieve tiles:
 
 Get tileset info:
 
@@ -54,7 +58,7 @@ python setup.py install
 recursive_agg_onefile.py file.cooler --out output.cooler
 ```
 
-### Preapring bigWig files for use with `higlass-server`
+### Preparing bigWig files for use with `higlass-server`
 
 [BigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) files contain values for positions along a genome. To be viewable using higlass, they need to be aggregated using `clodius`:
 
@@ -89,11 +93,9 @@ See the "Add a dataset" line in the "Jump Start" section above.
 ### Unit tests
 
 ```
-wget https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-mv dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool data/
-
-wget https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-mv wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+wget -O -P data/ https://s3.amazonaws.com/pkerp/public/gene_annotations.short.db
 
 python manage.py test tilesets
 ```

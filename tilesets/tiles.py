@@ -1,4 +1,4 @@
-import getter
+import cooler.contrib.higlass as cch
 import logging
 import numpy as np
 
@@ -14,7 +14,7 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
     start2 = y_pos * info['max_width'] / divisor
     end2 = (y_pos + 1) * info['max_width'] / divisor
 
-    data = getter.get_data(
+    data = cch.get_data(
         dset[0], zoomLevel, start1, end1 - 1, start2, end2 - 1
     )
 

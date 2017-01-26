@@ -2,8 +2,12 @@ from __future__ import print_function
 
 import base64
 import clodius.hdf_tiles as hdft
+import clodius.db_tiles as cdt
+import django.core.signals as dcs
+import django.dispatch as dd
 import django.db.models as dbm
-import getter
+import django.utils.datastructures as dud
+import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import h5py
 import json
@@ -16,11 +20,20 @@ import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
 import rest_framework.response as rfr
+import rest_framework.status as rfs
+import sqlite3
+import tilesets.models as tm
 import tilesets.serializers as tss
+import tilesets.suggestions as tsu
 import slugid
 import urllib
+<<<<<<< HEAD
 import redis
 import pickle
+=======
+import sys
+
+>>>>>>> f314c96685142b0f923849c9601ca3c6d03ef0eb
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -30,7 +43,6 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
-from tilesets.models import Tileset
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +52,7 @@ mats = {}
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, getter.get_info(dset)]
+    mats[dset] = [f, cch.get_info(dset)]
 
 
 def make_cooler_tile(cooler_filepath, tile_position):
@@ -86,7 +98,6 @@ def make_cooler_tile(cooler_filepath, tile_position):
 
     return tile_data
 
-
 def generate_tile(tile_id, request):
     '''
     Create a tile. The tile_id specifies the dataset as well
@@ -116,7 +127,7 @@ def generate_tile(tile_id, request):
     tile_position = map(int, tile_id_parts[1:])
     tileset_uuid = tile_id_parts[0]
 
-    tileset = Tileset.objects.get(uuid=tileset_uuid)
+    tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
 
 
     if tileset.private and request.user != tileset.owner:
@@ -128,6 +139,7 @@ def generate_tile(tile_id, request):
     #   tile_value = pickle.loads(rdb.get(tile_id))
     #   loaded_from_rdb = True
     #   return (tile_id, tile_value)
+
 
 
     if tileset.filetype == "hitile":
@@ -148,6 +160,27 @@ def generate_tile(tile_id, request):
             rdb.set(tile_id, pickle.dumps(b64_dense))
             return (tile_id,
                     {'dense': b64_dense})
+
+
+    elif tileset.filetype == 'beddb':
+        return (tile_id, cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1]))
+
+    elif tileset.filetype == 'bed2ddb':
+        return (tile_id, cdt.get_2d_tile(tileset.datafile.url, tile_position[0], tile_position[1], tile_position[2]))
+
+    elif tileset.filetype == 'hibed':
+        dense = hdft.get_discrete_data(
+                h5py.File(
+                    tileset.datafile.url
+                    ),
+                tile_position[0],
+                tile_position[1]
+                )
+
+        return (tile_id,
+                {'discrete': list([list(d) for d in dense])})
+
+
 
     elif tileset.filetype == 'hibed':
         print('hibed')
@@ -209,6 +242,56 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+@api_view(['GET'])
+def suggest(request):
+    '''
+    Suggest gene names based on the input text
+    '''
+    # suggestions are taken from a gene annotations tileset
+    tileset_uuid = request.GET['d'];
+    text = request.GET['ac']
+
+    try:
+        tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
+    except:
+        raise rfe.NotFound('Suggestion source file not found')
+
+    result_dict = tsu.get_gene_suggestions(tileset.datafile.url, text)
+
+    return JsonResponse(result_dict,  safe=False)
+
+@api_view(['GET', 'POST'])
+def viewconfs(request):
+    '''
+    Retrieve a viewconfs with a given uid
+
+    Args:
+
+    request (django.http.HTTPRequest): The request object containing the
+        uid (e.g. d=hg45ksdjfds) that identifies the viewconf.
+
+    Return:
+
+    '''
+    if request.method == 'POST':
+        uuid = slugid.nice()
+        viewconf = request.body
+
+        serializer = tss.ViewConfSerializer(data={'viewconf': request.body})
+        if not serializer.is_valid():
+            return JsonResponse({'error': 'Serializer not valid'}, 
+                    status=rfs.HTTP_400_BAD_REQUEST)
+
+        serializer.save(uuid=uuid, viewconf=viewconf)
+
+        return JsonResponse({'uid': uuid})
+
+    uuid = request.GET.get('d')
+
+    obj = tm.ViewConf.objects.get(uuid=uuid)
+    return JsonResponse(json.loads(obj.viewconf))
+
+
 
 @api_view(['GET'])
 def tiles(request):
@@ -264,7 +347,7 @@ def tileset_info(request):
             the tileset meta-information
     '''
     global mats
-    queryset = Tileset.objects.all()
+    queryset = tm.Tileset.objects.all()
     tileset_uuids = request.GET.getlist("d")
     tileset_infos = {}
     for tileset_uuid in tileset_uuids:
@@ -280,8 +363,6 @@ def tileset_info(request):
             continue
 
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
-            #print("datafile", tileset_object.datafile)
-            #print("datafile.url", datafile.url)
             tileset_info = hdft.get_tileset_info(
                 h5py.File(tileset_object.datafile.url))
             tileset_infos[tileset_uuid] = {
@@ -297,6 +378,10 @@ def tileset_info(request):
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
+        elif tileset_object.filetype == 'beddb':
+            tileset_infos[tileset_uuid] = cdt.get_tileset_info(tileset_object.datafile.url)
+        elif tileset_object.filetype == 'bed2ddb':
+            tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(tileset_object.datafile.url)
         else:
             dsetname = queryset.filter(
                 uuid=tileset_uuid
@@ -315,7 +400,7 @@ def tileset_info(request):
 class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
 
-    queryset = Tileset.objects.all()
+    queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
     # permission_classes = (IsOwnerOrReadOnly,)
     lookup_field = 'uuid'
@@ -372,7 +457,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
                 self.queryset.get(uuid=self.request.data['uid'])
                 # this uid already exists, return an error
                 raise rfe.APIException("UID already exists")
-            except Tileset.DoesNotExist:
+            except tm.Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
             uid = slugid.nice()

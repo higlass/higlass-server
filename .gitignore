@@ -4,6 +4,7 @@ api/coolers/migrations/*
 *.pyc
 *~
 data/
+real-data/
 log/
 db.sqlite3
 *.swp
@@ -12,3 +13,4 @@ db.sqlite3
 *.swm
 media/
 .DS_Store
+.idea/

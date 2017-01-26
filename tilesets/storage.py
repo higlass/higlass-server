@@ -1,6 +1,9 @@
+from __future__ import print_function
+
 from errno import EEXIST
 import hashlib
 import os
+import sys
 
 from django.core.files import File
 from django.core.files.storage import FileSystemStorage

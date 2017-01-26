@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import cooler.contrib.higlass as cch
+
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
@@ -10,11 +12,110 @@ import h5py
 import json
 import os.path as op
 import numpy as np
-import getter
-import rest_framework as rf
+import rest_framework.status as rfs
 import tiles
 
 import tilesets.models as tm
+
+class ViewConfTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_json_text = json.dumps({'hi': 'there'})
+
+        self.viewconf = tm.ViewConf.objects.create(
+                viewconf=upload_json_text, uuid='md')
+
+    def test_viewconf(self):
+        ret = self.client.get('/viewconfs/?d=md')
+
+        contents = json.loads(ret.content)
+        assert('hi' in contents)
+
+    def test_viewconfs(self):
+        ret = self.client.post('/viewconfs/',
+                '{"hello": "sir"}', content_type="application/json")
+        contents = json.loads(ret.content)
+        assert('uid' in contents)
+
+        url = '/viewconfs/?d=' + contents['uid']
+        ret = self.client.get(url)
+
+        contents = json.loads(ret.content)
+
+        assert('hello' in contents)
+        
+
+
+class CoolerTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='md')
+
+    def test_get_tileset_info(self):
+        ret = self.client.get('/tileset_info/?d=md')
+
+        contents = json.loads(ret.content)
+
+        assert('md' in contents)
+        assert('min_pos' in contents['md'])
+
+    def test_get_tiles(self):
+        ret = self.client.get('/tiles/?d=md.7.92.97')
+        content = json.loads(ret.content)
+
+        assert('md.7.92.97' in content)
+        assert('dense' in content['md.7.92.97'])
+
+
+class SuggestionsTest(dt.TestCase):
+    '''
+    Test gene suggestions
+    '''
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/gene_annotations.short.db', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='beddb',
+            datatype='gene-annotations',
+            owner=self.user1,
+            uuid='hhb',
+            coordSystem='hg19'
+            )
+
+    def test_suggest(self):
+        # shouldn't be found and shouldn't raise an error
+        ret = self.client.get('/suggest/?d=xx&ac=r')
+
+        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        suggestions = json.loads(ret.content)
+
+        self.assertGreater(len(suggestions), 0)
+        self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
+
+        ret = self.client.get('/suggest/?d=hhb&ac=r')
+        suggestions = json.loads(ret.content)
+        
+        self.assertGreater(len(suggestions), 0)
+        self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
+
 
 class FileUploadTest(dt.TestCase):
     '''
@@ -31,12 +132,13 @@ class FileUploadTest(dt.TestCase):
                 'filetype': 'hitile',
                 'datatype': 'vector',
                 'uid': 'bb',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             },
             format='multipart'
         )
 
-        self.assertEqual(rf.status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
 
         response = c.get('/tilesets/')
 
@@ -48,10 +150,50 @@ class FileUploadTest(dt.TestCase):
 class GetterTest(dt.TestCase):
     def test_get_info(self):
         filepath = 'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
-        info = getter.get_info(filepath)
+        info = cch.get_info(filepath)
 
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
+
+class Bed2DDBTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/arrowhead_domains_short.txt.multires.db', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bed2ddb',
+            datatype='arrowhead-domains',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_get_tile(self):
+        tile_id="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
+        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
+
+class BedDBTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/gene_annotations.short.db', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='beddb',
+            datatype='gene-annotations',
+            owner=self.user1,
+            uuid='hhb')
+
+    def test_get_tile(self):
+        tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
+        returned_text = self.client.get('/tiles/?d={tile_id}'.format(tile_id=tile_id))
+        returned = json.loads(returned_text.content)
 
 class HiBedTest(dt.TestCase):
     '''
@@ -126,7 +268,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         with h5py.File(self.cooler.datafile.url) as f:
 
-            mat = [f, getter.get_info(self.cooler.datafile.url)]
+            mat = [f, cch.get_info(self.cooler.datafile.url)]
             t = tiles.make_tile(z, x, y, mat)
 
             # test the base64 encoding
@@ -153,7 +295,8 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             },
             format='multipart'
         )
@@ -170,7 +313,8 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'True'
+                'private': 'True',
+                'coordSystem': 'hg19'
             }
             ,
             format='multipart'
@@ -202,7 +346,9 @@ class TilesetsViewSetTest(dt.TestCase):
             {
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
                 'filetype': 'hitile',
-                'private': 'False'
+                'private': 'False',
+                'coordSystem': 'hg19'
+
             },
             format='multipart'
         )
@@ -355,7 +501,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
                 'private': 'True',
-                'name': 'one'
+                'name': 'one',
+                'coordSystem': 'hg19'
             }
         )
         ret = c.post(
@@ -364,7 +511,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'hitile',
                 'private': 'True',
-                'name': 'tone'
+                'name': 'tone',
+                'coordSystem': 'hg19'
             }
         )
         ret = c.post(
@@ -373,7 +521,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'cooler',
                 'private': 'True',
-                'name': 'tax'
+                'name': 'tax',
+                'coordSystem': 'hg19'
             }
         )
         ret = json.loads(c.get('/tilesets/?ac=ne').content)
@@ -406,7 +555,24 @@ class TilesetsViewSetTest(dt.TestCase):
                 'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
                 'filetype': 'xxxyx',
                 'datatype': 'vector',
-                'private': 'True'
+                'private': 'True',
+            }
+        )
+
+        # not coordSystem field
+        assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
+        ret = json.loads(c.get('/tilesets/?t=xxxyx').content)
+
+        assert(ret['count'] == 0)
+
+        ret = c.post(
+            '/tilesets/',
+            {
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'filetype': 'xxxyx',
+                'datatype': 'vector',
+                'private': 'True',
+                'coordSystem': 'hg19',
             }
         )
 
@@ -421,7 +587,8 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': 'vector',
                 'private': 'True',
-                'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+                'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
+                'coordSystem': 'hg19'
             }
         )
 
@@ -439,7 +606,8 @@ class TilesetsViewSetTest(dt.TestCase):
                     'filetype': 'a',
                     'datatype': 'vector',
                     'private': 'True',
-                    'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
+                    'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
+                    'coordSystem': 'hg19'
                 }
             ).content
         )
@@ -459,6 +627,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': '1',
                 'private': 'True',
+                'coordSystem': 'hg19',
                 'uid': 'aaaaaaaaaaaaaaaaaaaaaa'
             }
         )
@@ -470,9 +639,11 @@ class TilesetsViewSetTest(dt.TestCase):
                 'filetype': 'a',
                 'datatype': '2',
                 'private': 'True',
+                'coordSystem': 'hg19',
                 'uid': 'bb'
             }
         )
+
 
         ret = json.loads(self.client.get('/tilesets/?dt=1').content)
         self.assertEqual(ret['count'], 1)

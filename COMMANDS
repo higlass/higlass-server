@@ -1,0 +1,138 @@
+mkvirtualenv higlass-server
+uwsgi --http :8000 --module api.wsgi --pythonpath ~/.virtualenvs/uwsgi-tutorial/lib/python2.7/site-packages/
+
+pip install Django uwsgi
+sudo apt-get install zlib1g-dev
+sudo apt-get install uwsgi-plugin-python
+pip install djangorestframework django-rest-swagger django-cors-headers pygments h5py
+pip install pandas cooler clodius django-guardian slugid
+
+# Delete existing datasets
+# rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
+python manage.py migrate
+
+
+# Run hg-server tests
+python manage.py test tilesets
+
+sudo apt-get install nginx
+sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
+sudo /etc/init.d/nginx restart
+#sudo /etc/init.d/nginx start
+
+
+# Start the WSGI server
+uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv /home/ubuntu/.virtualenvs/hg-server/ --workers 2
+
+# 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
+python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
+
+# Create a new instance
+
+rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
+port=8000
+python manage.py runserver localhost:${port} 
+
+
+port=8000
+curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
+curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
+curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
+curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
+
+curl -X "DELETE" localhost:${port}/tilesets/f/
+curl -F "datafile=@data/arrowhead_domains_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=arrowhead-domains" -F "name=Arrowhead domains" -F "uid=f" localhost:${port}/tilesets/
+
+curl -X "DELETE" localhost:${port}/tilesets/i/
+curl -F "datafile=@data/hiccups_loops_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=hiccups-loops" -F "name=HiCCUPS loops" -F "uid=i" localhost:${port}/tilesets/
+
+# Test individual classes
+
+python manage.pdy test tilesets.tests.HiBedTest
+
+# Adding a new data type
+
+* Add a new tile getter in `generate_tile` in `tilesets/views.py`
+* Add a new tileset_info in `tileset_info` in `tilesets/views.py`
+* (Search for `cooler` in `views.py` and add the new file type as needed)
+
+# Real data
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
+curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/gene-annotations-hg19.db
+curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix"  http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool
+curl -F "datafile=@/tmp/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878InputStdSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878InputStdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+
+curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
+curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
+curl -F "datafile=@/tmp/Dixon2015-H1_hESC-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
+
+
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile
+curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+
+wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/
+
+curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/
+
+
+### Docker
+
+#   build:
+docker build --tag higlass-server .
+
+#   upload image: TODO
+#   download image: TODO
+
+#   start container:
+# Port 8000 is hardcoded in the image;
+# Port 8001 is the one you want to expose.
+docker run --name my-higlass-server --detach --publish 8001:8000 higlass-server
+curl http://localhost:8001/
+
+#   connect to an already running container:
+docker exec --interactive --tty my-higlass-server bash
+
+#   remove all containers (use with caution):
+docker ps -a -q | xargs docker stop | xargs docker rm
