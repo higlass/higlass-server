@@ -1,6 +1,28 @@
 # higlass-server
 
-## Installation
+## Easy Docker install
+
+A higlass-server image is available on [DockerHub](https://hub.docker.com/r/gehlenborglab/higlass-server/).
+Install Docker on your system, and then:
+
+```bash
+# download:
+docker pull gehlenborglab/higlass-server
+
+# start container:
+#   Port 8000 is hardcoded in the image;
+#   Port 8001 is what it should be mapped to on the host.
+docker run --name my-higlass-server --detach --publish 8001:8000 gehlenborglab/higlass-server
+curl http://localhost:8001/
+
+# connect to an already running container:
+docker exec --interactive --tty my-higlass-server bash
+
+# remove all containers (use with caution):
+docker ps -a -q | xargs docker stop | xargs docker rm
+```
+
+## Installation from source
 
 ```bash
 git clone https://github.com/hms-dbmi/higlass-server.git
