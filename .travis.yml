@@ -64,3 +64,7 @@ script:
   - curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" -F "coordSystem=hg19" $URL
   - curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" -F "coordSystem=hg19" $URL
   # TODO: Check that the output is what we expect?
+
+  - JSON=`curl $URL`
+  - echo $JSON
+  - '[ "$JSON" == "{\"tilesets\":\"$URL\"}" ] && echo "Got expected response. Yay!"'
