@@ -58,7 +58,7 @@ script:
 
   - PORT=6000
   - python manage.py runserver localhost:$PORT &
-  - URL="http://localhost:$PORT/tilesets/"
+  - URL="http://localhost:$PORT/api/v1/tilesets/"
   - until $(curl --output /dev/null --silent --fail --globoff $URL); do echo '.'; sleep 1; done
 
   - curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" -F "coordSystem=hg19" $URL
@@ -100,7 +100,7 @@ script:
   - docker build --tag gehlenborglab/higlass-server:latest .
   # minimal tests
   - docker run --name my-higlass-server --detach --publish 8001:8000 higlass-server
-  - JSON=`curl http://localhost:8001/`
+  - JSON=`curl http://localhost:8001/api/v1`
   - '[ "$JSON" == "{\"tilesets\":\"http://localhost:8001/tilesets/\"}" ] && echo "Got expected response. Yay!"'
 
   # TODO: Probably not what we want?
