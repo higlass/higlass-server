@@ -27,13 +27,9 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
-<<<<<<< HEAD
 import redis
 import pickle
-=======
 import sys
-
->>>>>>> f314c96685142b0f923849c9601ca3c6d03ef0eb
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
