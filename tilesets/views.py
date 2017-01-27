@@ -144,9 +144,12 @@ def generate_tile(tile_id, request):
         return (tileset_uuid, {'error': "Forbidden"})
 
 
+    print("checking tile_id", tile_id)
     if rdb.exists(tile_id):
        tile_value = pickle.loads(rdb.get(tile_id))
+       print("found tile_id", tile_id)
        return (tile_id, tile_value)
+
 
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
