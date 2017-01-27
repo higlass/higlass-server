@@ -11,9 +11,18 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+import os.path as op
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if 'HIGLASS_SERVER_BASE_DIR' in os.environ:
+    base_dir = os.environ['HIGLASS_SERVER_BASE_DIR']
+
+    if op.exists(base_dir):
+        BASE_DIR = os.path.dirname(base_dir)
+    else:
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
