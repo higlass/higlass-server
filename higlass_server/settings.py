@@ -81,6 +81,13 @@ if DEBUG:
     for logger in LOGGING['loggers']:
         LOGGING['loggers'][logger]['handlers'] = ['console']
 
+if 'REDIS_HOST' in os.environ and 'REDIS_PORT' in os.environ:
+    REDIS_HOST = os.environ['REDIS_HOST']
+    REDIS_PORT = os.environ['REDIS_PORT']
+else:
+    REDIS_HOST = None
+    REDIS_PORT = None
+
 DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
