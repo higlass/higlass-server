@@ -117,8 +117,6 @@ def generate_tile(tile_id, request):
     Returns:
         (string, dict): A tuple containing the tile ID tile data
     '''
-    print("tile_id:?", tile_id)
-    # add redis hooks here
 
     rdb = redis.Redis(
             host=redis_host,
