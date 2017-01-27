@@ -27,8 +27,9 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
+import redis
+import pickle
 import sys
-
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -43,6 +44,12 @@ logger = logging.getLogger(__name__)
 
 global mats
 mats = {}
+
+global redis_host
+redis_host = '127.0.0.1'
+global redis_port
+redis_port = 6379
+
 
 
 def make_mats(dset):
@@ -111,15 +118,27 @@ def generate_tile(tile_id, request):
         (string, dict): A tuple containing the tile ID tile data
     '''
 
+    rdb = redis.Redis(
+            host=redis_host,
+            port=redis_port)
+
+
     tile_id_parts = tile_id.split('.')
     tile_position = map(int, tile_id_parts[1:])
     tileset_uuid = tile_id_parts[0]
 
     tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
 
+
     if tileset.private and request.user != tileset.owner:
         # dataset is not public return an empty set
         return (tileset_uuid, {'error': "Forbidden"})
+
+
+    if rdb.exists(tile_id):
+       tile_value = pickle.loads(rdb.get(tile_id))
+       return (tile_id, tile_value)
+
 
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
@@ -129,18 +148,21 @@ def generate_tile(tile_id, request):
             tile_position[0],
             tile_position[1]
         )
-
-        return (tile_id,
-                {'dense': base64.b64encode(dense)})
+        tile_value = {'dense': base64.b64encode(dense)}
+        rdb.set(tile_id, pickle.dumps(tile_value))
+        return (tile_id, tile_value)
 
     elif tileset.filetype == 'beddb':
-        return (tile_id, cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1]))
+        tile_value = cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1])
+        rdb.set(tile_id, pickle.dumps(tile_value))
+        return (tile_id, tile_value)
 
     elif tileset.filetype == 'bed2ddb':
-        return (tile_id, cdt.get_2d_tile(tileset.datafile.url, tile_position[0], tile_position[1], tile_position[2]))
+        tile_value = cdt.get_2d_tile(tileset.datafile.url, tile_position[0], tile_position[1], tile_position[2])
+        rdb.set(tile_id, pickle.dumps(tile_value))
+        return (tile_id, tile_value)
 
     elif tileset.filetype == 'hibed':
-
         dense = hdft.get_discrete_data(
                 h5py.File(
                     tileset.datafile.url
@@ -149,18 +171,24 @@ def generate_tile(tile_id, request):
                 tile_position[1]
                 )
 
-        return (tile_id,
-                {'discrete': list([list(d) for d in dense])})
+        tile_value = {'discrete': list([list(d) for d in dense])}
+        rdb.set(tile_id, pickle.dumps(tile_value))
+        return (tile_id, tile_value)
 
     elif tileset.filetype == "elasticsearch":
         response = urllib.urlopen(
             tileset.datafile + '/' + '.'.join(map(str, tile_position))
         )
-        return (tile_id, json.loads(response.read())["_source"]["tile_value"])
+        tile_value = json.loads(response.read())["_source"]["tile_value"]
+        rdb.set(tile_id, pickle.dumps(tile_value))
+        return (tile_id, tile_value)
+
     else:
         tile_data = make_cooler_tile(tileset.datafile.url, tile_position)
         if tile_data is None:
             return None
+
+        rdb.set(tile_id, pickle.dumps(tile_data))
         return (tile_id, tile_data)
         # od[ud[1]] = ud[0]
 
