@@ -144,8 +144,9 @@ def generate_tile(tile_id, request):
         return (tileset_uuid, {'error': "Forbidden"})
 
 
-    if rdb.exists(tile_id):
-       tile_value = pickle.loads(rdb.get(tile_id))
+    tile_value = rdb.get(tile_id)
+    if tile_value is not None:
+       tile_value = pickle.loads(tile_value)
        return (tile_id, tile_value)
 
 
