@@ -195,6 +195,11 @@ class BedDBTest(dt.TestCase):
         returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
 
+        for x in returned['bdb.0.0']:
+            assert('uid' in x)
+            assert('importance' in x)
+            assert('fields' in x)
+
 class HiBedTest(dt.TestCase):
     '''
     Test retrieving interval data (hibed)
