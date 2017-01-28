@@ -96,7 +96,7 @@ class SuggestionsTest(dt.TestCase):
             filetype='beddb',
             datatype='gene-annotations',
             owner=self.user1,
-            uuid='hhb',
+            uuid='sut',
             coordSystem='hg19'
             )
 
@@ -104,13 +104,13 @@ class SuggestionsTest(dt.TestCase):
         # shouldn't be found and shouldn't raise an error
         ret = self.client.get('/api/v1/suggest/?d=xx&ac=r')
 
-        ret = self.client.get('/api/v1/suggest/?d=hhb&ac=r')
+        ret = self.client.get('/api/v1/suggest/?d=sut&ac=r')
         suggestions = json.loads(ret.content)
 
         self.assertGreater(len(suggestions), 0)
         self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
 
-        ret = self.client.get('/api/v1/suggest/?d=hhb&ac=r')
+        ret = self.client.get('/api/v1/suggest/?d=sut&ac=r')
         suggestions = json.loads(ret.content)
         
         self.assertGreater(len(suggestions), 0)
@@ -168,7 +168,7 @@ class Bed2DDBTest(dt.TestCase):
             filetype='bed2ddb',
             datatype='arrowhead-domains',
             owner=self.user1,
-            uuid='hhb')
+            uuid='ahd')
 
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
@@ -188,7 +188,7 @@ class BedDBTest(dt.TestCase):
             filetype='beddb',
             datatype='gene-annotations',
             owner=self.user1,
-            uuid='hhb')
+            uuid='bdb')
 
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
@@ -211,7 +211,7 @@ class HiBedTest(dt.TestCase):
             filetype='hibed',
             datatype='stacked-interval',
             owner=self.user1,
-            uuid='hhb')
+            uuid='hbt')
 
 
     def test_hibed_get_tile(self):
