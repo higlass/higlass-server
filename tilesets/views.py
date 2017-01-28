@@ -53,6 +53,9 @@ class EmptyRDB:
     def exists(self, tile_id):
         return False
 
+    def get(self, tile_id):
+        return None;
+
     def set(self, tile_id, tile_value):
         pass
 
