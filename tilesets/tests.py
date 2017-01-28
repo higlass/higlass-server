@@ -50,6 +50,30 @@ class ViewConfTest(dt.TestCase):
 
 
 class CoolerTest(dt.TestCase):
+    def test_tile_symmetry(self):
+        '''
+        Make sure that tiles are symmetric
+        '''
+        print("uploading...")
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='aa')
+
+        ret = self.client.get('/api/v1/tiles/?d=aa.0.0.0')
+
+
+        contents = json.loads(ret.content)
+
+        import base64
+        r = base64.decodestring(contents['aa.0.0.0']['dense'])
+        q = np.frombuffer(r, dtype=np.float32)
+
+        q = q.reshape((256,256))
+
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'

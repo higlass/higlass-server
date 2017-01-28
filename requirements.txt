@@ -11,4 +11,4 @@ slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
 
--e git://github.com/mirnylab/cooler@develop#egg=cooler
+-e git://github.com/pkerpedjiev/cooler@develop#egg=cooler

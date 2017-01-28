@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import cooler.contrib.higlass as cch
 import logging
 import numpy as np
@@ -14,14 +16,16 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
     start2 = y_pos * info['max_width'] / divisor
     end2 = (y_pos + 1) * info['max_width'] / divisor
 
+    #print(start1, end1-1, start2, end2-1)
     data = cch.get_data(
         dset[0], zoomLevel, start1, end1 - 1, start2, end2 - 1
     )
 
-    df = data[data['genome_start'] >= start1]
+    df = data[data['genome_start1'] >= start1]
+
     binsize = dset[0].attrs[str(zoomLevel)]
-    j = (df['genome_start'].values - start1) // binsize
-    i = (df['genome_end'].values - start2) // binsize
+    j = (df['genome_start1'].values - start1) // binsize
+    i = (df['genome_start2'].values - start2) // binsize
     v = np.nan_to_num(df['balanced'].values)
 
     zi = zip(zip(i, j), v)
