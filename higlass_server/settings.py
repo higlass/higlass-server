@@ -18,12 +18,13 @@ if 'HIGLASS_SERVER_BASE_DIR' in os.environ:
     base_dir = os.environ['HIGLASS_SERVER_BASE_DIR']
 
     if op.exists(base_dir):
-        BASE_DIR = os.path.dirname(base_dir)
+        BASE_DIR = base_dir
     else:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+print "hgb", BASE_DIR
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/

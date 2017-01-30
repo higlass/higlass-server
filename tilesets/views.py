@@ -156,7 +156,7 @@ def generate_tile(tile_id, request):
     if tileset.filetype == "hitile":
         dense = hdft.get_data(
             h5py.File(
-                tileset.datafile.url
+                get_datapath(tileset.datafile.url)
             ),
             tile_position[0],
             tile_position[1]
@@ -164,15 +164,15 @@ def generate_tile(tile_id, request):
         tile_value = {'dense': base64.b64encode(dense)}
 
     elif tileset.filetype == 'beddb':
-        tile_value = cdt.get_tile(tileset.datafile.url, tile_position[0], tile_position[1])
+        tile_value = cdt.get_tile(get_datapath(tileset.datafile.url), tile_position[0], tile_position[1])
 
     elif tileset.filetype == 'bed2ddb':
-        tile_value = cdt.get_2d_tile(tileset.datafile.url, tile_position[0], tile_position[1], tile_position[2])
+        tile_value = cdt.get_2d_tile(get_datapath(tileset.datafile.url), tile_position[0], tile_position[1], tile_position[2])
 
     elif tileset.filetype == 'hibed':
         dense = hdft.get_discrete_data(
                 h5py.File(
-                    tileset.datafile.url
+                    get_datapath(tileset.datafile.url)
                     ),
                 tile_position[0],
                 tile_position[1]
@@ -187,7 +187,7 @@ def generate_tile(tile_id, request):
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
     else:
-        tile_value = make_cooler_tile(tileset.datafile.url, tile_position)
+        tile_value = make_cooler_tile(get_datapath(tileset.datafile.url), tile_position)
         if tile_value is None:
             return None
 
@@ -217,7 +217,7 @@ def suggest(request):
     except:
         raise rfe.NotFound('Suggestion source file not found')
 
-    result_dict = tsu.get_gene_suggestions(tileset.datafile.url, text)
+    result_dict = tsu.get_gene_suggestions(get_datapath(tileset.datafile.url), text)
 
     return JsonResponse(result_dict,  safe=False)
 
@@ -290,6 +290,8 @@ def tiles(request):
 
     return JsonResponse(result_dict, safe=False)
 
+def get_datapath(relpath):
+    return op.join(hss.BASE_DIR, relpath)
 
 @api_view(['GET'])
 def tileset_info(request):
@@ -325,7 +327,7 @@ def tileset_info(request):
 
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
             tileset_info = hdft.get_tileset_info(
-                h5py.File(tileset_object.datafile.url))
+                h5py.File(get_datapath(tileset_object.datafile.url)))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [0],
                 "max_pos": [tileset_info['max_pos']],
@@ -340,13 +342,13 @@ def tileset_info(request):
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         elif tileset_object.filetype == 'beddb':
-            tileset_infos[tileset_uuid] = cdt.get_tileset_info(tileset_object.datafile.url)
+            tileset_infos[tileset_uuid] = cdt.get_tileset_info(get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bed2ddb':
-            tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(tileset_object.datafile.url)
+            tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(get_datapath(tileset_object.datafile.url))
         else:
-            dsetname = queryset.filter(
+            dsetname = get_datapath(queryset.filter(
                 uuid=tileset_uuid
-            ).first().datafile.url
+            ).first().datafile.url)
 
             if dsetname not in mats:
                 make_mats(dsetname)
