@@ -24,6 +24,7 @@ import rest_framework.response as rfr
 import rest_framework.status as rfs
 import sqlite3
 import tilesets.models as tm
+import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
@@ -365,7 +366,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
-    # permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (tsp.UserPermission,)
     lookup_field = 'uuid'
     parser_classes = (rfp.MultiPartParser,)
 
