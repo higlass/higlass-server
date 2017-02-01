@@ -47,14 +47,89 @@ class ViewConfTest(dt.TestCase):
 
         assert('hello' in contents)
         
+class PermissionsTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
 
+        self.user2 = dcam.User.objects.create_user(
+            username='user2', password='pass'
+        )
+
+    def test_permissions(self):
+        c1 = dt.Client()
+        f = open( 'data/tiny.txt', 'r')
+
+        test_tileset = {
+                'datafile': f,
+                'filetype': 'hitile',
+                'datatype': 'vector',
+                'uid': 'bb',
+                'private': 'True',
+                'coordSystem': 'hg19'
+            }
+
+
+
+        response = c1.post(
+            '/api/v1/tilesets/',
+            test_tileset
+            ,
+            format='multipart'
+        )
+
+        # user must be logged in to create objects
+        assert(response.status_code == 403)
+        f.close()
+
+        c1.login(username='user1', password='pass')
+
+        f = open( 'data/tiny.txt', 'r')
+        test_tileset = {
+                'datafile': f,
+                'filetype': 'hitile',
+                'datatype': 'vector',
+                'uid': 'bb',
+                'private': 'True',
+                'coordSystem': 'hg19'
+            }
+
+        response = c1.post(
+            '/api/v1/tilesets/',
+            test_tileset,
+            format='multipart'
+        )
+        f.close()
+
+        # creating datasets is allowed if we're logged in
+        assert(response.status_code == 201)
+
+        ret = json.loads(response.content)
+
+        c2 = dt.Client()
+        c2.login(username='user2', password='pass')
+
+        # user2 should not be able to delete the tileset created by user1
+        resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
+        assert(resp.status_code == 403)
+
+        # tileset should still be there
+        resp = c1.get("/api/v1/tilesets/")
+        assert(json.loads(resp.content)['count'] == 1)
+        
+        # user1 should be able to delete his/her own tileset
+        resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
+        resp = c1.get("/api/v1/tilesets/")
+        assert(resp.status_code == 200)
+
+        assert(json.loads(resp.content)['count'] == 0)
 
 class CoolerTest(dt.TestCase):
     def test_tile_symmetry(self):
         '''
         Make sure that tiles are symmetric
         '''
-        print("uploading...")
         upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
         tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -145,8 +220,15 @@ class FileUploadTest(dt.TestCase):
     '''
     Test file upload functionality
     '''
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
     def test_upload_file(self):
         c = dt.Client()
+        c.login(username='user1', password='pass')
+
         f = open( 'data/tiny.txt', 'r')
 
         response = c.post(
@@ -319,22 +401,6 @@ class TilesetsViewSetTest(dt.TestCase):
             )
 
     def test_post_dataset(self):
-        ret = self.client.post(
-            '/api/v1/tilesets/',
-            {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
-                'filetype': 'hitile',
-                'private': 'True',
-                'coordSystem': 'hg19'
-            },
-            format='multipart'
-        )
-        ret_obj = json.loads(ret.content)
-
-        # since we posted this object as anonymous, we expect it not be private
-        t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
-        self.assertFalse(t.private)
-
         c = dt.Client()
         c.login(username='user1', password='pass')
         ret = c.post(
@@ -609,6 +675,7 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertEqual(ret['count'], 1)
 
     def test_add_with_uid(self):
+        self.client.login(username='user1', password='pass')
         ret = self.client.post(
             '/api/v1/tilesets/',
             {
@@ -649,6 +716,7 @@ class TilesetsViewSetTest(dt.TestCase):
         self.assertEquals(ret['count'], 3)
 
     def test_list_by_datatype(self):
+        self.client.login(username='user1', password='pass')
         ret = self.client.post(
             '/api/v1/tilesets/',
             {
