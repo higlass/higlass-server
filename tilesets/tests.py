@@ -125,6 +125,12 @@ class PermissionsTest(dt.TestCase):
 
         assert(json.loads(resp.content)['count'] == 0)
 
+        c3 = dt.Client()
+        resp = c3.get('/api/v1/tilesets/')
+
+        # unauthenticated users should be able to see the (public) tileset list
+        assert(resp.status_code ==  200)
+
 class CoolerTest(dt.TestCase):
     def test_tile_symmetry(self):
         '''
