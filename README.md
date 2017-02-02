@@ -24,10 +24,12 @@ docker ps -a -q | xargs docker stop | xargs docker rm
 
 ## Installation from source
 
+**Note:** We recommend creating a virtual environment for higlass-server after cloning, e.g.: `virtualenv -a ($pwd) higlass-server`, to avoid conflicts.
+
 ```bash
-git clone https://github.com/hms-dbmi/higlass-server.git
-cd higlass-server/
+git clone https://github.com/hms-dbmi/higlass-server.git && cd higlass-server
 pip install --upgrade -r requirements.txt
+pip install --upgrade -r requirements-secondary.txt
 python manage.py migrate
 python manage.py runserver localhost:8000
 ```
