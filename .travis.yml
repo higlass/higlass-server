@@ -57,12 +57,13 @@ script:
   ### 2) Django server
 
   - PORT=6000
+  - echo "from django.contrib.auth.models import User; User.objects.filter(username='admin').delete(); User.objects.create_superuser('admin', 'user@host.com', 'nimda')" | python manage.py shell
   - python manage.py runserver localhost:$PORT &
   - URL="http://localhost:$PORT/api/v1/tilesets/"
   - until $(curl --output /dev/null --silent --fail --globoff $URL); do echo '.'; sleep 1; done
 
-  - curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" -F "coordSystem=hg19" $URL
-  - curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" -F "coordSystem=hg19" $URL
+  - curl -u admin:nimda -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" -F "coordSystem=hg19" $URL
+  - curl -u admin:nimda -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" -F "coordSystem=hg19" $URL
   # TODO: Check that the output is what we expect?
 
   - JSON=`curl $URL`
