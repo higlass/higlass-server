@@ -32,23 +32,25 @@ def main():
 
     parts = args.filename.split('-')
 
-    name = parts[0][:-4]
-    year = parts[0][-4:]
-    celltype = parts[1]
-    enzyme = parts[2]
-    resolution = parts[4].split('.')[1]
+    try:
+        name = parts[0][:-4]
+        year = parts[0][-4:]
+        celltype = parts[1]
+        enzyme = parts[2]
+        resolution = parts[4].split('.')[1]
 
-    out_txt = """
-curl -u `cat ~/.higlass-server-login` \
- -F 'datafile=@/data/downloads/hg19/{filename}' \
- -F 'filetype=cooler' \
- -F 'datatype=matrix' \
- -F 'name={name} et al. ({year}) {celltype} {enzyme} (allreps) {resolution}' \
- -F 'coordSystem=hg19' \
- localhost:8000/api/v1/tilesets/
- """.format(filename=args.filename, name=name, year=year, celltype=celltype, enzyme=enzyme, resolution=resolution)
+        out_txt = """
+    curl -u `cat ~/.higlass-server-login` \
+     -F 'datafile=@/data/downloads/hg19/{filename}' \
+     -F 'filetype=cooler' \
+     -F 'datatype=matrix' \
+     -F 'name={name} et al. ({year}) {celltype} {enzyme} (allreps) {resolution}' \
+     -F 'coordSystem=hg19' \
+     localhost:8000/api/v1/tilesets/""".format(filename=args.filename, name=name, year=year, celltype=celltype, enzyme=enzyme, resolution=resolution)
 
-    print(out_txt)
+        print(out_txt, end="")
+    except:
+        print("ERROR:", args.filename)
     
 
 if __name__ == '__main__':
