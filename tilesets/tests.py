@@ -10,12 +10,15 @@ import base64
 import django.test as dt
 import h5py
 import json
+import logging
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
 import tiles
 
 import tilesets.models as tm
+
+logger = logging.getLogger(__name__)
 
 class ViewConfTest(dt.TestCase):
     def setUp(self):
@@ -36,7 +39,9 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/api/v1/viewconfs/',
-                '{"hello": "sir"}', content_type="application/json")
+                               '{"hello": "sir"}', content_type="application/json")
+                               # {'viewconf': '{"hello": "sir"}', 'uid': 'foo'},
+                               # content_type="application/json")
         contents = json.loads(ret.content)
         assert('uid' in contents)
 

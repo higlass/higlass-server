@@ -22,9 +22,11 @@ for FILE in $FILES; do
   [ -e data/$FILE ] || wget -P data/ https://s3.amazonaws.com/pkerp/public/$FILE
 done
 echo 'foo bar' > data/tiny.txt
-python manage.py test tilesets
+python manage.py test tilesets$1 # $1: You can run just a subset
 
 ### 2) Django server
+
+### Setup
 
 USER=admin
 PASS=nimda
@@ -33,33 +35,57 @@ echo "from django.contrib.auth.models import User; User.objects.filter(username=
 PORT=6000
 python manage.py runserver localhost:$PORT &
 DJANGO_PID=$!
-URL="http://localhost:$PORT/api/v1/tilesets/"
-until $(curl --output /dev/null --silent --fail --globoff $URL); do echo '.'; sleep 1; done
+TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
+until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 
-upload() {
+### Tilesets
+
+upload_tilesets() {
   curl -u $USER:$PASS \
        -F "uid=$1" \
        -F "filetype=$2" \
        -F "datatype=$3" \
        -F "datafile=@data/$4" \
        -F "coordSystem=hg19" \
-       $URL
+       $TILESETS_URL
 }
-upload aa cooler matrix $COOLER
-upload bb hitile vector $HITILE
+upload_tilesets aa cooler matrix $COOLER
+upload_tilesets bb hitile vector $HITILE
 # TODO: Check that the output is what we expect?
 
-JSON=`curl $URL`
-echo $JSON
+TILESETS_JSON=`curl $TILESETS_URL`
+echo $TILESETS_JSON
 
-EXPECTED=\
+TILESETS_EXPECTED=\
 '{"count": 2, "results": ['\
 '{"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, '\
 '"name": "'$COOLER'", "coordSystem": "hg19", "coordSystem2": ""}, '\
 '{"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, '\
 '"name": "'$HITILE'", "coordSystem": "hg19", "coordSystem2": ""}]}'
 
-[ "$JSON" == "$EXPECTED" ] || exit 1
+[ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
+
+### Viewconf
+
+#$VIEWCONF_URL="http://localhost:$PORT/api/v1/viewconf/"
+#echo '{}' > data/viewconf.json
+#
+#upload_viewconf() {
+#  curl -F "uid=$1" \
+#       -F "viewconf=@data/$4" \
+#       $VIEWCONF_URL
+#}
+#upload_viewconf viewconf_id viewconf.json
+#
+#VIEWCONF_JSON=`curl $VIEWCONF_URL?d=viewconf_id`
+#echo $VIEWCONF_JSON
+#
+#VIEWCONF_EXPECTED=\
+#'{}'
+#
+#[ "$VIEWCONF_JSON" == "$VIEWCONF_EXPECTED" ] || exit 1
+
+### Cleanup
 
 kill $DJANGO_PID
 
