@@ -236,21 +236,36 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        uuid = slugid.nice()
+        uid = slugid.nice()
         viewconf = request.body
+        # TODO: Copy-and-paste from TilessetsViewSet... Consider creating an abstract superclass both can inherit from.
+        # if 'uid' in request.data:
+        #     logger.warn('if!')
+        #     try:
+        #         queryset = tm.ViewConf.objects.all()
+        #         queryset.get(uuid=request.data['uid'])
+        #         # this uid already exists, return an error
+        #         raise rfe.APIException("UID already exists")
+        #     except tm.Tileset.DoesNotExist:
+        #         logger.warn('except!')
+        #         uid = request.data['uid']
+        # else:
+        #     logger.warn('else!')
+        #     uid = slugid.nice()
+        # viewconf = request.data['viewconf']
 
-        serializer = tss.ViewConfSerializer(data={'viewconf': request.body})
+        serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
             return JsonResponse({'error': 'Serializer not valid'}, 
                     status=rfs.HTTP_400_BAD_REQUEST)
 
-        serializer.save(uuid=uuid, viewconf=viewconf)
+        serializer.save(uuid=uid, viewconf=viewconf)
 
-        return JsonResponse({'uid': uuid})
+        return JsonResponse({'uid': uid})
 
-    uuid = request.GET.get('d')
+    uid = request.GET.get('d')
 
-    obj = tm.ViewConf.objects.get(uuid=uuid)
+    obj = tm.ViewConf.objects.get(uuid=uid)
     return JsonResponse(json.loads(obj.viewconf))
 
 
@@ -428,16 +443,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         if 'filetype' not in self.request.data:
             raise rfe.APIException('Missing filetype')
-
-        datatype = None
-        if 'datatype' not in self.request.data:
-            if self.request.data['filetype'] == 'cooler':
-                datatype = 'matrix'
-            elif self.request.data['filetype'] == 'hitile':
-                datatype = 'vector'
-            else:
-                raise rfe.APIException('Missing datatype. Could not infer from filetype:', self.request.data['filetype'])
-
 
         datafile = self.request.data.get('datafile')
 
