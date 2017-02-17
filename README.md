@@ -56,11 +56,18 @@ Or to get a tile:
 curl http://localhost:8000/api/v1/tiles/?d=hitile-demo.0.0.0
 ```
 
-### Preparing cooler files for use with `higlass-server`
+## Preparing files for ingest
 
-[Cooler](https://github.com/mirnylab/cooler) files store Hi-C data. They need to be decorated with aggregated data at multiple resolutions in order to work with `higlass-server`.
-This is easily accomplished by simply installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has to come from a clone of the
-official cooler repository, but this will hopefully be merged into the main branch shortly.
+Genomics data needs to be aggregated across a range of scales before it can be used with HiGlass.
+
+### Cooler files
+
+**TODO**: Is this still accurate?
+
+[Cooler](https://github.com/mirnylab/cooler) files store Hi-C data. They need to be decorated with aggregated
+data at multiple resolutions in order to work with `higlass-server`. This is easily accomplished by simply 
+installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has 
+to come from a clone of the official cooler repository, but this will hopefully be merged into the main branch shortly.
 
 ```
 
@@ -71,49 +78,18 @@ python setup.py install
 recursive_agg_onefile.py file.cooler --out output.cooler
 ```
 
-### Preparing bigWig files for use with `higlass-server`
+### BigWig files
 
-[BigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) files contain values for positions along a genome. To be viewable using higlass, they need to be aggregated using `clodius`:
+BigWig files can be aggregated with the [Clodius](https://github.com/hms-dbmi/clodius#bigwig-files).
 
-Installing `clodius`:
+### **TODO**: Any other types?
 
-```
-pip install clodius
-```
+## Development
 
-Getting a sample dataset:
+After you've done an installation from source you're ready to go.
+You can use `./test.sh` to run the same tests that Travis will run.
 
-```
-wget http://hgdownload.cse.ucsc.edu/goldenpath/hg19/encodeDCC/wgEncodeCaltechRnaSeq/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
-```
-
-Aggregate it:
-
-```
-tile_bigWig.py wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig --output-file data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-```
-
-Register it:
-
-```
-curl -H "Content-Type: application/json" -X POST -d '{"processed_file":"data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2","file_type":"hitile"}' http://localhost:8000/tilesets/
-```
-
-### Registering a cooler file
-
-See the "Add a dataset" line in the "Jump Start" section above.
-
-### Unit tests
-
-```
-wget -O -P data/ https://s3.amazonaws.com/pkerp/public/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
-wget -O -P data/ https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-wget -O -P data/ https://s3.amazonaws.com/pkerp/public/gene_annotations.short.db
-
-python manage.py test tilesets
-```
-
-### Upgrade
+### Upgrades
 
 ```
 bumpversion patch
