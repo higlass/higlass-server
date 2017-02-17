@@ -33,7 +33,12 @@ python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
 port=8000
+USERNAME=user
+PASSWORD=password
+echo "import django.contrib.auth; django.contrib.auth.models.User.objects.create_user('$USERNAME', password='$PASSWORD')" \
+     | python manage.py shell
 python manage.py runserver localhost:${port} 
+
 
 
 port=8000
