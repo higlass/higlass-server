@@ -26,4 +26,5 @@ print("static_root:", settings.STATIC_ROOT)
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api/v1/', include('tilesets.urls')),
+    url(r'^', include('higlass.urls'))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

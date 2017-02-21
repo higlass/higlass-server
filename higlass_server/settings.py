@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
+    'higlass.apps.HiglassConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
