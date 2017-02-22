@@ -36,13 +36,17 @@ if [ -z "$SUBSET" ]; then
 
     ### Setup
 
+    # TODO: We need a test DB rather than wiping the default one.
+    python manage.py flush --noinput
+    python manage.py migrate
+
     USER=admin
     PASS=nimda
     echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell
 
     PORT=6000
     python manage.py runserver localhost:$PORT &
-    DJANGO_PID=$!
+    #DJANGO_PID=$!
     TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
     until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 
@@ -64,7 +68,7 @@ if [ -z "$SUBSET" ]; then
     TILESETS_JSON=`curl $TILESETS_URL`
     echo $TILESETS_JSON
 
-    TILESETS_EXPECTED='{"count": 4, "results": [{"uuid": "cooler-demo", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "hitile-demo", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}]}'
+    TILESETS_EXPECTED='{"count": 2, "results": [{"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}]}'
 
     [ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
 
