@@ -50,7 +50,7 @@ if [ -z "$SUBSET" ]; then
     TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
     until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 
-    ### Tilesets
+    ### Tilesets via HTTP
 
     upload_tilesets() {
       curl -u $USER:$PASS \
@@ -71,6 +71,12 @@ if [ -z "$SUBSET" ]; then
     TILESETS_EXPECTED='{"count": 2, "results": [{"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}]}'
 
     [ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
+
+    ### Tilesets via CLI
+
+    INGEST_OUTPUT=`python manage.py ingest_tileset foo_bar`
+    echo $INGEST_OUTPUT
+    [ "$INGEST_OUTPUT" == 'TODO: ingest foo_bar' ] || exit 1
 
     ### Viewconf
 

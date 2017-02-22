@@ -6,7 +6,7 @@ api/coolers/migrations/*
 data/
 real-data/
 log/
-db.sqlite3
+*.sqlite3
 *.swp
 *.swo
 *.swn
