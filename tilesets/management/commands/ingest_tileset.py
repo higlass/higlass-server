@@ -11,16 +11,24 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('TODO: ingest %s' % (options['filename'][0])))
+        # ('uuid', 'datafile', 'filetype', 'datatype', 'private', 'name', 'coordSystem', 'coordSystem2')
+        filename = options['filename']
 
         data = {
+            'datafile': open(filename),
+            'datatype': 'TODO',
+            'coordSystem': 'TODO',
+            'coordSystem2': 'TODO',
+            'filetype': 'TODO',
+
             'owner': gu.get_anonymous_user(),
             'private': False,
-            'name': options['filename'][0],
+            'name': filename,
             'uuid': slugid.nice()
         }
         serializer = tss.TilesetSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+            self.stderr.write(self.style.SUCCESS('Ingested %s' % str(data)))
         else:
-            raise ValueError
+            self.stderr.write(self.style.ERROR(str(serializer.errors)))
