@@ -42,7 +42,7 @@ if [ -z "$SUBSET" ]; then
 
     USER=admin
     PASS=nimda
-    echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell
+    echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell --settings=$SETTINGS
 
     PORT=6000
     python manage.py runserver localhost:$PORT --settings=$SETTINGS &
