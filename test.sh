@@ -22,71 +22,73 @@ for FILE in $FILES; do
   [ -e data/$FILE ] || wget -P data/ https://s3.amazonaws.com/pkerp/public/$FILE
 done
 echo 'foo bar' > data/tiny.txt
-python manage.py test tilesets$1 # $1: You can run just a subset
+if [ -n "$1" ]; then
+  SUBSET=.tests.$1
+else
+  SUBSET=''
+fi
+python manage.py test tilesets$SUBSET
 
 ### 2) Django server
 
-### Setup
+# If no test filter was given:
+if [ -z "$SUBSET" ]; then
 
-USER=admin
-PASS=nimda
-echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell
+    ### Setup
 
-PORT=6000
-python manage.py runserver localhost:$PORT &
-DJANGO_PID=$!
-TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
-until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
+    USER=admin
+    PASS=nimda
+    echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell
 
-### Tilesets
+    PORT=6000
+    python manage.py runserver localhost:$PORT &
+    DJANGO_PID=$!
+    TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
+    until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 
-upload_tilesets() {
-  curl -u $USER:$PASS \
-       -F "uid=$1" \
-       -F "filetype=$2" \
-       -F "datatype=$3" \
-       -F "datafile=@data/$4" \
-       -F "coordSystem=hg19" \
-       $TILESETS_URL
-}
-upload_tilesets aa cooler matrix $COOLER
-upload_tilesets bb hitile vector $HITILE
-# TODO: Check that the output is what we expect?
+    ### Tilesets
 
-TILESETS_JSON=`curl $TILESETS_URL`
-echo $TILESETS_JSON
+    upload_tilesets() {
+      curl -u $USER:$PASS \
+           -F "uid=$1" \
+           -F "filetype=$2" \
+           -F "datatype=$3" \
+           -F "datafile=@data/$4" \
+           -F "coordSystem=hg19" \
+           $TILESETS_URL
+    }
+    upload_tilesets aa cooler matrix $COOLER
+    upload_tilesets bb hitile vector $HITILE
+    # TODO: Check that the output is what we expect?
 
-TILESETS_EXPECTED=\
-'{"count": 2, "results": ['\
-'{"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, '\
-'"name": "'$COOLER'", "coordSystem": "hg19", "coordSystem2": ""}, '\
-'{"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, '\
-'"name": "'$HITILE'", "coordSystem": "hg19", "coordSystem2": ""}]}'
+    TILESETS_JSON=`curl $TILESETS_URL`
+    echo $TILESETS_JSON
 
-[ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
+    TILESETS_EXPECTED='{"count": 4, "results": [{"uuid": "cooler-demo", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "hitile-demo", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}]}'
 
-### Viewconf
+    [ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
 
-#$VIEWCONF_URL="http://localhost:$PORT/api/v1/viewconf/"
-#echo '{}' > data/viewconf.json
-#
-#upload_viewconf() {
-#  curl -F "uid=$1" \
-#       -F "viewconf=@data/$4" \
-#       $VIEWCONF_URL
-#}
-#upload_viewconf viewconf_id viewconf.json
-#
-#VIEWCONF_JSON=`curl $VIEWCONF_URL?d=viewconf_id`
-#echo $VIEWCONF_JSON
-#
-#VIEWCONF_EXPECTED=\
-#'{}'
-#
-#[ "$VIEWCONF_JSON" == "$VIEWCONF_EXPECTED" ] || exit 1
+    ### Viewconf
 
-### Cleanup
+    #$VIEWCONF_URL="http://localhost:$PORT/api/v1/viewconf/"
+    #echo '{}' > data/viewconf.json
+    #
+    #upload_viewconf() {
+    #  curl -F "uid=$1" \
+    #       -F "viewconf=@data/$4" \
+    #       $VIEWCONF_URL
+    #}
+    #upload_viewconf viewconf_id viewconf.json
+    #
+    #VIEWCONF_JSON=`curl $VIEWCONF_URL?d=viewconf_id`
+    #echo $VIEWCONF_JSON
+    #
+    #VIEWCONF_EXPECTED=\
+    #'{}'
+    #
+    #[ "$VIEWCONF_JSON" == "$VIEWCONF_EXPECTED" ] || exit 1
 
-kill $DJANGO_PID
+fi
 
 echo 'PASS!'
+
