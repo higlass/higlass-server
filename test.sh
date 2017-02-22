@@ -27,7 +27,8 @@ if [ -n "$1" ]; then
 else
   SUBSET=''
 fi
-python manage.py test tilesets$SUBSET
+SETTINGS=higlass_server.settings_test
+python manage.py test tilesets$SUBSET --settings=$SETTINGS
 
 ### 2) Django server
 
@@ -37,15 +38,15 @@ if [ -z "$SUBSET" ]; then
     ### Setup
 
     # TODO: We need a test DB rather than wiping the default one.
-    python manage.py flush --noinput
-    python manage.py migrate
+    python manage.py flush --noinput --settings=$SETTINGS
+    python manage.py migrate --settings=$SETTINGS
 
     USER=admin
     PASS=nimda
     echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell
 
     PORT=6000
-    python manage.py runserver localhost:$PORT &
+    python manage.py runserver localhost:$PORT --settings=higlass_server.settings_test &
     #DJANGO_PID=$!
     TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
     until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
