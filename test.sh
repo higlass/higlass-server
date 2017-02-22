@@ -74,7 +74,7 @@ if [ -z "$SUBSET" ]; then
 
     ### Tilesets via CLI
 
-    INGEST_OUTPUT=`python manage.py ingest_tileset foo_bar`
+    INGEST_OUTPUT=`python manage.py ingest_tileset foo_bar --settings=$SETTINGS`
     echo $INGEST_OUTPUT
     [ "$INGEST_OUTPUT" == 'TODO: ingest foo_bar' ] || exit 1
 
