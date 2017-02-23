@@ -37,6 +37,6 @@ class Command(BaseCommand):
         serializer = tss.TilesetSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            self.stderr.write('Ingested %s' % str(data))
+            self.stdout.write('Ingested %s' % str(data))
         else:
             self.stderr.write(str(serializer.errors))

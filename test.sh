@@ -76,7 +76,9 @@ if [ -z "$SUBSET" ]; then
 
     INGEST_OUTPUT=`python manage.py ingest_tileset data/$COOLER --settings=$SETTINGS`
     echo $INGEST_OUTPUT
-    [ "$INGEST_OUTPUT" == 'TODO: ingest foo_bar' ] || exit 1
+    [[ "$INGEST_OUTPUT" == *'Ingested'* ]] || exit 1
+    [[ "$INGEST_OUTPUT" == *'django.contrib.auth.models.AnonymousUser'* ]] || exit 1
+    [[ "$INGEST_OUTPUT" == *'dixon2012-h1hesc-hindiii'* ]] || exit 1
 
     ### Viewconf
 
