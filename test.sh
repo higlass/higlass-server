@@ -32,7 +32,7 @@ TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
 until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 # Server is needed for higlass_server tests
 
-python manage.py test tilesets higlass_server --settings=$SETTINGS
+python manage.py -v 2 test tilesets higlass_server --settings=$SETTINGS
 
 echo 'PASS!'
 
