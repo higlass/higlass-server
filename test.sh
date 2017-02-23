@@ -22,87 +22,17 @@ for FILE in $FILES; do
   [ -e data/$FILE ] || wget -P data/ https://s3.amazonaws.com/pkerp/public/$FILE
 done
 echo 'foo bar' > data/tiny.txt
-if [ -n "$1" ]; then
-  SUBSET=.tests.$1
-else
-  SUBSET=''
-fi
+
 SETTINGS=higlass_server.settings_test
-python manage.py test tilesets$SUBSET higlass_server --settings=$SETTINGS
 
-### 2) CLI tests
+PORT=6000
+python manage.py runserver localhost:$PORT --settings=$SETTINGS &
+#DJANGO_PID=$!
+TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
+until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
+# Server is needed for higlass_server tests
 
-# If no test filter was given:
-if [ -z "$SUBSET" ]; then
-
-    ### Setup
-
-    python manage.py flush --noinput --settings=$SETTINGS
-    python manage.py migrate --settings=$SETTINGS
-
-    USER=admin
-    PASS=nimda
-    echo "from django.contrib.auth.models import User; User.objects.filter(username='$USER').delete(); User.objects.create_superuser('$USER', 'user@host.com', '$PASS')" | python manage.py shell --settings=$SETTINGS
-
-    PORT=6000
-    python manage.py runserver localhost:$PORT --settings=$SETTINGS &
-    #DJANGO_PID=$!
-    TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
-    until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
-
-    ### Tilesets via HTTP
-
-    upload_tilesets() {
-      curl -u $USER:$PASS \
-           -F "uid=$1" \
-           -F "filetype=$2" \
-           -F "datatype=$3" \
-           -F "datafile=@data/$4" \
-           -F "coordSystem=hg19" \
-           $TILESETS_URL
-    }
-    upload_tilesets aa cooler matrix $COOLER
-    upload_tilesets bb hitile vector $HITILE
-    # TODO: Check that the output is what we expect?
-
-    TILESETS_JSON=`curl $TILESETS_URL`
-    echo $TILESETS_JSON
-
-    TILESETS_EXPECTED='{"count": 2, "results": [{"uuid": "aa", "filetype": "cooler", "datatype": "matrix", "private": false, "name": "dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool", "coordSystem": "hg19", "coordSystem2": ""}, {"uuid": "bb", "filetype": "hitile", "datatype": "vector", "private": false, "name": "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile", "coordSystem": "hg19", "coordSystem2": ""}]}'
-
-    [ "$TILESETS_JSON" == "$TILESETS_EXPECTED" ] || exit 1
-
-    ### Tilesets via CLI
-
-    echo 'here?'
-    # There is no validation of datatype and filetype right now.
-    python manage.py ingest_tileset --filename data/$COOLER --datatype foo --filetype bar --uid cli-test --settings=$SETTINGS
-    TILES_OUTPUT=`curl -s http://localhost:6000/api/v1/tiles/?d=cli-test.1.1.1 | head -c 100`
-    echo $TILES_OUTPUT
-    TILES_EXPECTED='{"cli-test.1.1.1": {"max_value": 2.0264008045196533, "min_value": 0.0, "dense": "JTInPwAAAAAAAAAAAAA'
-    [[ "$TILES_OUTPUT" == "$TILES_EXPECTED" ]] || exit 1
-
-    ### Viewconf
-
-    #$VIEWCONF_URL="http://localhost:$PORT/api/v1/viewconf/"
-    #echo '{}' > data/viewconf.json
-    #
-    #upload_viewconf() {
-    #  curl -F "uid=$1" \
-    #       -F "viewconf=@data/$4" \
-    #       $VIEWCONF_URL
-    #}
-    #upload_viewconf viewconf_id viewconf.json
-    #
-    #VIEWCONF_JSON=`curl $VIEWCONF_URL?d=viewconf_id`
-    #echo $VIEWCONF_JSON
-    #
-    #VIEWCONF_EXPECTED=\
-    #'{}'
-    #
-    #[ "$VIEWCONF_JSON" == "$VIEWCONF_EXPECTED" ] || exit 1
-
-fi
+python manage.py test tilesets higlass_server --settings=$SETTINGS
 
 echo 'PASS!'
 
