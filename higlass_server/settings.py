@@ -88,7 +88,7 @@ else:
     REDIS_HOST = None
     REDIS_PORT = None
 
-DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+# DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
