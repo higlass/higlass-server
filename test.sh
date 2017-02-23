@@ -28,7 +28,7 @@ else
   SUBSET=''
 fi
 SETTINGS=higlass_server.settings_test
-python manage.py test tilesets$SUBSET --settings=$SETTINGS
+python manage.py test tilesets$SUBSET higlass_server --settings=$SETTINGS
 
 ### 2) CLI tests
 
