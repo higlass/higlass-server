@@ -74,11 +74,13 @@ if [ -z "$SUBSET" ]; then
 
     ### Tilesets via CLI
 
-    INGEST_OUTPUT=`python manage.py ingest_tileset --filename data/$COOLER --datatype foo --filetype bar --uid cli-test --settings=$SETTINGS`
-    echo $INGEST_OUTPUT
-    [[ "$INGEST_OUTPUT" == *'Ingested'* ]] || exit 1
-    [[ "$INGEST_OUTPUT" == *'django.contrib.auth.models.AnonymousUser'* ]] || exit 1
-    [[ "$INGEST_OUTPUT" == *'dixon2012-h1hesc-hindiii'* ]] || exit 1
+    echo 'here?'
+    # There is no validation of datatype and filetype right now.
+    python manage.py ingest_tileset --filename data/$COOLER --datatype foo --filetype bar --uid cli-test --settings=$SETTINGS
+    TILES_OUTPUT=`curl -s http://localhost:6000/api/v1/tiles/?d=cli-test.1.1.1 | head -c 100`
+    echo $TILES_OUTPUT
+    TILES_EXPECTED='{"cli-test.1.1.1": {"max_value": 2.0264008045196533, "min_value": 0.0, "dense": "JTInPwAAAAAAAAAAAAA'
+    [[ "$TILES_OUTPUT" == "$TILES_EXPECTED" ]] || exit 1
 
     ### Viewconf
 
