@@ -14,25 +14,28 @@ class SizedFile(file):
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('filename', type=str)
+        parser.add_argument('--filename', type=str)
+        parser.add_argument('--datatype', type=str)
+        parser.add_argument('--filetype', type=str)
+        parser.add_argument('--coord', default='hg19', type=str)
+        parser.add_argument('--uid', type=str)
 
     def handle(self, *args, **options):
         filename = options['filename']
-        self.stderr.write('filename: %s' % filename)
-
-        #username = 'admin' # TODO: Could we make owner optional?
-        #user = User.objects.get(username=username)
+        datatype = options['datatype']
+        filetype = options['filetype']
+        coord = options['coord']
+        uid = options.get('uid') or slugid.nice()
         data = {
             'datafile': SizedFile(filename),
-            'datatype': 'TODO',
-            'coordSystem': 'TODO',
-            'coordSystem2': 'TODO',
-            'filetype': 'TODO',
-
+            'datatype': datatype,
+            'coordSystem': coord,
+            #'coordSystem2': 'TODO',
+            'filetype': filetype,
             'owner': AnonymousUser(),
             'private': False,
             'name': filename,
-            'uuid': slugid.nice()
+            'uuid': uid
         }
         serializer = tss.TilesetSerializer(data=data)
         if serializer.is_valid():

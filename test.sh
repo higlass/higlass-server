@@ -74,7 +74,7 @@ if [ -z "$SUBSET" ]; then
 
     ### Tilesets via CLI
 
-    INGEST_OUTPUT=`python manage.py ingest_tileset data/$COOLER --settings=$SETTINGS`
+    INGEST_OUTPUT=`python manage.py ingest_tileset --filename data/$COOLER --datatype foo --filetype bar --uid cli-test --settings=$SETTINGS`
     echo $INGEST_OUTPUT
     [[ "$INGEST_OUTPUT" == *'Ingested'* ]] || exit 1
     [[ "$INGEST_OUTPUT" == *'django.contrib.auth.models.AnonymousUser'* ]] || exit 1
