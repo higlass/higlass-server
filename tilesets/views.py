@@ -113,7 +113,7 @@ def make_cooler_tile(cooler_filepath, tile_position):
     )
     tile_data["min_value"] = float(np.min(tile))
     tile_data["max_value"] = float(np.max(tile))
-    tile_data['dense'] = base64.b64encode(tile)
+    tile_data['dense'] = base64.b64encode(tile.astype('float16'))
 
     return tile_data
 
@@ -162,7 +162,7 @@ def generate_tile(tile_id, request):
             tile_position[0],
             tile_position[1]
         )
-        tile_value = {'dense': base64.b64encode(dense)}
+        tile_value = {'dense': base64.b64encode(dense.astype('float16'))}
 
     elif tileset.filetype == 'beddb':
         tile_value = cdt.get_tile(get_datapath(tileset.datafile.url), tile_position[0], tile_position[1])

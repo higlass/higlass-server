@@ -20,6 +20,32 @@ import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
 
+class TilesizeTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x1x'
+        )
+
+    def test_file_size(self):
+        # make sure that the returned tiles are not overly large
+        ret = self.client.get('/api/v1/tiles/?d=x1x.0.0.0')
+        val = json.loads(ret.content)
+
+        print("x:", val.keys())
+        print("len", len(val['x1x.0.0.0']['dense']))
+
+        # 32 bit:  349528
+        # 16 bit:  174764
+
+
 class ViewConfTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
