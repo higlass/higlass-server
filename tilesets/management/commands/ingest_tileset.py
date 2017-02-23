@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.contrib.auth.models import AnonymousUser
 import slugid
 import os
 import guardian.utils as gu
@@ -17,8 +18,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         filename = options['filename']
-
         self.stderr.write('filename: %s' % filename)
+
+        #username = 'admin' # TODO: Could we make owner optional?
+        #user = User.objects.get(username=username)
         data = {
             'datafile': SizedFile(filename),
             'datatype': 'TODO',
@@ -26,7 +29,7 @@ class Command(BaseCommand):
             'coordSystem2': 'TODO',
             'filetype': 'TODO',
 
-            'owner': gu.get_anonymous_user(),
+            'owner': AnonymousUser(),
             'private': False,
             'name': filename,
             'uuid': slugid.nice()
