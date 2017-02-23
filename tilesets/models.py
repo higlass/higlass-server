@@ -28,7 +28,8 @@ class Tileset(models.Model):
     coordSystem2 = models.TextField(default='')
 
     owner = models.ForeignKey(
-        'auth.User', related_name='tilesets', on_delete=models.CASCADE
+        'auth.User', related_name='tilesets', on_delete=models.CASCADE,
+        blank=True, null=True # Allow anonymous owner
     )
     private = models.BooleanField(default=False)
     name = models.TextField(blank=True)

@@ -30,7 +30,7 @@ fi
 SETTINGS=higlass_server.settings_test
 python manage.py test tilesets$SUBSET --settings=$SETTINGS
 
-### 2) Django server
+### 2) CLI tests
 
 # If no test filter was given:
 if [ -z "$SUBSET" ]; then
@@ -74,7 +74,7 @@ if [ -z "$SUBSET" ]; then
 
     ### Tilesets via CLI
 
-    INGEST_OUTPUT=`python manage.py ingest_tileset foo_bar --settings=$SETTINGS`
+    INGEST_OUTPUT=`python manage.py ingest_tileset data/$COOLER --settings=$SETTINGS`
     echo $INGEST_OUTPUT
     [ "$INGEST_OUTPUT" == 'TODO: ingest foo_bar' ] || exit 1
 
