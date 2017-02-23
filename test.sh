@@ -25,6 +25,8 @@ echo 'foo bar' > data/tiny.txt
 
 SETTINGS=higlass_server.settings_test
 
+python manage.py migrate --settings=$SETTINGS
+
 PORT=6000
 python manage.py runserver localhost:$PORT --settings=$SETTINGS &
 #DJANGO_PID=$!
@@ -32,7 +34,7 @@ TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
 until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 # Server is needed for higlass_server tests
 
-python manage.py -v 2 test tilesets higlass_server --settings=$SETTINGS
+python manage.py test -v 2 tilesets higlass_server --settings=$SETTINGS
 
 echo 'PASS!'
 
