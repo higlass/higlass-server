@@ -24,7 +24,8 @@ docker ps -a -q | xargs docker stop | xargs docker rm
 
 ## Installation from source
 
-**Note:** We recommend creating a virtual environment for higlass-server after cloning, e.g.: `virtualenv -a ($pwd) higlass-server`, to avoid conflicts.
+**Note:** We recommend creating a virtual environment for higlass-server after cloning, e.g.: 
+`virtualenv ~/higlass-server-env && source ~/higlass-server-env/bin/activate`, to avoid conflicts.
 
 ```bash
 git clone https://github.com/hms-dbmi/higlass-server.git && cd higlass-server
