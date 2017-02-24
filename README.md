@@ -35,20 +35,9 @@ HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 wget -P data/ https://s3.amazonaws.com/pkerp/public/$COOLER
 wget -P data/ https://s3.amazonaws.com/pkerp/public/$HITILE
 
-python manage.py ingest_tileset --filename data/$COOLER --filetype cooler --datatype matrix --uid aa
-python manage.py ingest_tileset --filename data/$HITILE --filetype hitile --datatype vector --uid bb
+python manage.py ingest_tileset --filename data/$COOLER --filetype cooler --datatype matrix --uid cooler-demo
+python manage.py ingest_tileset --filename data/$HITILE --filetype hitile --datatype vector --uid hitile-demo
 ```
-
-Get tileset info:
-
-curl -F "datafile=@/tmp/$COOLER" -F "filetype=cooler" -F "datatype=matrix" -F "uid=cooler-demo" \
-     -u username:password -F "coordSystem=hg19" http://localhost:8000/api/v1/tilesets/
-curl -F "datafile=@/tmp/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=hitile-demo" \
-     -u username:password -F "coordSystem=hg19" http://localhost:8000/api/v1/tilesets/
-```
-
-The `uid` parameter is optional, and if it were missing, one would be generated.
-Each POST returns JSON describing the new object.
 
 We can now use the API to get information about a tileset:
 ```
