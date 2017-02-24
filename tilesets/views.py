@@ -444,12 +444,12 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         if 'filetype' not in self.request.data:
             raise rfe.APIException('Missing filetype')
 
-        datafile = self.request.data.get('datafile')
+        datafile_name = self.request.data.get('datafile').name
 
         if 'name' in self.request.data:
             name = self.request.data['name']
         else:
-            name = op.split(datafile.name)[1]
+            name = op.split(datafile_name)[1]
 
         if self.request.user.is_anonymous:
             # can't create a private dataset as an anonymous user
