@@ -24,10 +24,13 @@ docker ps -a -q | xargs docker stop | xargs docker rm
 
 ## Installation from source
 
+**Note:** We recommend creating a virtual environment for higlass-server after cloning, e.g.: 
+`virtualenv ~/higlass-server-env && source ~/higlass-server-env/bin/activate`, to avoid conflicts.
+
 ```bash
-git clone https://github.com/hms-dbmi/higlass-server.git
-cd higlass-server/
+git clone https://github.com/hms-dbmi/higlass-server.git && cd higlass-server
 pip install --upgrade -r requirements.txt
+pip install --upgrade -r requirements-secondary.txt
 python manage.py migrate
 python manage.py runserver localhost:8000
 ```
@@ -37,21 +40,15 @@ python manage.py runserver localhost:8000
 These steps are optional in case one wants to start with a pre-populated database.
 
 ```
-COOL=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
+COOLER=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 
-wget https://s3.amazonaws.com/pkerp/public/$COOL
-mv $COOL data/
+wget -P data/ https://s3.amazonaws.com/pkerp/public/$COOLER
+wget -P data/ https://s3.amazonaws.com/pkerp/public/$HITILE
 
-wget https://s3.amazonaws.com/pkerp/public/$HITILE
-mv $HITILE data/
-
-curl -F "datafile=@data/$COOL" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:8000/tilesets/
-curl -F "datafile=@data/$HITILE" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:8000/tilesets/
+python manage.py ingest_tileset --filename data/$COOLER --filetype cooler --datatype matrix --uid aa
+python manage.py ingest_tileset --filename data/$HITILE --filetype hitile --datatype vector --uid bb
 ```
-
-The "uid" parameter is optional, and if it were missing, one would be generated.
-This uuid can be used to retrieve tiles:
 
 Get tileset info:
 

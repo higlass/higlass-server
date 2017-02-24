@@ -35,8 +35,9 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# TODO: These are unused?
+# MEDIA_URL = 'media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGGING = {
     'version': 1,
@@ -88,7 +89,7 @@ else:
     REDIS_HOST = None
     REDIS_PORT = None
 
-DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+#DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
