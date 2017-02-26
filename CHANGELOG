@@ -1,0 +1,5 @@
+v0.3.0
+
+- Send back float16 data for heatmaps and possibly 1d tracks
+
+
