@@ -184,12 +184,8 @@ def generate_tile(tile_id, request):
             max_dense = 0
             min_dense = 0
 
-        min_dense = min(dense)
-
         min_f16 = np.finfo('float16').min
         max_f16 = np.finfo('float16').max
-
-        print('dense:', dense.dtype)
 
         if (max_dense > min_f16 and max_dense < max_f16 and 
             min_dense > min_f16 and min_dense < max_f16):
