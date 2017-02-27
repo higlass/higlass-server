@@ -19,7 +19,10 @@ class Command(BaseCommand):
         uid = options.get('uid') or slugid.nice()
 
         upload_file = open(filename, 'r')
-        datafile = dcfu.SimpleUploadedFile(upload_file.name, upload_file.read())
+        datafile = dcfu.TemporaryUploadedFile(name=filename, # How are these used?
+                                              content_type=None,
+                                              size=None,
+                                              charset=None)
         tm.Tileset.objects.create(
             datafile=datafile,
             filetype=filetype,
