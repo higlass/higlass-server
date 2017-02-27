@@ -18,7 +18,23 @@ import tiles
 
 import tilesets.models as tm
 
+import requests
+
 logger = logging.getLogger(__name__)
+
+
+def get_fixture(basename):
+    """
+    If we don't already have the file, download it to /data.
+    """
+    pass
+    # dest = 'data/' + basename
+    # if not op.exists(dest):
+    #     url = 'https://s3.amazonaws.com/pkerp/public/' + basename
+    #     r = requests.get(url)
+    #     f = open(dest, 'w')
+    #     f.write(r.text)
+
 
 class ViewConfTest(dt.TestCase):
     def setUp(self):
@@ -61,6 +77,8 @@ class PermissionsTest(dt.TestCase):
         self.user2 = dcam.User.objects.create_user(
             username='user2', password='pass'
         )
+
+        get_fixture('tiny.txt')
 
     def test_permissions(self):
         c1 = dt.Client()
@@ -137,6 +155,22 @@ class PermissionsTest(dt.TestCase):
         assert(resp.status_code ==  200)
 
 class CoolerTest(dt.TestCase):
+    def setUp(self):
+        get_fixture('Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
+
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='md')
+
     def test_tile_symmetry(self):
         '''
         Make sure that tiles are symmetric
@@ -160,19 +194,6 @@ class CoolerTest(dt.TestCase):
 
         q = q.reshape((256,256))
 
-    def setUp(self):
-        self.user1 = dcam.User.objects.create_user(
-            username='user1', password='pass'
-        )
-
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
-        #x = upload_file.read()
-        self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
-            filetype='cooler',
-            datatype='matrix',
-            owner=self.user1,
-            uuid='md')
 
     def test_get_tileset_info(self):
         ret = self.client.get('/api/v1/tileset_info/?d=md')
@@ -195,6 +216,7 @@ class SuggestionsTest(dt.TestCase):
     Test gene suggestions
     '''
     def setUp(self):
+        get_fixture('gene_annotations.short.db')
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -232,6 +254,7 @@ class FileUploadTest(dt.TestCase):
     Test file upload functionality
     '''
     def setUp(self):
+        get_fixture('tiny.txt')
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -265,6 +288,9 @@ class FileUploadTest(dt.TestCase):
         self.assertTrue(op.exists, obj.datafile.url)
 
 class GetterTest(dt.TestCase):
+    def setUp(self):
+        get_fixture('dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool')
+
     def test_get_info(self):
         filepath = 'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
         info = cch.get_info(filepath)
@@ -274,6 +300,7 @@ class GetterTest(dt.TestCase):
 
 class Bed2DDBTest(dt.TestCase):
     def setUp(self):
+        get_fixture('arrowhead_domains_short.txt.multires.db')
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -294,6 +321,7 @@ class Bed2DDBTest(dt.TestCase):
 
 class BedDBTest(dt.TestCase):
     def setUp(self):
+        get_fixture('gene_annotations.short.db')
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -322,6 +350,7 @@ class HiBedTest(dt.TestCase):
     Test retrieving interval data (hibed)
     '''
     def setUp(self):
+        get_fixture('cnv_short.hibed')
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -359,6 +388,7 @@ class TilesetsViewSetTest(dt.TestCase):
             username='user2', password='pass'
         )
 
+        get_fixture('dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool')
         upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
         self.cooler = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -366,6 +396,7 @@ class TilesetsViewSetTest(dt.TestCase):
             owner=self.user1
         )
 
+        get_fixture('wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile')
         upload_file=open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
         self.hitile = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -767,5 +798,3 @@ class TilesetsViewSetTest(dt.TestCase):
 
         # make sure above doesn't raise an error 
 
-
-# Create your tests here.
