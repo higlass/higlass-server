@@ -187,10 +187,13 @@ def generate_tile(tile_id, request):
         )
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
-    else:
+    elif tileset.filetype == "cooler":
         tile_value = make_cooler_tile(get_datapath(tileset.datafile.url), tile_position)
         if tile_value is None:
             return None
+
+    else:
+        return None
 
     rdb.set(tile_id, pickle.dumps(tile_value))
     return (tile_id, tile_value)
