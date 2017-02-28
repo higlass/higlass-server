@@ -19,3 +19,12 @@ class CommandlineTest(unittest.TestCase):
         self.assertRun('python manage.py ingest_tileset --filename data/'+cooler+' --datatype foo --filetype bar --uid '+id+' --settings='+settings)
         self.assertRun('curl -s http://localhost:6000/api/v1/tiles/?d='+id+'.1.1.1',
                        r'\{"cli-test.1.1.1": \{"max_value": 2.0264008045196533, "min_value": 0.0, "dense": "JTInPwAAAAAAA')
+
+    def test_cli_huge_upload(self):
+        cooler = 'huge.fake.cool'
+        subprocess.call('truncate --size 1G '+cooler, shell=True)
+        settings = 'higlass_server.settings_test'
+        id = 'cli-huge-test'
+        self.assertRun('python manage.py ingest_tileset --filename data/'+cooler+' --datatype foo --filetype bar --uid '+id+' --settings='+settings)
+        self.assertRun('curl -s http://localhost:6000/api/v1/tiles/?d='+id+'.1.1.1',
+                       r'"cli-huge-test.1.1.1"')
