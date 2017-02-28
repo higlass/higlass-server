@@ -65,12 +65,12 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/api/v1/viewconfs/',
-                               '{"uid": "123", "hello": "sir"}', content_type="application/json")
+                               '{"uid": "123", "viewconf":{"hello": "sir"}}', content_type="application/json")
         contents = json.loads(ret.content)
         assert('uid' in contents)
         self.assertEqual(contents['uid'], '123')
 
-        url = '/api/v1/viewconfs/?d=' + contents['uid']
+        url = '/api/v1/viewconfs/?d=123'
         ret = self.client.get(url)
 
         contents = json.loads(ret.content)

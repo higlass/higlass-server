@@ -265,9 +265,9 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        viewconf = request.body
-        viewconf_obj = json.loads(viewconf)
-        uid = viewconf_obj.get('uid') or slugid.nice()
+        viewconf_wrapper = json.loads(request.body)
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        viewconf = viewconf_wrapper['viewconf']
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
