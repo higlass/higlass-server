@@ -107,6 +107,9 @@ INSTALLED_APPS = [
     'guardian'
 ]
 
+# We want to avoid loading into memory
+FILE_UPLOAD_HANDLERS = ['django.core.files.uploadhandler.TemporaryFileUploadHandler']
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
