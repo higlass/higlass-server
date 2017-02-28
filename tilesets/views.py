@@ -265,23 +265,9 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        uid = slugid.nice()
         viewconf = request.body
-        # TODO: Copy-and-paste from TilessetsViewSet... Consider creating an abstract superclass both can inherit from.
-        # if 'uid' in request.data:
-        #     logger.warn('if!')
-        #     try:
-        #         queryset = tm.ViewConf.objects.all()
-        #         queryset.get(uuid=request.data['uid'])
-        #         # this uid already exists, return an error
-        #         raise rfe.APIException("UID already exists")
-        #     except tm.Tileset.DoesNotExist:
-        #         logger.warn('except!')
-        #         uid = request.data['uid']
-        # else:
-        #     logger.warn('else!')
-        #     uid = slugid.nice()
-        # viewconf = request.data['viewconf']
+        viewconf_obj = json.loads(viewconf)
+        uid = viewconf_obj.get('uid') or slugid.nice()
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
