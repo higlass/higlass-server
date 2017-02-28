@@ -192,9 +192,6 @@ def generate_tile(tile_id, request):
         if tile_value is None:
             return None
 
-    else:
-        return None
-
     rdb.set(tile_id, pickle.dumps(tile_value))
     return (tile_id, tile_value)
 
