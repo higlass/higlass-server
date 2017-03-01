@@ -267,11 +267,11 @@ def viewconfs(request):
     if request.method == 'POST':
         viewconf_wrapper = json.loads(request.body)
         uid = viewconf_wrapper.get('uid') or slugid.nice()
-        viewconf = viewconf_wrapper['viewconf']
+        viewconf = json.dumps(viewconf_wrapper['viewconf'])
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
-            return JsonResponse({'error': 'Serializer not valid'}, 
+            return JsonResponse({'error': 'Serializer not valid'},
                     status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer.save(uuid=uid, viewconf=viewconf)
