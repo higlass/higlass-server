@@ -1,28 +1,8 @@
 # higlass-server
 
-## Easy Docker install
+## Development
 
-A higlass-server image is available on [DockerHub](https://hub.docker.com/r/gehlenborglab/higlass-server/).
-Install Docker on your system, and then:
-
-```bash
-# download:
-docker pull gehlenborglab/higlass-server
-
-# start container:
-#   Port 8000 is hardcoded in the image;
-#   Port 8001 is what it should be mapped to on the host.
-docker run --name my-higlass-server --detach --publish 8001:8000 gehlenborglab/higlass-server
-curl http://localhost:8001/
-
-# connect to an already running container:
-docker exec --interactive --tty my-higlass-server bash
-
-# remove all containers (use with caution):
-docker ps -a -q | xargs docker stop | xargs docker rm
-```
-
-## Installation from source
+### Local
 
 **Note:** We recommend creating a virtual environment for higlass-server after cloning, e.g.: 
 `virtualenv ~/higlass-server-env && source ~/higlass-server-env/bin/activate`, to avoid conflicts.
@@ -34,6 +14,11 @@ pip install --upgrade -r requirements-secondary.txt
 python manage.py migrate
 python manage.py runserver localhost:8000
 ```
+
+### Docker
+
+Alternatively, there is a [Dockerfile](docker-context/Dockerfile) which provides a quick way
+to get an isolated development environment configured.
 
 ## Jump start
 
