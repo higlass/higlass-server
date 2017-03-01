@@ -39,9 +39,6 @@ class TilesizeTest(dt.TestCase):
         ret = self.client.get('/api/v1/tiles/?d=x1x.0.0.0')
         val = json.loads(ret.content)
 
-        print("x:", val.keys())
-        print("len", len(val['x1x.0.0.0']['dense']))
-
         # 32 bit:  349528
         # 16 bit:  174764
 
@@ -181,7 +178,7 @@ class CoolerTest(dt.TestCase):
 
         import base64
         r = base64.decodestring(contents['aa.0.0.0']['dense'])
-        q = np.frombuffer(r, dtype=np.float32)
+        q = np.frombuffer(r, dtype=np.float16)
 
         q = q.reshape((256,256))
 
@@ -411,7 +408,7 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
         r = base64.decodestring(returned[returned.keys()[0]]['dense'])
-        q = np.frombuffer(r, dtype=np.float32)
+        q = np.frombuffer(r, dtype=np.float16)
 
         with h5py.File(self.cooler.datafile.url) as f:
 
@@ -419,7 +416,7 @@ class TilesetsViewSetTest(dt.TestCase):
             t = tiles.make_tile(z, x, y, mat)
 
             # test the base64 encoding
-            self.assertTrue(np.isclose(sum(q), sum(t)))
+            self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
 
             # make sure we're returning actual data
             self.assertGreater(sum(q), 0)
