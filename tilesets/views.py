@@ -111,9 +111,23 @@ def make_cooler_tile(cooler_filepath, tile_position):
         tile_position[2],
         mats[cooler_filepath]
     )
-    tile_data["min_value"] = float(np.min(tile))
-    tile_data["max_value"] = float(np.max(tile))
-    tile_data['dense'] = base64.b64encode(tile)
+
+    min_dense = float(np.min(tile))
+    max_dense = float(np.max(tile))
+
+    tile_data["min_value"] = min_dense
+    tile_data["max_value"] = max_dense
+
+    min_f16 = np.finfo('float16').min
+    max_f16 = np.finfo('float16').max
+
+    if (max_dense > min_f16 and max_dense < max_f16 and 
+        min_dense > min_f16 and min_dense < max_f16):
+        tile_data['dense'] = base64.b64encode(tile.astype('float16'))
+        tile_data['dtype'] = 'float16'
+    else:
+        tile_data['dense'] = base64.b64encode(tile.astype('float32'))
+        tile_data['dtype'] = 'float32'
 
     return tile_data
 
@@ -162,7 +176,22 @@ def generate_tile(tile_id, request):
             tile_position[0],
             tile_position[1]
         )
-        tile_value = {'dense': base64.b64encode(dense)}
+
+        if len(dense):
+            max_dense = max(dense)
+            min_dense = min(dense)
+        else:
+            max_dense = 0
+            min_dense = 0
+
+        min_f16 = np.finfo('float16').min
+        max_f16 = np.finfo('float16').max
+
+        if (max_dense > min_f16 and max_dense < max_f16 and 
+            min_dense > min_f16 and min_dense < max_f16):
+            tile_value = {'dense': base64.b64encode(dense.astype('float16')), 'dtype':'float16'}
+        else:
+            tile_value = {'dense': base64.b64encode(dense.astype('float32')), 'dtype':'float32'}
 
     elif tileset.filetype == 'beddb':
         tile_value = cdt.get_tile(get_datapath(tileset.datafile.url), tile_position[0], tile_position[1])
@@ -236,27 +265,13 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        uid = slugid.nice()
-        viewconf = request.body
-        # TODO: Copy-and-paste from TilessetsViewSet... Consider creating an abstract superclass both can inherit from.
-        # if 'uid' in request.data:
-        #     logger.warn('if!')
-        #     try:
-        #         queryset = tm.ViewConf.objects.all()
-        #         queryset.get(uuid=request.data['uid'])
-        #         # this uid already exists, return an error
-        #         raise rfe.APIException("UID already exists")
-        #     except tm.Tileset.DoesNotExist:
-        #         logger.warn('except!')
-        #         uid = request.data['uid']
-        # else:
-        #     logger.warn('else!')
-        #     uid = slugid.nice()
-        # viewconf = request.data['viewconf']
+        viewconf_wrapper = json.loads(request.body)
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        viewconf = json.dumps(viewconf_wrapper['viewconf'])
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
-            return JsonResponse({'error': 'Serializer not valid'}, 
+            return JsonResponse({'error': 'Serializer not valid'},
                     status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer.save(uuid=uid, viewconf=viewconf)
