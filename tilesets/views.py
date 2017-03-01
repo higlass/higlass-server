@@ -216,7 +216,7 @@ def generate_tile(tile_id, request):
         )
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
-    else:
+    elif tileset.filetype == "cooler":
         tile_value = make_cooler_tile(get_datapath(tileset.datafile.url), tile_position)
         if tile_value is None:
             return None
@@ -376,7 +376,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(get_datapath(tileset_object.datafile.url))
-        else:
+        elif tileset_object.filetype == 'cooler':
             dsetname = get_datapath(queryset.filter(
                 uuid=tileset_uuid
             ).first().datafile.url)
@@ -384,6 +384,9 @@ def tileset_info(request):
             if dsetname not in mats:
                 make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
+        else:
+            # Unknown filetype
+            tileset_infos[tileset_uuid] = {'message': 'Unknown filetype ' + tileset_object.filetype}
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
 
