@@ -5,6 +5,7 @@ import cooler.contrib.higlass as cch
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
+import django.db as db
 
 import base64
 import django.test as dt
@@ -62,19 +63,29 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/api/v1/viewconfs/',
-                               '{"hello": "sir"}', content_type="application/json")
-                               # {'viewconf': '{"hello": "sir"}', 'uid': 'foo'},
-                               # content_type="application/json")
+                               '{"uid": "123", "viewconf":{"hello": "sir"}}', content_type="application/json")
         contents = json.loads(ret.content)
-        assert('uid' in contents)
+        self.assertIn('uid', contents)
+        self.assertEqual(contents['uid'], '123')
 
-        url = '/api/v1/viewconfs/?d=' + contents['uid']
+        url = '/api/v1/viewconfs/?d=123'
         ret = self.client.get(url)
 
         contents = json.loads(ret.content)
 
         assert('hello' in contents)
-        
+
+    def test_duplicate_uid_errors(self):
+        ret1 = self.client.post('/api/v1/viewconfs/',
+                               '{"uid": "dupe", "viewconf":{"try": "first"}}', content_type="application/json")
+        self.assertEqual(ret1.status_code, 200)
+
+        # TODO: This will bubble up as a 500, when bad user input should really be 4xx.
+        with self.assertRaises(db.IntegrityError):
+            ret2 = self.client.post('/api/v1/viewconfs/',
+                                   '{"uid": "dupe", "viewconf":{"try": "second"}}', content_type="application/json")
+
+
 class PermissionsTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
