@@ -19,3 +19,4 @@ src
 # TODO: It looks like the build creates this directory? Not what I'd expect.
 
 uploads/
+static/
