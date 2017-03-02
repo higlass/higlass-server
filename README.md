@@ -24,7 +24,7 @@ git clone https://github.com/hms-dbmi/higlass-server.git && cd higlass-server
 pip install --upgrade -r requirements.txt
 pip install --upgrade -r requirements-secondary.txt
 python manage.py migrate
-python manage.py runserver localhost:8000
+python manage.py runserver localhost:8000 &
 ```
 
 ### Docker
@@ -33,9 +33,9 @@ Alternatively, there is a [Dockerfile](docker-context/Dockerfile) which provides
 to get an isolated development environment configured.
 
 
-## API Demo
+## Uploading files
 
-A username and password are required for most API calls. For now, the best way to do this is:
+Although there is an API endpoint for uploading files, but it is more direct to use a `manage.py` script:
 ```
 COOLER=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
@@ -47,13 +47,9 @@ python manage.py ingest_tileset --filename data/$COOLER --filetype cooler --data
 python manage.py ingest_tileset --filename data/$HITILE --filetype hitile --datatype vector --uid hitile-demo
 ```
 
-We can now use the API to get information about a tileset:
+We can now use the API to get information about a tileset, or to get the tile data itself:
 ```
 curl http://localhost:8000/api/v1/tileset_info/?d=hitile-demo
-```
-
-Or to get a tile:
-```
 curl http://localhost:8000/api/v1/tiles/?d=hitile-demo.0.0.0
 ```
 
