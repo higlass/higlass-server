@@ -2,20 +2,18 @@
 # but it should not be used for production: It is bloated, and
 # dependencies are not pinned.
 
-# (If you want to edit files with an outside IDE, you'll want the
-# sourcecode to be in a mounted volume, but then "pip install" here
-# wouldn't work. This is not the best solution for everyone.)
-
 # Typical usage:
-# $ cd docker-context
-# $ docker build --cache-from higlass-server-image --tag higlass-server-image .
-# $ docker run -dit --name higlass-server-container higlass-server-image
-# $ docker exec -it higlass-server-container /bin/bash
+#
+# git clone https://github.com/hms-dbmi/higlass-server.git
+# docker build --cache-from higlass-server-image --tag higlass-server-image docker-context
+# docker run -dit --name higlass-server-container --volume .:/home/higlass/higlass-server higlass-server-image
+# docker exec higlass-server-container python manage.py migrate
+# docker exec -it higlass-server-container /bin/bash
 
 FROM ubuntu
 
 RUN apt-get update
-RUN apt-get -y install libatlas-dev libatlas-base-dev liblapack-dev gfortran wget bzip2 git libz-dev curl nano
+RUN apt-get -y install libatlas-dev libatlas-base-dev liblapack-dev gfortran wget bzip2 git libz-dev curl
 RUN useradd --create-home --shell /bin/bash higlass
 
 USER higlass
@@ -26,13 +24,9 @@ RUN bash miniconda.sh -b -p /home/higlass/miniconda
 ENV PATH="/home/higlass/miniconda/bin:${PATH}"
 RUN conda install --yes python=2.7.12 cython==0.25.2 numpy=1.11.2
 
-RUN git clone https://github.com/hms-dbmi/higlass-server.git
+# This is not run with bash: Otherwise, the <( ) syntax would be useful here.
+ENV GITHUB=https://raw.githubusercontent.com/hms-dbmi/higlass-server/master
+RUN wget $GITHUB/requirements.txt           && pip install -r requirements.txt
+RUN wget $GITHUB/requirements-secondary.txt && pip install -r requirements-secondary.txt
 
 WORKDIR higlass-server
-
-RUN pip install -r requirements.txt
-RUN pip install -r requirements-secondary.txt
-RUN python manage.py migrate
-# As part of the tests, we upload a file that would exhaust a container's disk,
-# so at least one failure is expected
-#RUN ./test.sh
