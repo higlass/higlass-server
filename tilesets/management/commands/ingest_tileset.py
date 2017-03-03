@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.core.files import File
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu
@@ -20,11 +21,9 @@ class Command(BaseCommand):
         #coord = options['coord']
         uid = options.get('uid') or slugid.nice()
         name = options.get('name') or op.split(filename)[1]
-
-        upload_file = open(filename, 'r')
-        datafile = dcfu.SimpleUploadedFile(upload_file.name, upload_file.read())
+        django_file = File(open(filename, 'r'))
         tm.Tileset.objects.create(
-            datafile=datafile,
+            datafile=django_file,
             filetype=filetype,
             datatype=datatype,
             owner=None,
