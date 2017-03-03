@@ -6,7 +6,7 @@
 #
 # git clone https://github.com/hms-dbmi/higlass-server.git
 # docker build --cache-from higlass-server-image --tag higlass-server-image docker-context
-# docker run -dit --name higlass-server-container --volume .:/home/higlass/higlass-server higlass-server-image
+# docker run -dit --name higlass-server-container --volume `pwd`:/home/higlass/higlass-server higlass-server-image
 # docker exec higlass-server-container python manage.py migrate
 # docker exec -it higlass-server-container /bin/bash
 
