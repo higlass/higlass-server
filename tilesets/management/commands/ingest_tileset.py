@@ -20,8 +20,12 @@ class Command(BaseCommand):
         filetype = options['filetype']
         #coord = options['coord']
         uid = options.get('uid') or slugid.nice()
+
         name = options.get('name') or op.split(filename)[1]
         django_file = File(open(filename, 'r'))
+
+        # remove the filepath of the filename
+        django_file.name = op.split(django_file.name)[1]
         tm.Tileset.objects.create(
             datafile=django_file,
             filetype=filetype,
