@@ -35,8 +35,8 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
-if 'HIGLASS_EXTRA_ALLOWED_HOST' in os.environ:
-    ALLOWED_HOSTS += [os.environ['HIGLASS_EXTRA_ALLOWED_HOST']]
+if 'SITE_URL' in os.environ:
+    ALLOWED_HOSTS += [os.environ['SITE_URL']]
 
 # this specifies where uploaded files will be place (e.g. BASE_DIR/media/uplaods/file.x)
 MEDIA_URL = 'media/'
