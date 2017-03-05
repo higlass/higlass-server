@@ -1,3 +1,8 @@
+v0.3.3
+
+- Added __str__ to Tileset models so that they're visible in the django
+interface
+
 v0.3.2
 
 - Added support for passing SITE_URL as an environment variable
