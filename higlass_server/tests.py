@@ -31,7 +31,7 @@ class CommandlineTest(unittest.TestCase):
     def test_cli_huge_upload(self):
         cooler = 'huge.fake.cool'
         with open('data/'+cooler, 'w') as file:
-            file.truncate(1024 ** 3)
+            file.truncate(1024 ** 1)
         settings = 'higlass_server.settings_test'
         id = 'cli-huge-test'
         self.assertRun('python manage.py ingest_tileset --filename data/'+cooler+' --datatype foo --filetype bar --uid '+id+' --settings='+settings)
@@ -39,3 +39,9 @@ class CommandlineTest(unittest.TestCase):
                        [r'"name": "'+cooler+'"'])
         self.assertRun('curl -s http://localhost:6000/api/v1/tiles/?d='+id+'.1.1.1',
                        [r'"'+id+'.1.1.1"'])
+
+    def test_get_from_foreign_host_file(self):
+        # manage.py should have been started with
+        # export SITE_URL=somesite.com
+        self.assertRun('curl -s -H "Host: someothersite.com" http://localhost:6000/api/v1/tilesets/', [r'400'])
+        self.assertRun('curl -s -H "Host: somesite.com" http://localhost:6000/api/v1/tilesets/', [r'count'])
