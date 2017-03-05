@@ -1,3 +1,7 @@
+v0.3.2
+
+- Added support for passing SITE_URL as an environment variable
+
 v0.3.0
 
 - Send back float16 data for heatmaps and possibly 1d tracks
