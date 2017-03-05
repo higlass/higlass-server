@@ -35,6 +35,9 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
+if 'HIGLASS_EXTRA_ALLOWED_HOST' in os.environ:
+    ALLOWED_HOSTS += [os.environ['HIGLASS_EXTRA_ALLOWED_HOST']]
+
 # TODO: These are unused?
 # MEDIA_URL = 'media/'
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
