@@ -1,3 +1,7 @@
+v0.3.4
+
+- Bug fix for serving unbalanced data
+
 v0.3.3
 
 - Added __str__ to Tileset models so that they're visible in the django
