@@ -31,7 +31,7 @@ class CommandlineTest(unittest.TestCase):
     def test_cli_huge_upload(self):
         cooler = 'huge.fake.cool'
         with open('data/'+cooler, 'w') as file:
-            file.truncate(1024 ** 1)
+            file.truncate(1024 ** 3)
         settings = 'higlass_server.settings_test'
         id = 'cli-huge-test'
         self.assertRun('python manage.py ingest_tileset --filename data/'+cooler+' --datatype foo --filetype bar --uid '+id+' --settings='+settings)
