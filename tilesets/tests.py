@@ -21,6 +21,23 @@ import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
 
+class TilesetModelTest(dt.TestCase):
+    def test_to_string(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x1x'
+        )
+
+        cooler_string = str(self.cooler)
+        self.assertTrue(cooler_string.find("name") > 0)
+        
+
 class TilesizeTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(

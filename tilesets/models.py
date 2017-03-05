@@ -37,3 +37,9 @@ class Tileset(models.Model):
     class Meta:
         ordering = ('created',)
         permissions = (('view_tileset', "View tileset"),)
+
+    def __str__(self):
+        '''
+        Get a string representation of this model. Hopefully useful for the admin interface.
+        '''
+        return "Tileset [name: " + self.name + '] [ft: ' + self.filetype + ']'
