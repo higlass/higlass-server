@@ -5,6 +5,7 @@ import cooler.contrib.higlass as cch
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
+import django.db as db
 
 import base64
 import django.test as dt
@@ -19,6 +20,29 @@ import tiles
 import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
+
+class TilesizeTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x1x'
+        )
+
+    def test_file_size(self):
+        # make sure that the returned tiles are not overly large
+        ret = self.client.get('/api/v1/tiles/?d=x1x.0.0.0')
+        val = json.loads(ret.content)
+
+        # 32 bit:  349528
+        # 16 bit:  174764
+
 
 class ViewConfTest(dt.TestCase):
     def setUp(self):
@@ -39,19 +63,29 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/api/v1/viewconfs/',
-                               '{"hello": "sir"}', content_type="application/json")
-                               # {'viewconf': '{"hello": "sir"}', 'uid': 'foo'},
-                               # content_type="application/json")
+                               '{"uid": "123", "viewconf":{"hello": "sir"}}', content_type="application/json")
         contents = json.loads(ret.content)
-        assert('uid' in contents)
+        self.assertIn('uid', contents)
+        self.assertEqual(contents['uid'], '123')
 
-        url = '/api/v1/viewconfs/?d=' + contents['uid']
+        url = '/api/v1/viewconfs/?d=123'
         ret = self.client.get(url)
 
         contents = json.loads(ret.content)
 
         assert('hello' in contents)
-        
+
+    def test_duplicate_uid_errors(self):
+        ret1 = self.client.post('/api/v1/viewconfs/',
+                               '{"uid": "dupe", "viewconf":{"try": "first"}}', content_type="application/json")
+        self.assertEqual(ret1.status_code, 200)
+
+        # TODO: This will bubble up as a 500, when bad user input should really be 4xx.
+        with self.assertRaises(db.IntegrityError):
+            ret2 = self.client.post('/api/v1/viewconfs/',
+                                   '{"uid": "dupe", "viewconf":{"try": "second"}}', content_type="application/json")
+
+
 class PermissionsTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -156,7 +190,7 @@ class CoolerTest(dt.TestCase):
 
         import base64
         r = base64.decodestring(contents['aa.0.0.0']['dense'])
-        q = np.frombuffer(r, dtype=np.float32)
+        q = np.frombuffer(r, dtype=np.float16)
 
         q = q.reshape((256,256))
 
@@ -386,7 +420,7 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
         r = base64.decodestring(returned[returned.keys()[0]]['dense'])
-        q = np.frombuffer(r, dtype=np.float32)
+        q = np.frombuffer(r, dtype=np.float16)
 
         with h5py.File(self.cooler.datafile.url) as f:
 
@@ -394,7 +428,7 @@ class TilesetsViewSetTest(dt.TestCase):
             t = tiles.make_tile(z, x, y, mat)
 
             # test the base64 encoding
-            self.assertTrue(np.isclose(sum(q), sum(t)))
+            self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
 
             # make sure we're returning actual data
             self.assertGreater(sum(q), 0)

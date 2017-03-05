@@ -1,7 +1,9 @@
 from django.core.management.base import BaseCommand
+from django.core.files import File
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu
+import os.path as op
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
@@ -10,6 +12,7 @@ class Command(BaseCommand):
         parser.add_argument('--filetype', type=str)
         #parser.add_argument('--coord', default='hg19', type=str)
         parser.add_argument('--uid', type=str)
+        parser.add_argument('--name', type=str)
 
     def handle(self, *args, **options):
         filename = options['filename']
@@ -18,11 +21,15 @@ class Command(BaseCommand):
         #coord = options['coord']
         uid = options.get('uid') or slugid.nice()
 
-        upload_file = open(filename, 'r')
-        datafile = dcfu.SimpleUploadedFile(upload_file.name, upload_file.read())
+        name = options.get('name') or op.split(filename)[1]
+        django_file = File(open(filename, 'r'))
+
+        # remove the filepath of the filename
+        django_file.name = op.split(django_file.name)[1]
         tm.Tileset.objects.create(
-            datafile=datafile,
+            datafile=django_file,
             filetype=filetype,
             datatype=datatype,
             owner=None,
-            uuid=uid)
+            uuid=uid,
+            name=name)

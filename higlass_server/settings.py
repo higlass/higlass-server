@@ -38,9 +38,9 @@ ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higl
 if 'HIGLASS_EXTRA_ALLOWED_HOST' in os.environ:
     ALLOWED_HOSTS += [os.environ['HIGLASS_EXTRA_ALLOWED_HOST']]
 
-# TODO: These are unused?
-# MEDIA_URL = 'media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# this specifies where uploaded files will be place (e.g. BASE_DIR/media/uplaods/file.x)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGGING = {
     'version': 1,
@@ -109,6 +109,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'guardian'
 ]
+
+# We want to avoid loading into memory
+FILE_UPLOAD_HANDLERS = ['django.core.files.uploadhandler.TemporaryFileUploadHandler']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
