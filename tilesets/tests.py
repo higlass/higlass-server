@@ -188,6 +188,24 @@ class PermissionsTest(dt.TestCase):
         assert(resp.status_code ==  200)
 
 class CoolerTest(dt.TestCase):
+    def test_unbalanced(self):
+        '''
+        Try to get tiles from an unbalanced dataset
+        '''
+        upload_file = open('data/G15509.K-562.2_sampleDown.multires.cool', 'r')
+        tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='g1a')
+
+        ret = self.client.get('/api/v1/tiles/?d=g1a.0.0.0')
+        contents = json.loads(ret.content)
+
+        self.assertIn('g1a.0.0.0', contents)
+
+
     def test_tile_symmetry(self):
         '''
         Make sure that tiles are symmetric

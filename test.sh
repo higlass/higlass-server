@@ -19,6 +19,7 @@ gene_annotations.short.db
 cnv_short.hibed
 arrowhead_domains_short.txt.multires.db
 hiccups_loops_short.txt.multires.db
+G15509.K-562.2_sampleDown.multires.cool
 END
 )
 
