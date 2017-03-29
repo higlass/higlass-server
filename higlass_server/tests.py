@@ -40,8 +40,17 @@ class CommandlineTest(unittest.TestCase):
         self.assertRun('curl -s http://localhost:6000/api/v1/tiles/?d='+id+'.1.1.1',
                        [r'"'+id+'.1.1.1"'])
 
+        '''
+        id = 'cli-coord-system-test'
+        self.assertRun('python manage.py ingest_tileset --filename data/'+cooler+' --datatype foo --filetype bar --uid '+id+' --settings='+settings, 'coordSystem')
+        self.assertRun('curl -s http://localhost:6000/api/v1/tileset_info/?d='+id,
+                       [r'"coordSystem": "'+cooler+'"'])
+        '''
+        # TODO: check the coordSystem parameters for ingest_tileset.py
+
     def test_get_from_foreign_host_file(self):
         # manage.py should have been started with
         # export SITE_URL=somesite.com
         self.assertRun('curl -s -H "Host: someothersite.com" http://localhost:6000/api/v1/tilesets/', [r'400'])
         self.assertRun('curl -s -H "Host: somesite.com" http://localhost:6000/api/v1/tilesets/', [r'count'])
+
