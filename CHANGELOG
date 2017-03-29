@@ -1,3 +1,7 @@
+v0.3.5
+
+- Send min_pos with the tileset info
+
 v0.3.4
 
 - Bug fix for serving unbalanced data
