@@ -359,7 +359,6 @@ def tileset_info(request):
         if tileset_object.filetype == "hitile" or tileset_object.filetype == 'hibed':
             tileset_info = hdft.get_tileset_info(
                 h5py.File(get_datapath(tileset_object.datafile.url)))
-            print("tileset_info:", tileset_info)
             tileset_infos[tileset_uuid] = {
                 "min_pos": [tileset_info['min_pos']],
                 "max_pos": [tileset_info['max_pos']],
