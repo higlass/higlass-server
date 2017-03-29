@@ -15,8 +15,8 @@ class Command(BaseCommand):
         parser.add_argument('--filename', type=str)
         parser.add_argument('--datatype', type=str)
         parser.add_argument('--filetype', type=str)
-        parser.add_argument('--coordSystem', default=None, type=str)
-        parser.add_argument('--coordSystem2', default=None, type=str)
+        parser.add_argument('--coordSystem', default='', type=str)
+        parser.add_argument('--coordSystem2', default='', type=str)
         parser.add_argument('--uid', type=str)
         parser.add_argument('--name', type=str)
 
