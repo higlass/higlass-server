@@ -14,8 +14,8 @@ import os
 import os.path as op
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-if 'HIGLASS_SERVER_BASE_DIR' in os.environ:
-    base_dir = os.environ['HIGLASS_SERVER_BASE_DIR']
+if 'SERVER_BASE_DIR' in os.environ:
+    base_dir = os.environ['SERVER_BASE_DIR']
 
     if op.exists(base_dir):
         BASE_DIR = base_dir
@@ -31,13 +31,12 @@ else:
 SECRET_KEY = 'e71$i%^qmf9cml7-ga@r+h3&v$y4c48a&u@%@$8t87z*qz9#ks'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
-# TODO: These are unused?
-# MEDIA_URL = 'media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGGING = {
     'version': 1,
@@ -53,14 +52,14 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
             },
         'file': {
-            'level': 'WARNING',
+            'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'log/hgs.log'),
+            'filename': 'log/hgs.log',
             'formatter': 'verbose'
         },
     },
@@ -68,11 +67,11 @@ LOGGING = {
         'django': {
             'handlers': ['file'],
             'propagate': True,
-            'level': 'WARNING',
+            'level': 'DEBUG',
         },
         'tilesets': {
             'handlers': ['file'],
-            'level': 'WARNING',
+            'level': 'DEBUG',
         },
     }
 }
@@ -89,7 +88,7 @@ else:
     REDIS_HOST = None
     REDIS_PORT = None
 
-#DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
@@ -102,6 +101,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
+    'fragments.app.FragmentsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
@@ -112,14 +112,14 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend', # this is default
+    'django.contrib.auth.backends.ModelBackend',  # this is default
     'guardian.backends.ObjectPermissionBackend',
 )
 
@@ -160,6 +160,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
     }
 }
 
@@ -206,7 +213,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = 'static/'
 
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
