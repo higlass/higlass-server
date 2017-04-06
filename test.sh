@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+# kill previous instances
+# ps aux | grep runserver | grep 6000 | awk '{print $2}' | xargs kill
+# rm db_test.sqlite3
+
 ### Build and test from the inside out:
 ### 1) Unit tests
 
@@ -15,6 +19,7 @@ gene_annotations.short.db
 cnv_short.hibed
 arrowhead_domains_short.txt.multires.db
 hiccups_loops_short.txt.multires.db
+G15509.K-562.2_sampleDown.multires.cool
 END
 )
 
@@ -27,8 +32,10 @@ SETTINGS=higlass_server.settings_test
 
 python manage.py migrate --settings=$SETTINGS
 
+export SITE_URL="somesite.com"
 PORT=6000
 python manage.py runserver localhost:$PORT --settings=$SETTINGS &
+
 #DJANGO_PID=$!
 TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
 until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done

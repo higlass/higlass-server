@@ -216,7 +216,7 @@ def generate_tile(tile_id, request):
         )
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
-    else:
+    elif tileset.filetype == "cooler":
         tile_value = make_cooler_tile(get_datapath(tileset.datafile.url), tile_position)
         if tile_value is None:
             return None
@@ -265,27 +265,13 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        uid = slugid.nice()
-        viewconf = request.body
-        # TODO: Copy-and-paste from TilessetsViewSet... Consider creating an abstract superclass both can inherit from.
-        # if 'uid' in request.data:
-        #     logger.warn('if!')
-        #     try:
-        #         queryset = tm.ViewConf.objects.all()
-        #         queryset.get(uuid=request.data['uid'])
-        #         # this uid already exists, return an error
-        #         raise rfe.APIException("UID already exists")
-        #     except tm.Tileset.DoesNotExist:
-        #         logger.warn('except!')
-        #         uid = request.data['uid']
-        # else:
-        #     logger.warn('else!')
-        #     uid = slugid.nice()
-        # viewconf = request.data['viewconf']
+        viewconf_wrapper = json.loads(request.body)
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        viewconf = json.dumps(viewconf_wrapper['viewconf'])
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
-            return JsonResponse({'error': 'Serializer not valid'}, 
+            return JsonResponse({'error': 'Serializer not valid'},
                     status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer.save(uuid=uid, viewconf=viewconf)
@@ -374,10 +360,10 @@ def tileset_info(request):
             tileset_info = hdft.get_tileset_info(
                 h5py.File(get_datapath(tileset_object.datafile.url)))
             tileset_infos[tileset_uuid] = {
-                "min_pos": [0],
+                "min_pos": [tileset_info['min_pos']],
                 "max_pos": [tileset_info['max_pos']],
                 "max_width": 2 ** math.ceil(
-                    math.log(tileset_info['max_pos'] - 0) / math.log(2)
+                    math.log(tileset_info['max_pos'] - tileset_info['min_pos']) / math.log(2)
                 ),
                 "tile_size": tileset_info['tile_size'],
                 "max_zoom": tileset_info['max_zoom']
@@ -390,7 +376,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(get_datapath(tileset_object.datafile.url))
-        else:
+        elif tileset_object.filetype == 'cooler':
             dsetname = get_datapath(queryset.filter(
                 uuid=tileset_uuid
             ).first().datafile.url)
@@ -398,6 +384,9 @@ def tileset_info(request):
             if dsetname not in mats:
                 make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
+        else:
+            # Unknown filetype
+            tileset_infos[tileset_uuid] = {'message': 'Unknown filetype ' + tileset_object.filetype}
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
 
