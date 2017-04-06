@@ -5,6 +5,7 @@ import cooler.contrib.higlass as cch
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
+import django.db as db
 
 import base64
 import django.test as dt
@@ -19,6 +20,23 @@ import tiles
 import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
+
+class TilesetModelTest(dt.TestCase):
+    def test_to_string(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x1x'
+        )
+
+        cooler_string = str(self.cooler)
+        self.assertTrue(cooler_string.find("name") > 0)
+        
 
 class TilesizeTest(dt.TestCase):
     def setUp(self):
@@ -62,19 +80,29 @@ class ViewConfTest(dt.TestCase):
 
     def test_viewconfs(self):
         ret = self.client.post('/api/v1/viewconfs/',
-                               '{"hello": "sir"}', content_type="application/json")
-                               # {'viewconf': '{"hello": "sir"}', 'uid': 'foo'},
-                               # content_type="application/json")
+                               '{"uid": "123", "viewconf":{"hello": "sir"}}', content_type="application/json")
         contents = json.loads(ret.content)
-        assert('uid' in contents)
+        self.assertIn('uid', contents)
+        self.assertEqual(contents['uid'], '123')
 
-        url = '/api/v1/viewconfs/?d=' + contents['uid']
+        url = '/api/v1/viewconfs/?d=123'
         ret = self.client.get(url)
 
         contents = json.loads(ret.content)
 
         assert('hello' in contents)
-        
+
+    def test_duplicate_uid_errors(self):
+        ret1 = self.client.post('/api/v1/viewconfs/',
+                               '{"uid": "dupe", "viewconf":{"try": "first"}}', content_type="application/json")
+        self.assertEqual(ret1.status_code, 200)
+
+        # TODO: This will bubble up as a 500, when bad user input should really be 4xx.
+        with self.assertRaises(db.IntegrityError):
+            ret2 = self.client.post('/api/v1/viewconfs/',
+                                   '{"uid": "dupe", "viewconf":{"try": "second"}}', content_type="application/json")
+
+
 class PermissionsTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -160,6 +188,24 @@ class PermissionsTest(dt.TestCase):
         assert(resp.status_code ==  200)
 
 class CoolerTest(dt.TestCase):
+    def test_unbalanced(self):
+        '''
+        Try to get tiles from an unbalanced dataset
+        '''
+        upload_file = open('data/G15509.K-562.2_sampleDown.multires.cool', 'r')
+        tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='g1a')
+
+        ret = self.client.get('/api/v1/tiles/?d=g1a.0.0.0')
+        contents = json.loads(ret.content)
+
+        self.assertIn('g1a.0.0.0', contents)
+
+
     def test_tile_symmetry(self):
         '''
         Make sure that tiles are symmetric
