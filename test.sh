@@ -48,3 +48,6 @@ python manage.py test -v 2 tilesets higlass_server --settings=$SETTINGS
 
 echo 'PASS!'
 
+# kill all child processes of this bash script
+# e.g.: the server
+pkill -P $$
