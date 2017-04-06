@@ -14,8 +14,8 @@ import os
 import os.path as op
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-if 'SERVER_BASE_DIR' in os.environ:
-    base_dir = os.environ['SERVER_BASE_DIR']
+if 'HIGLASS_SERVER_BASE_DIR' in os.environ:
+    base_dir = os.environ['HIGLASS_SERVER_BASE_DIR']
 
     if op.exists(base_dir):
         BASE_DIR = base_dir
@@ -56,14 +56,14 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': 'WARNING',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
             },
         'file': {
-            'level': 'DEBUG',
+            'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': 'log/hgs.log',
+            'filename': os.path.join(BASE_DIR, 'log/hgs.log'),
             'formatter': 'verbose'
         },
     },
@@ -71,11 +71,11 @@ LOGGING = {
         'django': {
             'handlers': ['file'],
             'propagate': True,
-            'level': 'DEBUG',
+            'level': 'WARNING',
         },
         'tilesets': {
             'handlers': ['file'],
-            'level': 'DEBUG',
+            'level': 'WARNING',
         },
     }
 }
@@ -119,7 +119,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -220,6 +220,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = 'static/'
 
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
