@@ -11,11 +11,10 @@ import logging
 import numpy as np
 
 from os import path
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 
 from tilesets.models import Tileset
-from fragments.models import ChromInfo, ChromSizes
 
 from operator import itemgetter
 
@@ -397,45 +396,3 @@ def loci(request):
     }
 
     return JsonResponse(results)
-
-
-@api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def chromInfo(request):
-    coords = request.GET.get('coords', False)
-
-    try:
-        chrom_info = ChromInfo.objects.get(uuid=coords)
-    except Exception as e:
-        return JsonResponse({})
-
-    try:
-        with open(chrom_info.datafile) as f:
-            data = json.load(f)
-    except Exception as e:
-        return JsonResponse({})
-
-    return JsonResponse(data)
-
-
-@api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def chromSizes(request):
-    coords = request.GET.get('coords', False)
-
-    try:
-        chrom_sizes = ChromSizes.objects.get(uuid=coords)
-    except Exception as e:
-        return HttpResponse({
-            error: 'ChromSizes for %s not found' % coords
-        })
-
-    try:
-        with open(chrom_sizes.datafile) as f:
-            data = f.readlines()
-    except Exception as e:
-        return HttpResponse({
-            error: 'Could not load file %s' % chrom_sizes.datafile
-        })
-
-    return HttpResponse(data)

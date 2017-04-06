@@ -106,6 +106,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
     'fragments.app.FragmentsConfig',
+    'chroms.app.ChromsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
