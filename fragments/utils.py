@@ -93,7 +93,7 @@ def get_cooler(f, zoomout_level=-1):
                 c = cooler.Cooler(f[str(zoom_level)])
             else:
                 c = cooler.Cooler(f['0'])
-        except Exception as e:
+        except Exception:
             c = cooler.Cooler(f)
     else:
         c = cooler.Cooler(f)
