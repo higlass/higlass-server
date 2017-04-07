@@ -1,6 +1,7 @@
 v0.4.0
 
 - Add endpoints for pulling out fragments aka snippets aka patches of the interaction map
+- Add endpoints for chrom-sizes in TSV and JSON format
 
 v0.3.5
 
