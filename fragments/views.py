@@ -18,6 +18,8 @@ from tilesets.models import Tileset
 
 from operator import itemgetter
 
+from tilesets.views import get_datapath
+
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,
@@ -93,9 +95,11 @@ def fragments_by_loci(request):
                     cooler_file = path.join('data', locus[6])
                 else:
                     try:
-                        cooler_file = Tileset.objects.get(
-                            uuid=locus[6]
-                        ).datafile
+                        cooler_file = get_datapath(
+                            Tileset.objects.get(
+                                uuid=locus[6]
+                            ).datafile.url
+                        )
                     except AttributeError:
                         return JsonResponse({
                             'error': 'Dataset (cooler file) not in database',
@@ -138,7 +142,7 @@ def fragments_by_loci(request):
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
                 raw_matrices = get_frag_by_loc(
-                    dataset,
+                    cooler_file,
                     loci_lists[dataset][zoomout_level],
                     zoomout_level=zoomout_level,
                     dim=dims,
@@ -194,7 +198,9 @@ def fragments_by_chr(request):
             cooler_file = path.join('data', cooler_file)
         else:
             try:
-                cooler_file = Tileset.objects.get(uuid=cooler_file).datafile
+                cooler_file = get_datapath(
+                    Tileset.objects.get(uuid=cooler_file).datafile.url
+                )
             except AttributeError:
                 return JsonResponse({
                     'error': 'Cooler file not in database',
