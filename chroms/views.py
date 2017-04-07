@@ -26,6 +26,44 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def sizes(request):
+    '''Return chromosome sizes.
+
+    Retrieves the chromSiyes.tsv and either retrieves it as is or converts it
+    to a JSON format.
+
+    Args:
+        request: HTTP GET request object. The request can feature the following
+            queries:
+
+            coords: uuid of the stored chromSizes [e.g.: hg19 or mm9]
+            type: return data format [tsv or json]
+            cum: return cumulative size or offset [0 or 1]
+
+    Returns:
+        A HTTP text or JSON response depending on the GET request.
+
+        A text response looks like this:
+        ```
+        chr1    1
+        chr2    2
+        ...
+        ```
+
+        A JSON response looks like this:
+        ```
+        {
+            chr1: {
+                size: 1,
+                offset: 0
+            }
+            chr2: {
+                size: 2,
+                offset: 1
+            },
+            ...
+        }
+        ```
+    '''
     coords = request.GET.get('coords', False)
     res_type = request.GET.get('type', 'tsv')
     incl_cum = request.GET.get('cum', False)
