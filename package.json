@@ -1,0 +1,14 @@
+{
+  "name": "higlass-server",
+  "description": "Server for HiGlass serving cooler files",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hms-dbmi/higlass-server.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "python manage.py runserver localhost:8001",
+    "startmac": "brew services start redis && npm start",
+    "test": "./test.sh"
+  }
+}

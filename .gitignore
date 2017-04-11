@@ -21,4 +21,4 @@ src
 npm-debug.log
 
 uploads/
-static
+static/

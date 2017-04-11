@@ -31,7 +31,7 @@ else:
 SECRET_KEY = 'e71$i%^qmf9cml7-ga@r+h3&v$y4c48a&u@%@$8t87z*qz9#ks'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
@@ -92,7 +92,7 @@ else:
     REDIS_HOST = None
     REDIS_PORT = None
 
-#DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
@@ -105,6 +105,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
+    'fragments.app.FragmentsConfig',
+    'chroms.app.ChromsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
@@ -125,7 +127,7 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend', # this is default
+    'django.contrib.auth.backends.ModelBackend',  # this is default
     'guardian.backends.ObjectPermissionBackend',
 )
 

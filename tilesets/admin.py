@@ -4,7 +4,18 @@ from tilesets.models import ViewConf
 # Register your models here.
 
 class TilesetAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'created',
+        'uuid',
+        'datafile',
+        'filetype',
+        'datatype',
+        'coordSystem',
+        'coordSystem2',
+        'owner',
+        'private',
+        'name',
+    ]
 
 class ViewConfAdmin(admin.ModelAdmin):
     pass
