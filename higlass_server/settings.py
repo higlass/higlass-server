@@ -31,7 +31,7 @@ else:
 SECRET_KEY = 'e71$i%^qmf9cml7-ga@r+h3&v$y4c48a&u@%@$8t87z*qz9#ks'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['52.45.229.11', 'localhost', '127.0.0.1', 'higlass.site', 'higlass.io']
 
