@@ -29,7 +29,10 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import sys
 
 from django.contrib.auth.models import User
