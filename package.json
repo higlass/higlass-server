@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "start": "python manage.py runserver localhost:8001",
-    "startmac": "brew services start memcached && npm start",
+    "startmac": "brew services start redis && npm start",
     "test": "./test.sh"
   }
 }

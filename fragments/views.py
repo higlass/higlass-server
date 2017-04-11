@@ -1,25 +1,18 @@
 from __future__ import print_function
 
-from django.core.cache import cache
-
-from rest_framework.authentication import BasicAuthentication
-from drf_disable_csrf import CsrfExemptSessionAuthentication
-
 import hashlib
 import json
 import logging
 import numpy as np
 
+from rest_framework.authentication import BasicAuthentication
+from drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
-
 from tilesets.models import Tileset
-
 from operator import itemgetter
-
 from tilesets.views import get_datapath
-
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,
@@ -29,6 +22,9 @@ from fragments.utils import (
     get_intra_chr_loops_from_looplist,
     rel_loci_2_obj
 )
+from higlass_server.utils import getRdb
+
+rdb = getRdb()
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +128,7 @@ def fragments_by_loci(request):
 
     # Check if something is cached
     if not no_cache:
-        results = cache.get('frag_by_loci_%s' % uuid, False)
+        results = rdb.get('frag_by_loci_%s' % uuid)
 
         if results:
             return JsonResponse(results)
@@ -181,7 +177,7 @@ def fragments_by_loci(request):
     }
 
     # Cache results for 30 minutes
-    cache.set('frag_by_loci_%s' % uuid, results, 60 * 30)
+    rdb.set('frag_by_loci_%s' % uuid, results, 60 * 30)
 
     return JsonResponse(results)
 
@@ -254,7 +250,7 @@ def fragments_by_chr(request):
 
     # Check if something is cached
     if not no_cache:
-        results = cache.get('frag_by_chrom_%s' % uuid, False)
+        results = rdb.get('frag_by_chrom_%s' % uuid)
 
         if results:
             return JsonResponse(results)
@@ -376,7 +372,7 @@ def fragments_by_chr(request):
         results['fragments'] = fragments_arr
 
     # Cache results for 30 mins
-    cache.set('frag_by_chrom_%s' % uuid, results, 60 * 30)
+    rdb.set('frag_by_chrom_%s' % uuid, results, 60 * 30)
 
     return JsonResponse(results)
 
