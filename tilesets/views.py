@@ -29,7 +29,6 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
-import redis
 import pickle
 import sys
 
@@ -42,32 +41,15 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
 
+from higlass_server.utils import getRdb
+
 logger = logging.getLogger(__name__)
 
 global mats
 mats = {}
 
-class EmptyRDB:
-    def __init__(self):
-        pass
+rdb = getRdb()
 
-    def exists(self, tile_id):
-        return False
-
-    def get(self, tile_id):
-        return None;
-
-    def set(self, tile_id, tile_value):
-        pass
-
-global rdb 
-
-if hss.REDIS_HOST is not None:
-    rdb = redis.Redis(
-            host=hss.REDIS_HOST,
-            port=hss.REDIS_PORT)
-else:
-    rdb = EmptyRDB()
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
@@ -121,7 +103,7 @@ def make_cooler_tile(cooler_filepath, tile_position):
     min_f16 = np.finfo('float16').min
     max_f16 = np.finfo('float16').max
 
-    if (max_dense > min_f16 and max_dense < max_f16 and 
+    if (max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16):
         tile_data['dense'] = base64.b64encode(tile.astype('float16'))
         tile_data['dtype'] = 'float16'
@@ -187,7 +169,7 @@ def generate_tile(tile_id, request):
         min_f16 = np.finfo('float16').min
         max_f16 = np.finfo('float16').max
 
-        if (max_dense > min_f16 and max_dense < max_f16 and 
+        if (max_dense > min_f16 and max_dense < max_f16 and
             min_dense > min_f16 and min_dense < max_f16):
             tile_value = {'dense': base64.b64encode(dense.astype('float16')), 'dtype':'float16'}
         else:

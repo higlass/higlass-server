@@ -8,6 +8,9 @@ set -e
 ### Build and test from the inside out:
 ### 1) Unit tests
 
+# clear previous db
+rm db_test.sqlite3 ||:
+
 COOLER=dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool
 HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 
@@ -45,3 +48,6 @@ python manage.py test -v 2 tilesets higlass_server --settings=$SETTINGS
 
 echo 'PASS!'
 
+# kill all child processes of this bash script
+# e.g.: the server
+pkill -P $$

@@ -92,7 +92,7 @@ else:
     REDIS_HOST = None
     REDIS_PORT = None
 
-#DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
+DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
 # Application definition
 
@@ -105,6 +105,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
+    'fragments.app.FragmentsConfig',
+    'chroms.app.ChromsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
@@ -125,7 +127,7 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend', # this is default
+    'django.contrib.auth.backends.ModelBackend',  # this is default
     'guardian.backends.ObjectPermissionBackend',
 )
 
@@ -212,6 +214,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = 'static/'
 
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
