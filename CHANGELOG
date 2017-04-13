@@ -1,3 +1,8 @@
+v0.4.3
+
+- Fixed an error when the zoom-out levels for fragmentds was negative
+- Fixed wrong ordering for multi dataset and/or multi resolution fragment extraction
+
 v0.4.2
 
 - Fixed caching issue in loci extraction
