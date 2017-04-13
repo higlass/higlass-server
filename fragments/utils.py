@@ -79,23 +79,22 @@ def rel_2_abs_loci(loci, chr_info):
     return map(absolutize_tuple, loci)
 
 
-def get_cooler(f, zoomout_level=-1):
-    if zoomout_level >= 0:
+def get_cooler(f, zoomout_level=0):
+    try:
         zoom_levels = np.array(f.keys(), dtype=int)
 
         max_zoom = np.max(zoom_levels)
         min_zoom = np.min(zoom_levels)
 
-        zoom_level = max_zoom - zoomout_level
+        zoom_level = max_zoom - max(zoomout_level, 0)
 
-        try:
-            if (zoom_level >= min_zoom and zoom_level <= max_zoom):
-                c = cooler.Cooler(f[str(zoom_level)])
-            else:
-                c = cooler.Cooler(f['0'])
-        except Exception:
-            c = cooler.Cooler(f)
-    else:
+        print(zoom_level)
+
+        if (zoom_level >= min_zoom and zoom_level <= max_zoom):
+            c = cooler.Cooler(f[str(zoom_level)])
+        else:
+            c = cooler.Cooler(f['0'])
+    except Exception:
         c = cooler.Cooler(f)
 
     return c
@@ -107,7 +106,7 @@ def get_frag_by_loc(
     is_rel=True,
     dim=22,
     balanced=True,
-    zoomout_level=-1
+    zoomout_level=0
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
