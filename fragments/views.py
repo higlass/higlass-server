@@ -140,12 +140,12 @@ def fragments_by_loci(request):
         except:
             pass
 
-    matrices = []
+    matrices = [None] * i
     try:
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
                 raw_matrices = get_frag_by_loc(
-                    cooler_file,
+                    dataset,
                     loci_lists[dataset][zoomout_level],
                     zoomout_level=zoomout_level,
                     dim=dims,
@@ -157,10 +157,8 @@ def fragments_by_loci(request):
 
                 i = 0
                 for raw_matrix in raw_matrices:
-                    matrices.append({
-                        'id': loci_lists[dataset][zoomout_level][i][6],
-                        'raw': raw_matrix
-                    })
+                    matrices[loci_lists[dataset][zoomout_level][i][6]] =\
+                        raw_matrix.tolist()
                     i += 1
     except Exception as e:
         return JsonResponse({
@@ -168,19 +166,9 @@ def fragments_by_loci(request):
             'error_message': str(e)
         }, status=500)
 
-    # Sort matrices
-    matrices_sorted = sorted(matrices, key=itemgetter('id'))
-
-    fragments = []
-
-    i = 0
-    for matrix in matrices_sorted:
-        fragments.append(matrix['raw'].tolist())
-        i += 1
-
     # Create results
     results = {
-        'fragments': fragments
+        'fragments': matrices
     }
 
     # Cache results for 30 minutes
