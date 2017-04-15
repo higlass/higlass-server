@@ -26,7 +26,11 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
     binsize = dset[0].attrs[str(zoomLevel)]
     j = (df['genome_start1'].values - start1) // binsize
     i = (df['genome_start2'].values - start2) // binsize
-    v = np.nan_to_num(df['balanced'].values)
+
+    if 'balanced' in df:
+        v = np.nan_to_num(df['balanced'].values)
+    else:
+        v = np.nan_to_num(df['count'].values)
 
     zi = zip(zip(i, j), v)
     tile_bins = dict(zi)

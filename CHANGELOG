@@ -1,5 +1,25 @@
+v0.4.0
+
+- Add endpoints for pulling out fragments aka snippets aka patches of the interaction map
+- Add endpoints for chrom-sizes in TSV and JSON format
+
+v0.3.5
+
+- Send min_pos with the tileset info
+
+v0.3.4
+
+- Bug fix for serving unbalanced data
+
+v0.3.3
+
+- Added __str__ to Tileset models so that they're visible in the django
+interface
+
+v0.3.2
+
+- Added support for passing SITE_URL as an environment variable
+
 v0.3.0
 
 - Send back float16 data for heatmaps and possibly 1d tracks
-
-

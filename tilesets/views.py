@@ -29,8 +29,10 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
-import redis
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import sys
 
 from django.contrib.auth.models import User
@@ -42,32 +44,15 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from tiles import make_tile
 
+from higlass_server.utils import getRdb
+
 logger = logging.getLogger(__name__)
 
 global mats
 mats = {}
 
-class EmptyRDB:
-    def __init__(self):
-        pass
+rdb = getRdb()
 
-    def exists(self, tile_id):
-        return False
-
-    def get(self, tile_id):
-        return None;
-
-    def set(self, tile_id, tile_value):
-        pass
-
-global rdb 
-
-if hss.REDIS_HOST is not None:
-    rdb = redis.Redis(
-            host=hss.REDIS_HOST,
-            port=hss.REDIS_PORT)
-else:
-    rdb = EmptyRDB()
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
@@ -121,7 +106,7 @@ def make_cooler_tile(cooler_filepath, tile_position):
     min_f16 = np.finfo('float16').min
     max_f16 = np.finfo('float16').max
 
-    if (max_dense > min_f16 and max_dense < max_f16 and 
+    if (max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16):
         tile_data['dense'] = base64.b64encode(tile.astype('float16'))
         tile_data['dtype'] = 'float16'
@@ -187,7 +172,7 @@ def generate_tile(tile_id, request):
         min_f16 = np.finfo('float16').min
         max_f16 = np.finfo('float16').max
 
-        if (max_dense > min_f16 and max_dense < max_f16 and 
+        if (max_dense > min_f16 and max_dense < max_f16 and
             min_dense > min_f16 and min_dense < max_f16):
             tile_value = {'dense': base64.b64encode(dense.astype('float16')), 'dtype':'float16'}
         else:
@@ -216,7 +201,7 @@ def generate_tile(tile_id, request):
         )
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
-    else:
+    elif tileset.filetype == "cooler":
         tile_value = make_cooler_tile(get_datapath(tileset.datafile.url), tile_position)
         if tile_value is None:
             return None
@@ -265,27 +250,13 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
-        uid = slugid.nice()
-        viewconf = request.body
-        # TODO: Copy-and-paste from TilessetsViewSet... Consider creating an abstract superclass both can inherit from.
-        # if 'uid' in request.data:
-        #     logger.warn('if!')
-        #     try:
-        #         queryset = tm.ViewConf.objects.all()
-        #         queryset.get(uuid=request.data['uid'])
-        #         # this uid already exists, return an error
-        #         raise rfe.APIException("UID already exists")
-        #     except tm.Tileset.DoesNotExist:
-        #         logger.warn('except!')
-        #         uid = request.data['uid']
-        # else:
-        #     logger.warn('else!')
-        #     uid = slugid.nice()
-        # viewconf = request.data['viewconf']
+        viewconf_wrapper = json.loads(request.body)
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        viewconf = json.dumps(viewconf_wrapper['viewconf'])
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
-            return JsonResponse({'error': 'Serializer not valid'}, 
+            return JsonResponse({'error': 'Serializer not valid'},
                     status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer.save(uuid=uid, viewconf=viewconf)
@@ -374,10 +345,10 @@ def tileset_info(request):
             tileset_info = hdft.get_tileset_info(
                 h5py.File(get_datapath(tileset_object.datafile.url)))
             tileset_infos[tileset_uuid] = {
-                "min_pos": [0],
+                "min_pos": [tileset_info['min_pos']],
                 "max_pos": [tileset_info['max_pos']],
                 "max_width": 2 ** math.ceil(
-                    math.log(tileset_info['max_pos'] - 0) / math.log(2)
+                    math.log(tileset_info['max_pos'] - tileset_info['min_pos']) / math.log(2)
                 ),
                 "tile_size": tileset_info['tile_size'],
                 "max_zoom": tileset_info['max_zoom']
@@ -390,7 +361,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(get_datapath(tileset_object.datafile.url))
-        else:
+        elif tileset_object.filetype == 'cooler':
             dsetname = get_datapath(queryset.filter(
                 uuid=tileset_uuid
             ).first().datafile.url)
@@ -398,6 +369,9 @@ def tileset_info(request):
             if dsetname not in mats:
                 make_mats(dsetname)
             tileset_infos[tileset_uuid] = mats[dsetname][1]
+        else:
+            # Unknown filetype
+            tileset_infos[tileset_uuid] = {'message': 'Unknown filetype ' + tileset_object.filetype}
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
 

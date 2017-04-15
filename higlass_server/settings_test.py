@@ -6,3 +6,5 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db_test.sqlite3'),
     }
 }
+
+DEBUG = False

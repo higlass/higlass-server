@@ -20,4 +20,6 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api/v1/', include('tilesets.urls')),
+    url(r'^api/v1/', include('fragments.urls')),
+    url(r'^api/v1/', include('chroms.urls')),
 ]

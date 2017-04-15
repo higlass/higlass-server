@@ -16,6 +16,12 @@ class ViewConf(models.Model):
     class Meta:
         ordering = ('created',)
 
+    def __str__(self):
+        '''
+        Get a string representation of this model. Hopefully useful for the admin interface.
+        '''
+        return "Viewconf [uuid: " + self.uuid + ']'
+
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
@@ -37,3 +43,9 @@ class Tileset(models.Model):
     class Meta:
         ordering = ('created',)
         permissions = (('view_tileset', "View tileset"),)
+
+    def __str__(self):
+        '''
+        Get a string representation of this model. Hopefully useful for the admin interface.
+        '''
+        return "Tileset [name: " + self.name + '] [ft: ' + self.filetype + ']'
