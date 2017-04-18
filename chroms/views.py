@@ -69,26 +69,30 @@ def sizes(request):
     incl_cum = request.GET.get('cum', False)
 
     response = HttpResponse
+    is_json = False
 
     if res_type == 'json':
+        is_json = True
         response = JsonResponse
 
     if res_type != 'json' and incl_cum:
-        return response({
-            'error': (
-                'Sorry buddy. Cumulative sizes not yet supported for non-JSON '
-                'file types. 😞'
-            )
-        })
+        return response(
+            'Sorry buddy. Cumulative sizes not yet supported for non-JSON '
+            'file types. 😞', status=501
+        )
 
     # Try to find the db entry
     try:
         chrom_sizes = Sizes.objects.get(uuid=coords)
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': 'Oh lord! ChromSizes for %s not found. ☹️' % coords
-        })
+        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % coords
+        err_status = 404
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     # Try to load the CSV file
     try:
@@ -106,9 +110,13 @@ def sizes(request):
                 data = f.readlines()
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': 'WHAT?! Could not load file %s. 😤' % chrom_sizes.datafile
-        })
+        err_msg = 'WHAT?! Could not load file %s. 😤' % chrom_sizes.datafile
+        err_status = 500
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     # Convert the stuff if needed
     try:
@@ -138,11 +146,12 @@ def sizes(request):
             data = json_out
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': (
-                'THIS IS AN OUTRAGE!!!1! Something failed. 😡'
-            ),
-            'errorMsg': str(e)
-        })
+        err_msg = 'THIS IS AN OUTRAGE!!!1! Something failed. 😡'
+        err_status = 500
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     return response(data)

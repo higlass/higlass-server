@@ -80,6 +80,8 @@ def rel_2_abs_loci(loci, chr_info):
 
 
 def get_cooler(f, zoomout_level=0):
+    c = None
+
     try:
         zoom_levels = np.array(f.keys(), dtype=int)
 
@@ -88,14 +90,20 @@ def get_cooler(f, zoomout_level=0):
 
         zoom_level = max_zoom - max(zoomout_level, 0)
 
-        print(zoom_level)
-
         if (zoom_level >= min_zoom and zoom_level <= max_zoom):
             c = cooler.Cooler(f[str(zoom_level)])
         else:
             c = cooler.Cooler(f['0'])
-    except Exception:
+
+        return c
+    except Exception as e:
+        logger.error(e)
+        pass  # failed loading zoomlevel of cooler file
+
+    try:
         c = cooler.Cooler(f)
+    except Exception:
+        logger.error(e)
 
     return c
 
