@@ -1,3 +1,8 @@
+v0.4.4
+
+- Set proper HTTP status codes for errors of the chrom-sizes endpoint
+- Robustify internal magic (a.k.a. bug fixes)
+
 v0.4.3
 
 - Fixed an error when the zoom-out levels for fragmentds was negative
