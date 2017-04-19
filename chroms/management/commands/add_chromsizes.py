@@ -42,13 +42,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['no_upload']:
-            if not is_subdir(op.dirname(options['file']), settings.MEDIA_ROOT):
+            file_abs_path = op.abspath(options['file'])
+
+            if not is_subdir(op.dirname(file_abs_path), settings.MEDIA_ROOT):
                 raise CommandError('File is not under media root')
 
-            if not op.isfile(op.join(settings.MEDIA_ROOT, options['file'])):
-                raise CommandError('File does not exist under media root')
+            if not op.isfile(options['file']):
+                raise CommandError(
+                    'File (%s) does not exist under media (%s)' % (
+                        op.dirname(file_abs_path),
+                        settings.MEDIA_ROOT
+                    )
+                )
 
-            django_file = options['file']
+            django_file = op.relpath(options['file'], settings.MEDIA_ROOT)
         else:
             django_file = File(open(options['file'], 'r'))
 
