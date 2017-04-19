@@ -1,3 +1,8 @@
+v0.4.5
+
+- Add management command for adding chrom-sizes
+- Chrom-sizes endpoint parameter `coords` changes to `id` to avoid confusion. I.e., for one coordinate system there might exist multiple orderings, which means multiple IDs could reference the same coordinate system.
+
 v0.4.4
 
 - Set proper HTTP status codes for errors of the chrom-sizes endpoint
