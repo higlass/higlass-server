@@ -73,6 +73,14 @@ LOGGING = {
             'propagate': True,
             'level': 'WARNING',
         },
+        'chroms': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+        },
+        'fragments': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+        },
         'tilesets': {
             'handlers': ['file'],
             'level': 'WARNING',
