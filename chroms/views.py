@@ -7,13 +7,11 @@ from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 import logging
 import csv
-import os
 
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 
 from chroms.models import Sizes
-from django.conf import settings
 
 import sys
 reload(sys)
@@ -35,7 +33,7 @@ def sizes(request):
         request: HTTP GET request object. The request can feature the following
             queries:
 
-            coords: uuid of the stored chromSizes [e.g.: hg19 or mm9]
+            id: id of the stored chromSizes [e.g.: hg19 or mm9]
             type: return data format [tsv or json]
             cum: return cumulative size or offset [0 or 1]
 
@@ -64,7 +62,7 @@ def sizes(request):
         }
         ```
     '''
-    coords = request.GET.get('coords', False)
+    uuid = request.GET.get('id', False)
     res_type = request.GET.get('type', 'tsv')
     incl_cum = request.GET.get('cum', False)
 
@@ -83,10 +81,10 @@ def sizes(request):
 
     # Try to find the db entry
     try:
-        chrom_sizes = Sizes.objects.get(uuid=coords)
+        chrom_sizes = Sizes.objects.get(uuid=uuid)
     except Exception as e:
         logger.error(e)
-        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % coords
+        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % uuid
         err_status = 404
 
         if is_json:
@@ -96,21 +94,24 @@ def sizes(request):
 
     # Try to load the CSV file
     try:
-        fpath = os.path.join(settings.MEDIA_ROOT, chrom_sizes.datafile)
+        f = chrom_sizes.datafile
+        f.open('rb')
 
         if res_type == 'json':
-            with open(fpath, 'rb') as f:
-                reader = csv.reader(f, delimiter='\t')
+            reader = csv.reader(f, delimiter='\t')
 
-                data = []
-                for row in reader:
-                    data.append(row)
+            data = []
+            for row in reader:
+                data.append(row)
         else:
-            with open(fpath) as f:
-                data = f.readlines()
+            data = f.readlines()
+
+        f.close()
     except Exception as e:
         logger.error(e)
-        err_msg = 'WHAT?! Could not load file %s. 😤' % chrom_sizes.datafile
+        err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
+            chrom_sizes.datafile, e
+        )
         err_status = 500
 
         if is_json:
