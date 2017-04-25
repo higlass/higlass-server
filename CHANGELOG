@@ -1,4 +1,8 @@
-v0.4.5
+v0.5.1
+
+- Updated requirements to use mirnylab develop cooler
+
+v0.5.0
 
 - Add management command for adding chrom-sizes
 - Chrom-sizes endpoint parameter `coords` changes to `id` to avoid confusion. I.e., for one coordinate system there might exist multiple orderings, which means multiple IDs could reference the same coordinate system.
