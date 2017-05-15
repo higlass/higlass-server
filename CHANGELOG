@@ -1,3 +1,8 @@
+v0.5.2
+
+- Added test.higlass.io to allowed hosts
+- Turned off HashedFilenameStorage
+
 v0.5.1
 
 - Updated requirements to use mirnylab develop cooler
