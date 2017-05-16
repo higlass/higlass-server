@@ -12,6 +12,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 
 from chroms.models import Sizes
+import chroms.serializers as css
 
 import sys
 reload(sys)
@@ -19,6 +20,26 @@ sys.setdefaultencoding('utf-8')
 
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(['GET'])
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+def available_chrom_sizes(request):
+    '''
+    Get the list of available chromosome size lists.
+
+    Args:
+        request: HTTP GET request object. Should contain no query features
+
+    Returns:
+        A JSON response containing the list of chromosome size lists.
+    '''
+    queryset = Sizes.objects.all()
+
+    serializer = css.ChromSizeObjectSerializer(queryset, many=True)
+
+    return JsonResponse(
+            {"count": len(queryset), "results": serializer.data})
 
 
 @api_view(['GET'])
