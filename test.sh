@@ -23,6 +23,7 @@ cnv_short.hibed
 arrowhead_domains_short.txt.multires.db
 hiccups_loops_short.txt.multires.db
 G15509.K-562.2_sampleDown.multires.cool
+chromSizes.tsv
 END
 )
 
@@ -44,7 +45,7 @@ TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
 until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 # Server is needed for higlass_server tests
 
-python manage.py test -v 2 tilesets higlass_server --settings=$SETTINGS
+python manage.py test -v 2 tilesets higlass_server chroms --settings=$SETTINGS
 
 echo 'PASS!'
 

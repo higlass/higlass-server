@@ -229,3 +229,5 @@ STATIC_ROOT = 'static/'
 # )
 
 #TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+NOSE_ARGS = ['--nocapture', '--nologcapture']
