@@ -1,3 +1,7 @@
+v0.5.3
+
+- Return coordSystem as part of tileset_info
+
 v0.5.2
 
 - Added test.higlass.io to allowed hosts

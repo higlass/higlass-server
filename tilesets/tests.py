@@ -241,6 +241,8 @@ class CoolerTest(dt.TestCase):
             filetype='cooler',
             datatype='matrix',
             owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
             uuid='md')
 
     def test_get_tileset_info(self):
@@ -250,6 +252,7 @@ class CoolerTest(dt.TestCase):
 
         assert('md' in contents)
         assert('min_pos' in contents['md'])
+        assert(contents['md']['coordSystem'] == 'hg19')
 
     def test_get_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
@@ -401,6 +404,7 @@ class HiBedTest(dt.TestCase):
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='hibed',
             datatype='stacked-interval',
+            coordSystem='hg19',
             owner=self.user1,
             uuid='hbt')
 
@@ -418,6 +422,7 @@ class HiBedTest(dt.TestCase):
         returned = json.loads(returned_text.content)
 
         self.assertTrue('tile_size' in returned[tile_id])
+        self.assertEqual(returned[tile_id]['coordSystem'], 'hg19')
 
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
@@ -514,6 +519,7 @@ class TilesetsViewSetTest(dt.TestCase):
         # user1 should be able to access it
         ts_info = json.loads(ret.content)
         self.assertFalse('error' in ts_info[ret_obj['uuid']])
+        self.assertEqual(ts_info[ret_obj['uuid']]['coordSystem'], 'hg19')
 
         # upload a new dataset as user1
         ret = c.post(

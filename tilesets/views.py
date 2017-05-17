@@ -374,6 +374,8 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = {'message': 'Unknown filetype ' + tileset_object.filetype}
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
+        tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
+        tileset_infos[tileset_uuid]['coordSystem2'] = tileset_object.coordSystem2
 
     return JsonResponse(tileset_infos)
 
