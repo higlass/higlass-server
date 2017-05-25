@@ -305,37 +305,36 @@ def get_frag(
     # the end position is always exclusive
     start_bin_1 = max(abs_coord_2_bin(c, start_pos_1, chr_info) - padding, 0)
     start_bin_2 = max(abs_coord_2_bin(c, start_pos_2, chr_info) - padding, 0)
-    end_bin_1 = abs_coord_2_bin(c, end_pos_1, chr_info) + padding + 1
-    end_bin_2 = abs_coord_2_bin(c, end_pos_2, chr_info) + padding + 1
+    end_bin_1 = abs_coord_2_bin(c, end_pos_1, chr_info) + padding
+    end_bin_2 = abs_coord_2_bin(c, end_pos_2, chr_info) + padding
 
-    real_dim = min(abs(start_bin_1 - end_bin_1), abs(start_bin_2 - end_bin_2))
-
+    real_dim = abs(start_bin_1 - end_bin_1)
     if real_dim < dim:
-        diff = dim - real_dim
-        end_bin_1 += diff
-        end_bin_2 += diff
+        end_bin_1 += dim - real_dim
+
+    real_dim = abs(start_bin_2 - end_bin_2)
+    if real_dim < dim:
+        end_bin_2 += dim - real_dim
 
     pixels = c.matrix(
         as_pixels=True, max_chunk=np.inf, balance=balanced
     )[start_bin_1:end_bin_1, start_bin_2:end_bin_2]
 
-    pixels['id_1'] = pixels['bin1_id'] - start_bin_1
-    pixels['id_2'] = pixels['bin2_id'] - start_bin_2
+    pixels['index'] = (
+        (pixels['bin1_id'] - start_bin_1) * dim +
+        pixels['bin2_id'] - start_bin_2
+    )
 
-    out = np.zeros(dim**2, dtype=np.float)
+    flat_dim = dim**2
+
+    out = np.zeros(flat_dim, dtype=np.float)
 
     accessor = 'count'
 
     if balanced:
         accessor = 'balanced'
-    for index, row in pixels.iterrows():
-        try:
-            out[
-                row['id_1'].astype(np.uint32) * dim +
-                row['id_2'].astype(np.uint32)
-            ] = row[accessor]
-        except IndexError:
-            continue
+
+    out[pixels['index'].values[:flat_dim]] = pixels[accessor].values[:flat_dim]
 
     # Store low quality bins
     low_quality_bins = np.where(np.isnan(out))
