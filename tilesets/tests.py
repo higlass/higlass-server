@@ -21,6 +21,23 @@ import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
 
+class GeneAnnotationsTest(dt.TestCase):
+
+    def test_to_string(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/gene-annotations-dm6.db', 'r')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='gene-annotation',
+            owner=self.user1,
+            uuid='ga1'
+        )
+
+        cooler_string = str(self.cooler)
+        self.assertTrue(cooler_string.find("name") > 0)
+
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
         self.user1 = dcam.User.objects.create_user(

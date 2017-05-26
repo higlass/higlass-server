@@ -25,6 +25,7 @@ hiccups_loops_short.txt.multires.db
 G15509.K-562.2_sampleDown.multires.cool
 chromSizes.tsv
 gene-annotations-mm9.db
+gene-annotations-dm6.db
 END
 )
 
