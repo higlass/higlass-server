@@ -30,13 +30,18 @@ class GeneAnnotationsTest(dt.TestCase):
         upload_file = open('data/gene-annotations-dm6.db', 'r')
         self.cooler = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
-            filetype='gene-annotation',
+            filetype='beddb',
             owner=self.user1,
             uuid='ga1'
         )
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
+
+        tile = json.loads(self.client.get('/api/v1/tiles/?d=ga1.0.0').content)
+
+        print("tile:", tile)
+
 
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
