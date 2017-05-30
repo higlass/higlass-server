@@ -7,13 +7,12 @@ from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 import logging
 import csv
-import os
 
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 
 from chroms.models import Sizes
-from django.conf import settings
+import chroms.serializers as css
 
 import sys
 reload(sys)
@@ -21,6 +20,26 @@ sys.setdefaultencoding('utf-8')
 
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(['GET'])
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+def available_chrom_sizes(request):
+    '''
+    Get the list of available chromosome size lists.
+
+    Args:
+        request: HTTP GET request object. Should contain no query features
+
+    Returns:
+        A JSON response containing the list of chromosome size lists.
+    '''
+    queryset = Sizes.objects.all()
+
+    serializer = css.ChromSizeObjectSerializer(queryset, many=True)
+
+    return JsonResponse(
+            {"count": len(queryset), "results": serializer.data})
 
 
 @api_view(['GET'])
@@ -35,7 +54,7 @@ def sizes(request):
         request: HTTP GET request object. The request can feature the following
             queries:
 
-            coords: uuid of the stored chromSizes [e.g.: hg19 or mm9]
+            id: id of the stored chromSizes [e.g.: hg19 or mm9]
             type: return data format [tsv or json]
             cum: return cumulative size or offset [0 or 1]
 
@@ -64,51 +83,62 @@ def sizes(request):
         }
         ```
     '''
-    coords = request.GET.get('coords', False)
+    uuid = request.GET.get('id', False)
     res_type = request.GET.get('type', 'tsv')
     incl_cum = request.GET.get('cum', False)
 
     response = HttpResponse
+    is_json = False
 
     if res_type == 'json':
+        is_json = True
         response = JsonResponse
 
     if res_type != 'json' and incl_cum:
-        return response({
-            'error': (
-                'Sorry buddy. Cumulative sizes not yet supported for non-JSON '
-                'file types. 😞'
-            )
-        })
+        return response(
+            'Sorry buddy. Cumulative sizes not yet supported for non-JSON '
+            'file types. 😞', status=501
+        )
 
     # Try to find the db entry
     try:
-        chrom_sizes = Sizes.objects.get(uuid=coords)
+        chrom_sizes = Sizes.objects.get(uuid=uuid)
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': 'Oh lord! ChromSizes for %s not found. ☹️' % coords
-        })
+        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % uuid
+        err_status = 404
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     # Try to load the CSV file
     try:
-        fpath = os.path.join(settings.MEDIA_ROOT, chrom_sizes.datafile)
+        f = chrom_sizes.datafile
+        f.open('rb')
 
         if res_type == 'json':
-            with open(fpath, 'rb') as f:
-                reader = csv.reader(f, delimiter='\t')
+            reader = csv.reader(f, delimiter='\t')
 
-                data = []
-                for row in reader:
-                    data.append(row)
+            data = []
+            for row in reader:
+                data.append(row)
         else:
-            with open(fpath) as f:
-                data = f.readlines()
+            data = f.readlines()
+
+        f.close()
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': 'WHAT?! Could not load file %s. 😤' % chrom_sizes.datafile
-        })
+        err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
+            chrom_sizes.datafile, e
+        )
+        err_status = 500
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     # Convert the stuff if needed
     try:
@@ -138,11 +168,12 @@ def sizes(request):
             data = json_out
     except Exception as e:
         logger.error(e)
-        return response({
-            'error': (
-                'THIS IS AN OUTRAGE!!!1! Something failed. 😡'
-            ),
-            'errorMsg': str(e)
-        })
+        err_msg = 'THIS IS AN OUTRAGE!!!1! Something failed. 😡'
+        err_status = 500
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
 
     return response(data)

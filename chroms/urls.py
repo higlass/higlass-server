@@ -6,4 +6,5 @@ from chroms import views
 # Additionally, we include the login URLs for the browsable API.
 urlpatterns = [
     url(r'^chrom-sizes/$', views.sizes),
+    url(r'^available-chrom-sizes/$', views.available_chrom_sizes)
 ]

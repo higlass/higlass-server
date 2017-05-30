@@ -4,6 +4,10 @@ import hashlib
 import json
 import logging
 import numpy as np
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 from rest_framework.authentication import BasicAuthentication
 from drf_disable_csrf import CsrfExemptSessionAuthentication
@@ -128,17 +132,20 @@ def fragments_by_loci(request):
 
     # Check if something is cached
     if not no_cache:
-        results = rdb.get('frag_by_loci_%s' % uuid)
+        try:
+            results = rdb.get('frag_by_loci_%s' % uuid)
 
-        if results:
-            return JsonResponse(results)
+            if results:
+                return JsonResponse(pickle.loads(results))
+        except:
+            pass
 
-    matrices = []
+    matrices = [None] * i
     try:
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
                 raw_matrices = get_frag_by_loc(
-                    cooler_file,
+                    dataset,
                     loci_lists[dataset][zoomout_level],
                     zoomout_level=zoomout_level,
                     dim=dims,
@@ -150,10 +157,8 @@ def fragments_by_loci(request):
 
                 i = 0
                 for raw_matrix in raw_matrices:
-                    matrices.append({
-                        'id': loci_lists[dataset][zoomout_level][i][6],
-                        'raw': raw_matrix
-                    })
+                    matrices[loci_lists[dataset][zoomout_level][i][6]] =\
+                        raw_matrix.tolist()
                     i += 1
     except Exception as e:
         return JsonResponse({
@@ -161,23 +166,13 @@ def fragments_by_loci(request):
             'error_message': str(e)
         }, status=500)
 
-    # Sort matrices
-    matrices_sorted = sorted(matrices, key=itemgetter('id'))
-
-    fragments = []
-
-    i = 0
-    for matrix in matrices_sorted:
-        fragments.append(matrix['raw'].tolist())
-        i += 1
-
     # Create results
     results = {
-        'fragments': fragments
+        'fragments': matrices
     }
 
     # Cache results for 30 minutes
-    rdb.set('frag_by_loci_%s' % uuid, results, 60 * 30)
+    rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
 
     return JsonResponse(results)
 
@@ -250,10 +245,13 @@ def fragments_by_chr(request):
 
     # Check if something is cached
     if not no_cache:
-        results = rdb.get('frag_by_chrom_%s' % uuid)
+        try:
+            results = rdb.get('frag_by_chrom_%s' % uuid)
 
-        if results:
-            return JsonResponse(results)
+            if results:
+                return JsonResponse(pickle.loads(results))
+        except:
+            pass
 
     # Get relative loci
     try:
@@ -372,7 +370,7 @@ def fragments_by_chr(request):
         results['fragments'] = fragments_arr
 
     # Cache results for 30 mins
-    rdb.set('frag_by_chrom_%s' % uuid, results, 60 * 30)
+    rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
 
     return JsonResponse(results)
 

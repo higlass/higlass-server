@@ -1,3 +1,39 @@
+v0.5.3
+
+- Return coordSystem as part of tileset_info
+
+v0.5.2
+
+- Added test.higlass.io to allowed hosts
+- Turned off HashedFilenameStorage
+
+v0.5.1
+
+- Updated requirements to use mirnylab develop cooler
+
+v0.5.0
+
+- Add management command for adding chrom-sizes
+- Chrom-sizes endpoint parameter `coords` changes to `id` to avoid confusion. I.e., for one coordinate system there might exist multiple orderings, which means multiple IDs could reference the same coordinate system.
+
+v0.4.4
+
+- Set proper HTTP status codes for errors of the chrom-sizes endpoint
+- Robustify internal magic (a.k.a. bug fixes)
+
+v0.4.3
+
+- Fixed an error when the zoom-out levels for fragmentds was negative
+- Fixed wrong ordering for multi dataset and/or multi resolution fragment extraction
+
+v0.4.2
+
+- Fixed caching issue in loci extraction
+
+v0.4.1
+
+- Added test server IP to ALLOWED_HOSTS
+
 v0.4.0
 
 - Add endpoints for pulling out fragments aka snippets aka patches of the interaction map

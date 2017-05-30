@@ -8,6 +8,7 @@ from chroms.models import Sizes
 class SizesAdmin(GuardedModelAdmin):
     list_display = [
         'created',
+        'coords',
         'uuid',
         'datafile'
     ]
