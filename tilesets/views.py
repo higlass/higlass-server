@@ -23,6 +23,7 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
+import csv
 
 try:
     import cPickle as pickle
@@ -257,8 +258,7 @@ def available_chrom_sizes(request):
 
     serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
 
-    return JsonResponse(
-            {"count": len(queryset), "results": serializer.data})
+    return JsonResponse({"count": len(queryset), "results": serializer.data})
 
 
 @api_view(['GET'])
@@ -396,6 +396,7 @@ def sizes(request):
         return response(err_msg, status=err_status)
 
     return response(data)
+
 
 @api_view(['GET'])
 def suggest(request):
