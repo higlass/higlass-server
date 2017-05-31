@@ -1,12 +1,9 @@
 from __future__ import unicode_literals
 
-import django.core.files as dcf 
-import hashlib
-import os
-import os.path as op
 import slugid
 
 from django.db import models
+
 
 class ViewConf(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -18,14 +15,16 @@ class ViewConf(models.Model):
 
     def __str__(self):
         '''
-        Get a string representation of this model. Hopefully useful for the admin interface.
+        Get a string representation of this model. Hopefully useful for the
+        admin interface.
         '''
         return "Viewconf [uuid: " + self.uuid + ']'
+
 
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
-    #processed_file = models.TextField()
+    # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
     datatype = models.TextField(default='unknown')
@@ -35,7 +34,7 @@ class Tileset(models.Model):
 
     owner = models.ForeignKey(
         'auth.User', related_name='tilesets', on_delete=models.CASCADE,
-        blank=True, null=True # Allow anonymous owner
+        blank=True, null=True  # Allow anonymous owner
     )
     private = models.BooleanField(default=False)
     name = models.TextField(blank=True)
@@ -46,6 +45,7 @@ class Tileset(models.Model):
 
     def __str__(self):
         '''
-        Get a string representation of this model. Hopefully useful for the admin interface.
+        Get a string representation of this model. Hopefully useful for the
+        admin interface.
         '''
         return "Tileset [name: " + self.name + '] [ft: ' + self.filetype + ']'
