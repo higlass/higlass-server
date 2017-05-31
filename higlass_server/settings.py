@@ -77,10 +77,6 @@ LOGGING = {
             'propagate': True,
             'level': 'WARNING',
         },
-        'chroms': {
-            'handlers': ['file'],
-            'level': 'WARNING',
-        },
         'fragments': {
             'handlers': ['file'],
             'level': 'WARNING',
@@ -118,7 +114,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
     'fragments.app.FragmentsConfig',
-    'chroms.app.ChromsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'
