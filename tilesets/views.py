@@ -270,7 +270,13 @@ def viewconfs(request):
     if request.method == 'POST':
         viewconf_wrapper = json.loads(request.body)
         uid = viewconf_wrapper.get('uid') or slugid.nice()
-        viewconf = json.dumps(viewconf_wrapper['viewconf'])
+
+        try:
+            viewconf = json.dumps(viewconf_wrapper['viewconf'])
+        except KeyError:
+            return JsonResponse({
+                'error': 'Broken view config'
+            }, status=400)
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
