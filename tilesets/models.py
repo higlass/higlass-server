@@ -7,6 +7,7 @@ from django.db import models
 
 class ViewConf(models.Model):
     created = models.DateTimeField(auto_now_add=True)
+    higlassVersion = models.CharField(max_length=5, default='')
     uuid = models.CharField(max_length=100, unique=True, default=slugid.nice)
     viewconf = models.TextField()
 

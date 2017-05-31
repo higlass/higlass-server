@@ -20,7 +20,11 @@ class TilesetAdmin(admin.ModelAdmin):
 
 
 class ViewConfAdmin(admin.ModelAdmin):
-    pass
+    list_display = [
+        'created',
+        'uuid',
+        'higlassVersion',
+    ]
 
 
 admin.site.register(Tileset, TilesetAdmin)
