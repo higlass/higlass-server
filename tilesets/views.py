@@ -268,6 +268,16 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
+        if not hss.UPLOAD_ENABLED:
+            return JsonResponse({
+                'error': 'Uploads disabled'
+            }, status=403)
+
+        if request.user.is_anonymous() and not hss.PUBLIC_UPLOAD_ENABLED:
+            return JsonResponse({
+                'error': 'Public uploads disabled'
+            }, status=403)
+
         viewconf_wrapper = json.loads(request.body)
         uid = viewconf_wrapper.get('uid') or slugid.nice()
 
