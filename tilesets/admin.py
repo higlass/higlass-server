@@ -3,6 +3,7 @@ from tilesets.models import Tileset
 from tilesets.models import ViewConf
 # Register your models here.
 
+
 class TilesetAdmin(admin.ModelAdmin):
     list_display = [
         'created',
@@ -17,8 +18,10 @@ class TilesetAdmin(admin.ModelAdmin):
         'name',
     ]
 
+
 class ViewConfAdmin(admin.ModelAdmin):
     pass
+
 
 admin.site.register(Tileset, TilesetAdmin)
 admin.site.register(ViewConf, ViewConfAdmin)
