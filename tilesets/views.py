@@ -506,6 +506,10 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
+
+        if not hss.UPLOAD_ENABLED:
+            raise rfe.APIException('Uploads disabled')
+
         if 'uid' in self.request.data:
             try:
                 self.queryset.get(uuid=self.request.data['uid'])
