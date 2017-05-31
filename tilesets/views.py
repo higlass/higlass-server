@@ -35,6 +35,7 @@ except:
     import pickle
 import sys
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
@@ -256,8 +257,9 @@ def viewconfs(request):
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
         if not serializer.is_valid():
-            return JsonResponse({'error': 'Serializer not valid'},
-                    status=rfs.HTTP_400_BAD_REQUEST)
+            return JsonResponse({
+                'error': 'Serializer not valid'
+            }, status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer.save(uuid=uid, viewconf=viewconf)
 
@@ -265,7 +267,18 @@ def viewconfs(request):
 
     uid = request.GET.get('d')
 
-    obj = tm.ViewConf.objects.get(uuid=uid)
+    if not uid:
+        return JsonResponse({
+            'error': 'View config ID not specified'
+        }, status=404)
+
+    try:
+        obj = tm.ViewConf.objects.get(uuid=uid)
+    except ObjectDoesNotExist:
+        return JsonResponse({
+            'error': 'View config not found'
+        }, status=404)
+
     return JsonResponse(json.loads(obj.viewconf))
 
 
