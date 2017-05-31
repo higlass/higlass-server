@@ -120,13 +120,6 @@ LOGGING = {
             'propagate': True,
             'level': get_setting('LOG_LEVEL_DJANGO', 'WARNING'),
         },
-<<<<<<< HEAD
-        'chroms': {
-            'handlers': ['file'],
-            'level': get_setting('LOG_LEVEL_CHROMS', 'WARNING'),
-        },
-=======
->>>>>>> develop
         'fragments': {
             'handlers': ['file'],
             'level': get_setting('LOG_LEVEL_FRAGMENTS', 'WARNING'),
