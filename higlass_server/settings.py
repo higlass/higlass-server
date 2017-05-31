@@ -120,10 +120,13 @@ LOGGING = {
             'propagate': True,
             'level': get_setting('LOG_LEVEL_DJANGO', 'WARNING'),
         },
+<<<<<<< HEAD
         'chroms': {
             'handlers': ['file'],
             'level': get_setting('LOG_LEVEL_CHROMS', 'WARNING'),
         },
+=======
+>>>>>>> develop
         'fragments': {
             'handlers': ['file'],
             'level': get_setting('LOG_LEVEL_FRAGMENTS', 'WARNING'),
@@ -161,7 +164,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'tilesets.apps.TilesetsConfig',
     'fragments.app.FragmentsConfig',
-    'chroms.app.ChromsConfig',
     'rest_framework_swagger',
     'corsheaders',
     'guardian'

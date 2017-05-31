@@ -21,6 +21,30 @@ import tilesets.models as tm
 
 logger = logging.getLogger(__name__)
 
+class ChromosomeSizes(dt.TestCase):
+    def test_list_chromsizes(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes.tsv', 'r')
+        self.chroms = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='chromsizes-csv',
+            datatype='chromsizes',
+            coordSystem="hg19",
+            owner=self.user1,
+            uuid='cs-hg19'
+        )
+
+        ret = json.loads(self.client.get('/api/v1/available-chrom-sizes/').content)
+
+        assert(ret["count"] == 1)
+        assert(len(ret["results"]) == 1)
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cs-hg19').content
+
+        assert(len(ret) > 300)
+
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
         self.user1 = dcam.User.objects.create_user(
