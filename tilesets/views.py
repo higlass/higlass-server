@@ -288,13 +288,22 @@ def viewconfs(request):
                 'error': 'Broken view config'
             }, status=400)
 
+        try:
+            higlass_version = viewconf_wrapper['higlassVersion']
+            print(higlass_version)
+        except KeyError:
+            higlass_version = ''
+
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
+
         if not serializer.is_valid():
             return JsonResponse({
                 'error': 'Serializer not valid'
             }, status=rfs.HTTP_400_BAD_REQUEST)
 
-        serializer.save(uuid=uid, viewconf=viewconf)
+        serializer.save(
+            uuid=uid, viewconf=viewconf, higlassVersion=higlass_version
+        )
 
         return JsonResponse({'uid': uid})
 
