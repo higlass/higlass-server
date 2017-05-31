@@ -37,7 +37,6 @@ class ChromosomeSizes(dt.TestCase):
         )
 
         ret = json.loads(self.client.get('/api/v1/available-chrom-sizes/').content)
-        print('ret:', ret)
 
         assert(ret["count"] == 1)
         assert(len(ret["results"]) == 1)
