@@ -3,10 +3,7 @@ from __future__ import print_function
 import base64
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
-import django.core.signals as dcs
-import django.dispatch as dd
 import django.db.models as dbm
-import django.utils.datastructures as dud
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import higlass_server.settings as hss
@@ -16,24 +13,20 @@ import logging
 import math
 import numpy as np
 import os.path as op
-import rest_framework as rf
-import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
-import rest_framework.response as rfr
 import rest_framework.status as rfs
-import sqlite3
 import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
+
 try:
     import cPickle as pickle
-except:
+except ImportError:
     import pickle
-import sys
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
@@ -204,12 +197,12 @@ def generate_tile(tile_id, request):
 
     elif tileset.filetype == 'hibed':
         dense = hdft.get_discrete_data(
-                h5py.File(
-                    get_datapath(tileset.datafile.url)
-                ),
-                tile_position[0],
-                tile_position[1]
-            )
+            h5py.File(
+                get_datapath(tileset.datafile.url)
+            ),
+            tile_position[0],
+            tile_position[1]
+        )
 
         tile_value = {'discrete': list([list(d) for d in dense])}
 
@@ -251,7 +244,7 @@ def suggest(request):
 
     try:
         tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
-    except:
+    except ObjectDoesNotExist:
         raise rfe.NotFound('Suggestion source file not found')
 
     result_dict = tsu.get_gene_suggestions(
