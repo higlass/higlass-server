@@ -456,7 +456,10 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
-    permission_classes = (tsp.UserPermission,)
+    if hss.UPLOAD_ENABLED:
+        permission_classes = (tsp.UserPermission,)
+    else:
+        permission_classes = (tsp.UserPermissionReadOnly,)
     lookup_field = 'uuid'
     parser_classes = (rfp.MultiPartParser,)
 
@@ -506,9 +509,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
-
-        if not hss.UPLOAD_ENABLED:
-            raise rfe.APIException('Uploads disabled')
 
         if 'uid' in self.request.data:
             try:
