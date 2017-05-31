@@ -30,19 +30,22 @@ else:
 
 # SECURITY WARNING: keep the secret key used in production secret!
 if 'SECRET_KEY' in os.environ:
-    SECRET_KEY = os.environ['SECRET_KEY'] 
+    SECRET_KEY = os.environ['SECRET_KEY']
 else:
     SECRET_KEY = slugid.nice()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'higlass.site', 'higlass.io', 'test.higlass.io']
+ALLOWED_HOSTS = [
+    'localhost', '127.0.0.1', 'higlass.site', 'higlass.io', 'test.higlass.io'
+]
 
 if 'SITE_URL' in os.environ:
     ALLOWED_HOSTS += [os.environ['SITE_URL']]
 
-# this specifies where uploaded files will be place (e.g. BASE_DIR/media/uplaods/file.x)
+# this specifies where uploaded files will be place
+# (e.g. BASE_DIR/media/uplaods/file.x)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -51,7 +54,8 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'format':
+            "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
             'datefmt': "%d/%b/%Y %H:%M:%S"
         },
         'simple': {
@@ -63,7 +67,7 @@ LOGGING = {
             'level': 'WARNING',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
-            },
+        },
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
@@ -125,7 +129,9 @@ INSTALLED_APPS = [
 ]
 
 # We want to avoid loading into memory
-FILE_UPLOAD_HANDLERS = ['django.core.files.uploadhandler.TemporaryFileUploadHandler']
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler'
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -187,20 +193,19 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+AUTH_PASSWORD_VALIDATORS = [{
+    'NAME':
+    'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+}, {
+    'NAME':
+    'django.contrib.auth.password_validation.MinimumLengthValidator',
+}, {
+    'NAME':
+    'django.contrib.auth.password_validation.CommonPasswordValidator',
+}, {
+    'NAME':
+    'django.contrib.auth.password_validation.NumericPasswordValidator',
+}]
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
@@ -232,6 +237,6 @@ STATIC_ROOT = 'static/'
 #    os.path.join(BASE_DIR, 'static'),
 # )
 
-#TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+# TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 NOSE_ARGS = ['--nocapture', '--nologcapture']
