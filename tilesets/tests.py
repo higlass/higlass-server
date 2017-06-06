@@ -285,6 +285,11 @@ class CoolerTest(dt.TestCase):
         assert('md.7.92.97' in content)
         assert('dense' in content['md.7.92.97'])
 
+    def test_get_empty_tiles(self):
+        # this test is here to ensure that the function call doesn't
+        # throw an error because this tile has no data
+        ret = self.client.get('/api/v1/tiles/?d=md.7.127.127')
+        content = json.loads(ret.content)
 
 class SuggestionsTest(dt.TestCase):
     '''

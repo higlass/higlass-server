@@ -33,6 +33,9 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
 
     out = np.zeros(65536, dtype=np.float32)  # 256^2
     index = (i * 256) + j
-    out[index] = v
+
+    if len(index) > 0:
+        # need this otherwise we get an error
+        out[index] = v
 
     return out
