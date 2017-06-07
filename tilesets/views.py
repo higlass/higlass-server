@@ -20,6 +20,7 @@ import os.path as op
 import rest_framework as rf
 import rest_framework.decorators as rfd
 import rest_framework.exceptions as rfe
+import rest_framework.pagination as rfpa
 import rest_framework.parsers as rfp
 import rest_framework.response as rfr
 import rest_framework.status as rfs
@@ -551,6 +552,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
     permission_classes = (tsp.UserPermission,)
+    pagination_class = rfpa.LimitOffsetPagination
     lookup_field = 'uuid'
     parser_classes = (rfp.MultiPartParser,)
 
@@ -585,10 +587,20 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             # Filter by datatype
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
-        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ts_serializer(queryset, many=True)
+        return JsonResponse(serializer.data)
+
+        """
         return JsonResponse(
             {"count": len(queryset), "results": ts_serializer.data}
         )
+        """
 
     def perform_create(self, serializer):
         '''Add a new tileset
