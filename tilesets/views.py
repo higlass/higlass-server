@@ -4,6 +4,7 @@ from __future__ import print_function
 import base64
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
+import csv
 import django.db.models as dbm
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
@@ -23,7 +24,6 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
 import urllib
-import csv
 
 try:
     import cPickle as pickle
