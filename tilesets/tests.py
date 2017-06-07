@@ -16,8 +16,8 @@ import os.path as op
 import numpy as np
 import rest_framework.status as rfs
 import tiles
-
 import tilesets.models as tm
+import higlass_server.settings as hss
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
-        
+
 
 class TilesizeTest(dt.TestCase):
     def setUp(self):
@@ -103,28 +103,46 @@ class ViewConfTest(dt.TestCase):
         assert('hi' in contents)
 
     def test_viewconfs(self):
-        ret = self.client.post('/api/v1/viewconfs/',
-                               '{"uid": "123", "viewconf":{"hello": "sir"}}', content_type="application/json")
-        contents = json.loads(ret.content)
-        self.assertIn('uid', contents)
-        self.assertEqual(contents['uid'], '123')
-
-        url = '/api/v1/viewconfs/?d=123'
-        ret = self.client.get(url)
-
+        ret = self.client.post(
+            '/api/v1/viewconfs/',
+            '{"uid": "123", "viewconf":{"hello": "sir"}}',
+            content_type="application/json"
+        )
         contents = json.loads(ret.content)
 
-        assert('hello' in contents)
+        if hss.UPLOAD_ENABLED:
+            self.assertIn('uid', contents)
+            self.assertEqual(contents['uid'], '123')
+
+            url = '/api/v1/viewconfs/?d=123'
+            ret = self.client.get(url)
+
+            contents = json.loads(ret.content)
+
+            assert('hello' in contents)
+        else:
+            self.assertEquals(ret.status_code, 403)
 
     def test_duplicate_uid_errors(self):
-        ret1 = self.client.post('/api/v1/viewconfs/',
-                               '{"uid": "dupe", "viewconf":{"try": "first"}}', content_type="application/json")
-        self.assertEqual(ret1.status_code, 200)
+        ret1 = self.client.post(
+            '/api/v1/viewconfs/',
+            '{"uid": "dupe", "viewconf":{"try": "first"}}',
+            content_type="application/json"
+        )
+        self.assertEqual(
+            ret1.status_code,
+            200 if hss.UPLOAD_ENABLED else 403
+        )
 
-        # TODO: This will bubble up as a 500, when bad user input should really be 4xx.
-        with self.assertRaises(db.IntegrityError):
-            ret2 = self.client.post('/api/v1/viewconfs/',
-                                   '{"uid": "dupe", "viewconf":{"try": "second"}}', content_type="application/json")
+        if hss.UPLOAD_ENABLED:
+            # TODO: This will bubble up as a 500, when bad user input should
+            # really be 4xx.
+            with self.assertRaises(db.IntegrityError):
+                self.client.post(
+                    '/api/v1/viewconfs/',
+                    '{"uid": "dupe", "viewconf":{"try": "second"}}',
+                    content_type="application/json"
+                )
 
 
 class PermissionsTest(dt.TestCase):
@@ -139,23 +157,20 @@ class PermissionsTest(dt.TestCase):
 
     def test_permissions(self):
         c1 = dt.Client()
-        f = open( 'data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'r')
 
         test_tileset = {
-                'datafile': f,
-                'filetype': 'hitile',
-                'datatype': 'vector',
-                'uid': 'bb',
-                'private': 'True',
-                'coordSystem': 'hg19'
-            }
-
-
+            'datafile': f,
+            'filetype': 'hitile',
+            'datatype': 'vector',
+            'uid': 'bb',
+            'private': 'True',
+            'coordSystem': 'hg19'
+        }
 
         response = c1.post(
             '/api/v1/tilesets/',
-            test_tileset
-            ,
+            test_tileset,
             format='multipart'
         )
 
@@ -165,15 +180,15 @@ class PermissionsTest(dt.TestCase):
 
         c1.login(username='user1', password='pass')
 
-        f = open( 'data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'r')
         test_tileset = {
-                'datafile': f,
-                'filetype': 'hitile',
-                'datatype': 'vector',
-                'uid': 'bb',
-                'private': 'True',
-                'coordSystem': 'hg19'
-            }
+            'datafile': f,
+            'filetype': 'hitile',
+            'datatype': 'vector',
+            'uid': 'bb',
+            'private': 'True',
+            'coordSystem': 'hg19'
+        }
 
         response = c1.post(
             '/api/v1/tilesets/',
@@ -182,34 +197,39 @@ class PermissionsTest(dt.TestCase):
         )
         f.close()
 
-        # creating datasets is allowed if we're logged in
-        assert(response.status_code == 201)
+        if hss.UPLOAD_ENABLED:
+            # creating datasets is allowed if we're logged in
+            assert(response.status_code == 201)
 
-        ret = json.loads(response.content)
+            ret = json.loads(response.content)
 
-        c2 = dt.Client()
-        c2.login(username='user2', password='pass')
+            c2 = dt.Client()
+            c2.login(username='user2', password='pass')
 
-        # user2 should not be able to delete the tileset created by user1
-        resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
-        assert(resp.status_code == 403)
+            # user2 should not be able to delete the tileset created by user1
+            resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
+            assert(resp.status_code == 403)
 
-        # tileset should still be there
-        resp = c1.get("/api/v1/tilesets/")
-        assert(json.loads(resp.content)['count'] == 1)
-        
-        # user1 should be able to delete his/her own tileset
-        resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
-        resp = c1.get("/api/v1/tilesets/")
-        assert(resp.status_code == 200)
+            # tileset should still be there
+            resp = c1.get("/api/v1/tilesets/")
+            assert(json.loads(resp.content)['count'] == 1)
 
-        assert(json.loads(resp.content)['count'] == 0)
+            # user1 should be able to delete his/her own tileset
+            resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
+            resp = c1.get("/api/v1/tilesets/")
+            assert(resp.status_code == 200)
 
-        c3 = dt.Client()
-        resp = c3.get('/api/v1/tilesets/')
+            assert(json.loads(resp.content)['count'] == 0)
 
-        # unauthenticated users should be able to see the (public) tileset list
-        assert(resp.status_code ==  200)
+            c3 = dt.Client()
+            resp = c3.get('/api/v1/tilesets/')
+
+            # unauthenticated users should be able to see the (public) tileset
+            # list
+            assert(resp.status_code == 200)
+        else:
+            assert(response.status_code == 403)
+
 
 class CoolerTest(dt.TestCase):
     def test_unbalanced(self):
@@ -228,7 +248,6 @@ class CoolerTest(dt.TestCase):
         contents = json.loads(ret.content)
 
         self.assertIn('g1a.0.0.0', contents)
-
 
     def test_tile_symmetry(self):
         '''
@@ -323,7 +342,7 @@ class SuggestionsTest(dt.TestCase):
 
         ret = self.client.get('/api/v1/suggest/?d=sut&ac=r')
         suggestions = json.loads(ret.content)
-        
+
         self.assertGreater(len(suggestions), 0)
         self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
 
@@ -341,7 +360,7 @@ class FileUploadTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
 
-        f = open( 'data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'r')
 
         response = c.post(
             '/api/v1/tilesets/',
@@ -356,14 +375,18 @@ class FileUploadTest(dt.TestCase):
             format='multipart'
         )
 
-        self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
+        if hss.UPLOAD_ENABLED:
+            self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
 
-        response = c.get('/api/v1/tilesets/')
+            response = c.get('/api/v1/tilesets/')
 
-        obj = tm.Tileset.objects.get(uuid='bb')
+            obj = tm.Tileset.objects.get(uuid='bb')
 
-        # make sure the file was actually created
-        self.assertTrue(op.exists, obj.datafile.url)
+            # make sure the file was actually created
+            self.assertTrue(op.exists, obj.datafile.url)
+        else:
+            self.assertEqual(403, response.status_code)
+
 
 class GetterTest(dt.TestCase):
     def test_get_info(self):
@@ -372,6 +395,7 @@ class GetterTest(dt.TestCase):
 
         self.assertEqual(info['max_zoom'], 4)
         self.assertEqual(info['max_width'], 1000000 * 2 ** 12)
+
 
 class Bed2DDBTest(dt.TestCase):
     def setUp(self):
@@ -453,6 +477,7 @@ class HiBedTest(dt.TestCase):
         self.assertTrue('tile_size' in returned[tile_id])
         self.assertEqual(returned[tile_id]['coordSystem'], 'hg19')
 
+
 class TilesetsViewSetTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -507,7 +532,7 @@ class TilesetsViewSetTest(dt.TestCase):
         Don't allow the creation of datasets by anonymouse users.
         """
         with self.assertRaises(ValueError):
-            upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r') 
+            upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
             tm.Tileset.objects.create(
                 datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
                 filetype='hitile',
@@ -529,55 +554,63 @@ class TilesetsViewSetTest(dt.TestCase):
             format='multipart'
         )
         ret_obj = json.loads(ret.content)
-        t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
 
-        # this object should be private because we were logged in and requested
-        # it to be private
-        self.assertTrue(t.private)
+        if hss.UPLOAD_ENABLED:
+            t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
 
-        c.login(username='user2', password='pass')
-        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+            # this object should be private because we were logged in and
+            # requested it to be private
+            self.assertTrue(t.private)
 
-        # user2 should not be able to get information about this dataset
-        ts_info = json.loads(ret.content)
-        self.assertTrue('error' in ts_info[ret_obj['uuid']])
+            c.login(username='user2', password='pass')
+            ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(
+                uuid=ret_obj['uuid'])
+            )
 
-        c.login(username='user1', password='pass')
-        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+            # user2 should not be able to get information about this dataset
+            ts_info = json.loads(ret.content)
+            self.assertTrue('error' in ts_info[ret_obj['uuid']])
 
-        # user1 should be able to access it
-        ts_info = json.loads(ret.content)
-        self.assertFalse('error' in ts_info[ret_obj['uuid']])
-        self.assertEqual(ts_info[ret_obj['uuid']]['coordSystem'], 'hg19')
+            c.login(username='user1', password='pass')
+            ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(
+                uuid=ret_obj['uuid'])
+            )
 
-        # upload a new dataset as user1
-        ret = c.post(
-            '/api/v1/tilesets/',
-            {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
-                'filetype': 'hitile',
-                'private': 'False',
-                'coordSystem': 'hg19'
+            # user1 should be able to access it
+            ts_info = json.loads(ret.content)
+            self.assertFalse('error' in ts_info[ret_obj['uuid']])
+            self.assertEqual(ts_info[ret_obj['uuid']]['coordSystem'], 'hg19')
 
-            },
-            format='multipart'
-        )
-        ret_obj = json.loads(ret.content)
+            # upload a new dataset as user1
+            ret = c.post(
+                '/api/v1/tilesets/',
+                {
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
+                    'filetype': 'hitile',
+                    'private': 'False',
+                    'coordSystem': 'hg19'
 
-        # since the previously uploaded dataset is not private, we should be
-        # able to access it as user2
-        c.login(username='user2', password='pass')
-        ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
-        ts_info = json.loads(ret.content)
+                },
+                format='multipart'
+            )
+            ret_obj = json.loads(ret.content)
 
-        self.assertFalse('error' in ts_info[ret_obj['uuid']])
+            # since the previously uploaded dataset is not private, we should be
+            # able to access it as user2
+            c.login(username='user2', password='pass')
+            ret = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=ret_obj['uuid']))
+            ts_info = json.loads(ret.content)
+
+            self.assertFalse('error' in ts_info[ret_obj['uuid']])
+        else:
+            self.assertEquals(ret.status_code, 403)
 
     def test_create_private_tileset(self):
         """Test to make sure that when we create a private dataset, we can only
         access it if we're logged in as the proper user
         """
 
-        upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r') 
+        upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
         private_obj = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='hitile',
@@ -735,59 +768,66 @@ class TilesetsViewSetTest(dt.TestCase):
                 'coordSystem': 'hg19'
             }
         )
-        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne').content)
-        count1 = ret['count']
-        self.assertTrue(count1 > 0)
+        ret = c.get('/api/v1/tilesets/?ac=ne')
+        self.assertEquals(ret.status_code, 200)
 
-        names = set([ts['name'] for ts in ret['results']])
+        ret = json.loads(ret.content)
 
-        self.assertTrue(u'one' in names)
-        self.assertFalse(u'tax' in names)
+        if hss.UPLOAD_ENABLED:
+            count1 = ret['count']
+            self.assertTrue(count1 > 0)
 
-        c.logout()
-        # all tilesets should be private
-        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne').content)
-        self.assertEquals(ret['count'], 0)
+            names = set([ts['name'] for ts in ret['results']])
 
-        ret = json.loads(c.get('/api/v1/tilesets/?ac=ne&t=cooler').content)
-        count1 = ret['count']
-        self.assertTrue(count1 == 0)
+            self.assertTrue(u'one' in names)
+            self.assertFalse(u'tax' in names)
 
-        c.login(username='user2', password='pass')
-        ret = json.loads(c.get('/api/v1/tilesets/?q=ne').content)
+            c.logout()
+            # all tilesets should be private
+            ret = json.loads(c.get('/api/v1/tilesets/?ac=ne').content)
+            self.assertEquals(ret['count'], 0)
 
-        names = set([ts['name'] for ts in ret['results']])
-        self.assertFalse(u'one' in names)
+            ret = json.loads(c.get('/api/v1/tilesets/?ac=ne&t=cooler').content)
+            count1 = ret['count']
+            self.assertTrue(count1 == 0)
 
-        ret = c.post(
-            '/api/v1/tilesets/',
-            {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
-                'filetype': 'xxxyx',
-                'datatype': 'vector',
-                'private': 'True',
-            }
-        )
+            c.login(username='user2', password='pass')
+            ret = json.loads(c.get('/api/v1/tilesets/?q=ne').content)
 
-        # not coordSystem field
-        assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
-        ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
+            names = set([ts['name'] for ts in ret['results']])
+            self.assertFalse(u'one' in names)
 
-        assert(ret['count'] == 0)
+            ret = c.post(
+                '/api/v1/tilesets/',
+                {
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                    'filetype': 'xxxyx',
+                    'datatype': 'vector',
+                    'private': 'True',
+                }
+            )
 
-        ret = c.post(
-            '/api/v1/tilesets/',
-            {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
-                'filetype': 'xxxyx',
-                'datatype': 'vector',
-                'private': 'True',
-                'coordSystem': 'hg19',
-            }
-        )
+            # not coordSystem field
+            assert(ret.status_code == rfs.HTTP_400_BAD_REQUEST)
+            ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
 
-        ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
-        self.assertEqual(ret['count'], 1)
+            assert(ret['count'] == 0)
+
+            ret = c.post(
+                '/api/v1/tilesets/',
+                {
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                    'filetype': 'xxxyx',
+                    'datatype': 'vector',
+                    'private': 'True',
+                    'coordSystem': 'hg19',
+                }
+            )
+
+            ret = json.loads(c.get('/api/v1/tilesets/?t=xxxyx').content)
+            self.assertEqual(ret['count'], 1)
+        else:
+            self.assertEquals(ret['count'], 0)
 
     def test_add_with_uid(self):
         self.client.login(username='user1', password='pass')
@@ -805,30 +845,33 @@ class TilesetsViewSetTest(dt.TestCase):
 
         ret = json.loads(self.client.get('/api/v1/tilesets/').content)
 
-        # the two default datasets plus the added one
-        self.assertEquals(ret['count'], 3)
+        if hss.UPLOAD_ENABLED:
+            # the two default datasets plus the added one
+            self.assertEquals(ret['count'], 3)
 
-        # try to add one more dataset with a specified uid
-        ret = json.loads(
-            self.client.post(
-                '/api/v1/tilesets/',
-                {
-                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
-                    'filetype': 'a',
-                    'datatype': 'vector',
-                    'private': 'True',
-                    'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
-                    'coordSystem': 'hg19'
-                }
-            ).content
-        )
+            # try to add one more dataset with a specified uid
+            ret = json.loads(
+                self.client.post(
+                    '/api/v1/tilesets/',
+                    {
+                        'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                        'filetype': 'a',
+                        'datatype': 'vector',
+                        'private': 'True',
+                        'uid': 'aaaaaaaaaaaaaaaaaaaaaa',
+                        'coordSystem': 'hg19'
+                    }
+                ).content
+            )
 
-        # there should be a return value explaining that we can't add a tileset
-        # which has an existing uuid
-        self.assertTrue('detail' in ret)
+            # there should be a return value explaining that we can't add a tileset
+            # which has an existing uuid
+            self.assertTrue('detail' in ret)
 
-        ret = json.loads(self.client.get('/api/v1/tilesets/').content)
-        self.assertEquals(ret['count'], 3)
+            ret = json.loads(self.client.get('/api/v1/tilesets/').content)
+            self.assertEquals(ret['count'], 3)
+        else:
+            self.assertEquals(ret['count'], 2)
 
     def test_list_by_datatype(self):
         self.client.login(username='user1', password='pass')
@@ -856,20 +899,19 @@ class TilesetsViewSetTest(dt.TestCase):
             }
         )
 
-
         ret = json.loads(self.client.get('/api/v1/tilesets/?dt=1').content)
-        self.assertEqual(ret['count'], 1)
+        self.assertEqual(ret['count'], 1 if hss.UPLOAD_ENABLED else 0)
 
         ret = json.loads(self.client.get('/api/v1/tilesets/?dt=2').content)
-        self.assertEqual(ret['count'], 1)
+        self.assertEqual(ret['count'], 1 if hss.UPLOAD_ENABLED else 0)
 
         ret = json.loads(self.client.get('/api/v1/tilesets/?dt=1&dt=2').content)
-        self.assertEqual(ret['count'], 2)
+        self.assertEqual(ret['count'], 2 if hss.UPLOAD_ENABLED else 0)
 
     def test_get_nonexistant_tileset_info(self):
         ret = json.loads(self.client.get('/api/v1/tileset_info/?d=x1x').content)
 
-        # make sure above doesn't raise an error 
+        # make sure above doesn't raise an error
 
 
 # Create your tests here.

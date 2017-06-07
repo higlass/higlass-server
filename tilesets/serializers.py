@@ -12,6 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username')
 
+
 class ViewConfSerializer(serializers.ModelSerializer):
     class Meta:
         model = ViewConf
@@ -22,10 +23,28 @@ class TilesetSerializer(serializers.ModelSerializer):
     class Meta:
         owner = serializers.ReadOnlyField(source='owner.username')
         model = Tileset
-        fields = ('uuid', 'datafile', 'filetype', 'datatype', 'private', 'name', 'coordSystem', 'coordSystem2')
+        fields = (
+            'uuid',
+            'datafile',
+            'filetype',
+            'datatype',
+            'private',
+            'name',
+            'coordSystem',
+            'coordSystem2'
+        )
+
 
 class UserFacingTilesetSerializer(TilesetSerializer):
     class Meta:
         owner = serializers.ReadOnlyField(source='owner.username')
         model = Tileset
-        fields = ('uuid', 'filetype', 'datatype', 'private', 'name', 'coordSystem', 'coordSystem2')
+        fields = (
+            'uuid',
+            'filetype',
+            'datatype',
+            'private',
+            'name',
+            'coordSystem',
+            'coordSystem2'
+        )
