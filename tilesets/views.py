@@ -4,12 +4,6 @@ from __future__ import print_function
 import base64
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
-<<<<<<< HEAD
-import csv
-import django.core.signals as dcs
-import django.dispatch as dd
-=======
->>>>>>> origin/flekschas/bug-fixes-clean-up
 import django.db.models as dbm
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
@@ -628,15 +622,12 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
-<<<<<<< HEAD
-    permission_classes = (tsp.UserPermission,)
-    pagination_class = rfpa.LimitOffsetPagination
-=======
+
     if hss.UPLOAD_ENABLED:
         permission_classes = (tsp.UserPermission,)
     else:
         permission_classes = (tsp.UserPermissionReadOnly,)
->>>>>>> origin/flekschas/bug-fixes-clean-up
+
     lookup_field = 'uuid'
     parser_classes = (rfp.MultiPartParser,)
 
