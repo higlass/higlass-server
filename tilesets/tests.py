@@ -165,7 +165,8 @@ class PermissionsTest(dt.TestCase):
             'datatype': 'vector',
             'uid': 'bb',
             'private': 'True',
-            'coordSystem': 'hg19'
+            'coordSystem': 'hg19',
+            'name': "tr1"
         }
 
         response = c1.post(
@@ -185,9 +186,10 @@ class PermissionsTest(dt.TestCase):
             'datafile': f,
             'filetype': 'hitile',
             'datatype': 'vector',
-            'uid': 'bb',
+            'uid': 'cc',
             'private': 'True',
-            'coordSystem': 'hg19'
+            'coordSystem': 'hg19',
+            'name': "tr2"
         }
 
         response = c1.post(
@@ -229,6 +231,54 @@ class PermissionsTest(dt.TestCase):
             assert(resp.status_code == 200)
         else:
             assert(response.status_code == 403)
+
+    def test_filter(self):
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+        f = open('data/tiny.txt', 'r')
+
+        test_tileset = {
+            'datafile': f,
+            'filetype': 'hitile',
+            'datatype': 'vector',
+            'uid': 'bb',
+            'private': 'True',
+            'coordSystem': 'hg19',
+            'name': "tr1"
+        }
+
+        response = c1.post(
+            '/api/v1/tilesets/',
+            test_tileset,
+            format='multipart'
+        )
+
+        f.close()
+        f = open('data/tiny.txt', 'r')
+
+
+        test_tileset = {
+            'datafile': f,
+            'filetype': 'hitile',
+            'datatype': 'vector',
+            'uid': 'cc',
+            'private': 'True',
+            'coordSystem': 'hg19',
+            'name': "tr2"
+        }
+
+        response = c1.post(
+            '/api/v1/tilesets/',
+            test_tileset,
+            format='multipart'
+        )
+        f.close()
+
+        ret = json.loads(c1.get('/api/v1/tilesets/').content)
+        assert(ret['count'] == 2)
+
+        ret = json.loads(c1.get('/api/v1/tilesets/?ac=tr2').content)
+        assert(ret['count'] == 1)
 
 
 class CoolerTest(dt.TestCase):
