@@ -1,3 +1,7 @@
+v0.7.3 (2017-06-19)
+
+- Fixed reversion preventing the ingestion of large files
+
 v0.7.2 (2017-06-16)
 
 - Fixed tile data bug
