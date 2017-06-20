@@ -282,6 +282,72 @@ class PermissionsTest(dt.TestCase):
 
 
 class CoolerTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
+            name="x",
+            uuid='md')
+
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
+            name="t",
+            uuid='rd')
+
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
+            name="v",
+            uuid='sd')
+
+    def test_order_by(self):
+        '''
+        Test to make sure that tilesets are correctly ordered when returned
+        '''
+        ret = self.client.get('/api/v1/tilesets/?o=uuid')
+        contents = json.loads(ret.content)
+
+        uuids = [r['uuid'] for r in contents['results']]
+        assert(uuids[0] < uuids[1])
+
+        ret = self.client.get('/api/v1/tilesets/?o=uuid&r=1')
+        contents = json.loads(ret.content)
+
+        uuids = [r['uuid'] for r in contents['results']]
+        assert(uuids[0] > uuids[1])
+
+        ret = self.client.get('/api/v1/tilesets/?o=name')
+        contents = json.loads(ret.content)
+
+        names = [r['name'] for r in contents['results']]
+        assert(names[0] < names[1])
+
+        ret = self.client.get('/api/v1/tilesets/?o=name&r=1')
+        contents = json.loads(ret.content)
+
+        names = [r['name'] for r in contents['results']]
+        assert(names[0] > names[1])
+
+
     def test_unbalanced(self):
         '''
         Try to get tiles from an unbalanced dataset
@@ -321,22 +387,6 @@ class CoolerTest(dt.TestCase):
         q = np.frombuffer(r, dtype=np.float16)
 
         q = q.reshape((256,256))
-
-    def setUp(self):
-        self.user1 = dcam.User.objects.create_user(
-            username='user1', password='pass'
-        )
-
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
-        #x = upload_file.read()
-        self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
-            filetype='cooler',
-            datatype='matrix',
-            owner=self.user1,
-            coordSystem='hg19',
-            coordSystem2='hg19',
-            uuid='md')
 
     def test_get_tileset_info(self):
         ret = self.client.get('/api/v1/tileset_info/?d=md')
