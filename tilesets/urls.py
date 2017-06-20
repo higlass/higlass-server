@@ -7,7 +7,7 @@ schema_view = get_swagger_view(title='Pastebin API')
 # Create a router and register our viewsets with it.
 router = SimpleRouter()
 
-router.register(r'tilesets', views.TilesetsViewSet)
+router.register(r'tilesets', views.TilesetsViewSet, 'tilesets')
 #router.register(r'users', views.UserViewSet)
 
 

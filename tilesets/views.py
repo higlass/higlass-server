@@ -662,6 +662,12 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             # Filter by datatype
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
+        if 'o' in request.GET:
+            if 'r' in request.GET:
+                queryset = queryset.order_by('-' + request.GET['o'])
+            else:
+                queryset = queryset.order_by(request.GET['o'])
+
         #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         page = self.paginate_queryset(queryset)
         if page is not None:
