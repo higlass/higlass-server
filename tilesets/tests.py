@@ -388,6 +388,20 @@ class CoolerTest(dt.TestCase):
 
         q = q.reshape((256,256))
 
+
+    def test_tile_boundary(self):
+        '''
+        Some recent changes made the tile boundaries appear darker than they should
+        '''
+        import tilesets.views as tsv
+
+        tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
+        tile = tiles.make_tile(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
+
+        # this tile stretches down beyond the end of data and should thus contain no values
+        assert(tile[-1] == 0.)
+
+
     def test_get_tileset_info(self):
         ret = self.client.get('/api/v1/tileset_info/?d=md')
 
