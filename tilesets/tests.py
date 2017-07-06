@@ -15,7 +15,7 @@ import logging
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
-import tiles
+import tilesets.tiles
 import tilesets.models as tm
 import higlass_server.settings as hss
 
@@ -26,7 +26,7 @@ class ChromosomeSizes(dt.TestCase):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
-        upload_file = open('data/chromSizes.tsv', 'r')
+        upload_file = open('data/chromSizes.tsv', 'rb')
         self.chroms = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='chromsizes-csv',
@@ -50,7 +50,7 @@ class TilesetModelTest(dt.TestCase):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
-        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='cooler',
@@ -68,7 +68,7 @@ class TilesizeTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='cooler',
@@ -157,7 +157,7 @@ class PermissionsTest(dt.TestCase):
 
     def test_permissions(self):
         c1 = dt.Client()
-        f = open('data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'rb')
 
         test_tileset = {
             'datafile': f,
@@ -181,7 +181,7 @@ class PermissionsTest(dt.TestCase):
 
         c1.login(username='user1', password='pass')
 
-        f = open('data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'rb')
         test_tileset = {
             'datafile': f,
             'filetype': 'hitile',
@@ -235,7 +235,7 @@ class PermissionsTest(dt.TestCase):
     def test_filter(self):
         c1 = dt.Client()
         c1.login(username='user1', password='pass')
-        f = open('data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'rb')
 
         test_tileset = {
             'datafile': f,
@@ -254,7 +254,7 @@ class PermissionsTest(dt.TestCase):
         )
 
         f.close()
-        f = open('data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'rb')
 
 
         test_tileset = {
@@ -287,7 +287,7 @@ class CoolerTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'rb')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -352,7 +352,7 @@ class CoolerTest(dt.TestCase):
         '''
         Try to get tiles from an unbalanced dataset
         '''
-        upload_file = open('data/G15509.K-562.2_sampleDown.multires.cool', 'r')
+        upload_file = open('data/G15509.K-562.2_sampleDown.multires.cool', 'rb')
         tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='cooler',
@@ -369,7 +369,7 @@ class CoolerTest(dt.TestCase):
         '''
         Make sure that tiles are symmetric
         '''
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'r')
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'rb')
         tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='cooler',
@@ -433,7 +433,7 @@ class SuggestionsTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/gene_annotations.short.db', 'r')
+        upload_file = open('data/gene_annotations.short.db', 'rb')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -474,7 +474,7 @@ class FileUploadTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
 
-        f = open('data/tiny.txt', 'r')
+        f = open('data/tiny.txt', 'rb')
 
         response = c.post(
             '/api/v1/tilesets/',
@@ -517,7 +517,7 @@ class Bed2DDBTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/arrowhead_domains_short.txt.multires.db', 'r')
+        upload_file = open('data/arrowhead_domains_short.txt.multires.db', 'rb')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -537,7 +537,7 @@ class BedDBTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/gene_annotations.short.db', 'r')
+        upload_file = open('data/gene_annotations.short.db', 'rb')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -565,7 +565,7 @@ class HiBedTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/cnv_short.hibed', 'r')
+        upload_file = open('data/cnv_short.hibed', 'rb')
         #x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
@@ -601,14 +601,14 @@ class TilesetsViewSetTest(dt.TestCase):
             username='user2', password='pass'
         )
 
-        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'r')
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='cooler',
             owner=self.user1
         )
 
-        upload_file=open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
+        upload_file=open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')
         self.hitile = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='hitile',
@@ -646,7 +646,7 @@ class TilesetsViewSetTest(dt.TestCase):
         Don't allow the creation of datasets by anonymouse users.
         """
         with self.assertRaises(ValueError):
-            upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
+            upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')
             tm.Tileset.objects.create(
                 datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
                 filetype='hitile',
@@ -659,7 +659,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = c.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb'),
                 'filetype': 'hitile',
                 'private': 'True',
                 'coordSystem': 'hg19'
@@ -699,7 +699,7 @@ class TilesetsViewSetTest(dt.TestCase):
             ret = c.post(
                 '/api/v1/tilesets/',
                 {
-                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r'),
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb'),
                     'filetype': 'hitile',
                     'private': 'False',
                     'coordSystem': 'hg19'
@@ -724,7 +724,7 @@ class TilesetsViewSetTest(dt.TestCase):
         access it if we're logged in as the proper user
         """
 
-        upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'r')
+        upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')
         private_obj = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='hitile',
@@ -855,7 +855,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = c.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'hitile',
                 'private': 'True',
                 'name': 'one',
@@ -865,7 +865,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = c.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'hitile',
                 'private': 'True',
                 'name': 'tone',
@@ -875,7 +875,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = c.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'cooler',
                 'private': 'True',
                 'name': 'tax',
@@ -914,7 +914,7 @@ class TilesetsViewSetTest(dt.TestCase):
             ret = c.post(
                 '/api/v1/tilesets/',
                 {
-                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                     'filetype': 'xxxyx',
                     'datatype': 'vector',
                     'private': 'True',
@@ -930,7 +930,7 @@ class TilesetsViewSetTest(dt.TestCase):
             ret = c.post(
                 '/api/v1/tilesets/',
                 {
-                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                    'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                     'filetype': 'xxxyx',
                     'datatype': 'vector',
                     'private': 'True',
@@ -948,7 +948,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = self.client.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'a',
                 'datatype': 'vector',
                 'private': 'True',
@@ -968,7 +968,7 @@ class TilesetsViewSetTest(dt.TestCase):
                 self.client.post(
                     '/api/v1/tilesets/',
                     {
-                        'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                        'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                         'filetype': 'a',
                         'datatype': 'vector',
                         'private': 'True',
@@ -992,7 +992,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = self.client.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'a',
                 'datatype': '1',
                 'private': 'True',
@@ -1004,7 +1004,7 @@ class TilesetsViewSetTest(dt.TestCase):
         ret = self.client.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','r'),
+                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile','rb'),
                 'filetype': 'a',
                 'datatype': '2',
                 'private': 'True',
