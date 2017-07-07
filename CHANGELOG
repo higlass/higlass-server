@@ -1,3 +1,24 @@
+v0.7.5 (2017-07-07)
+
+- Improved performance of fragment retrieval for lower resolutions
+- Retrieve mirrored matrix (and not just the upper triangle)
+
+v0.7.4 (2017-06-20)
+
+- Added ordering to tileset list API
+
+v0.7.3 (2017-06-19)
+
+- Fixed reversion preventing the ingestion of large files
+
+v0.7.2 (2017-06-16)
+
+- Fixed tile data bug
+
+v0.7.1
+
+- Fixed merge conflicts (doh!)
+
 v0.7.0
 
 - Add setting to disable (public) uploads.

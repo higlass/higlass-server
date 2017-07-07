@@ -198,24 +198,65 @@ def get_bin_size(cooler_file, zoomout_level=-1):
         return c.util.get_binsize()
 
 
+def check_cis_only(loci):
+    loci = np.array(loci)
+    return np.all(loci[0:, 0] == loci[0:, 3])
+
+
 def collect_frags(c, loci, is_rel=False, dim=22, balanced=True):
     chr_info = get_chrom_names_cumul_len(c)
+    cis_only = check_cis_only(loci)
 
-    if is_rel:
-        loci = rel_2_abs_loci(loci, chr_info)
+    if cis_only and c.info['bin-size'] >= 4000:
+        # Sort loci by chromosome
+        loci.sort(key=lambda locus: locus[0])
 
-    fragments = np.zeros((len(loci), dim, dim))
+        fragments = np.zeros((len(loci), dim, dim))
 
-    k = 0
-    for locus in loci:
-        fragments[k] = get_frag(
-            c, chr_info, *locus, balanced=balanced, dim=dim
-        )
+        k = 0
+        last_chrom = None
+        pixels = None
+        for locus in loci:
+            chrom = 'chr{}'.format(loci[k][0])
 
-        if max > 0 and k >= max:
-            break
+            if (
+                not chrom == last_chrom or
+                pixels is None
+            ):
+                pixels = c.matrix(balance=balanced).fetch(chrom)
 
-        k += 1
+            fragments[k] = get_cis_frag(
+                c,
+                chr_info,
+                pixels,
+                locus[1],  # start 1
+                locus[2],  # end 1
+                locus[4],  # start 2
+                locus[5],  # end 2,
+                balanced=balanced,
+                dim=dim
+            )
+
+            k += 1
+
+            last_chrom = chrom
+
+    else:
+        if is_rel:
+            loci = rel_2_abs_loci(loci, chr_info)
+
+        fragments = np.zeros((len(loci), dim, dim))
+
+        k = 0
+        for locus in loci:
+            fragments[k] = get_frag(
+                c, chr_info, *locus, balanced=balanced, dim=dim
+            )
+
+            if max > 0 and k >= max:
+                break
+
+            k += 1
 
     return fragments
 
@@ -301,12 +342,22 @@ def get_frag(
     balanced=True,
     dim=22
 ):
+    resolution = c.info['bin-size']
+
+    center_start_bin_1 = int(np.rint(float(start_pos_1) / resolution))
+    center_start_bin_2 = int(np.rint(float(start_pos_2) / resolution))
+    center_end_bin_1 = int(np.rint(float(end_pos_1) / resolution))
+    center_end_bin_2 = int(np.rint(float(end_pos_2) / resolution))
+
+    padding_1 = int((dim - (center_end_bin_1 - center_start_bin_1)) / 2)
+    padding_2 = int((dim - (center_end_bin_2 - center_start_bin_2)) / 2)
+
     # abs_coord_2_bin(...) returns the inclusive bin ID but in the python world
     # the end position is always exclusive
-    start_bin_1 = max(abs_coord_2_bin(c, start_pos_1, chr_info) - padding, 0)
-    start_bin_2 = max(abs_coord_2_bin(c, start_pos_2, chr_info) - padding, 0)
-    end_bin_1 = abs_coord_2_bin(c, end_pos_1, chr_info) + padding
-    end_bin_2 = abs_coord_2_bin(c, end_pos_2, chr_info) + padding
+    start_bin_1 = max(abs_coord_2_bin(c, start_pos_1, chr_info) - padding_1, 0)
+    start_bin_2 = max(abs_coord_2_bin(c, start_pos_2, chr_info) - padding_2, 0)
+    end_bin_1 = abs_coord_2_bin(c, end_pos_1, chr_info) + padding_1
+    end_bin_2 = abs_coord_2_bin(c, end_pos_2, chr_info) + padding_2
 
     real_dim = abs(start_bin_1 - end_bin_1)
     if real_dim < dim:
@@ -316,25 +367,9 @@ def get_frag(
     if real_dim < dim:
         end_bin_2 += dim - real_dim
 
-    pixels = c.matrix(
-        as_pixels=True, max_chunk=np.inf, balance=balanced
-    )[start_bin_1:end_bin_1, start_bin_2:end_bin_2]
-
-    pixels['index'] = (
-        (pixels['bin1_id'] - start_bin_1) * dim +
-        pixels['bin2_id'] - start_bin_2
-    )
-
-    flat_dim = dim**2
-
-    out = np.zeros(flat_dim, dtype=np.float)
-
-    accessor = 'count'
-
-    if balanced:
-        accessor = 'balanced'
-
-    out[pixels['index'].values[:flat_dim]] = pixels[accessor].values[:flat_dim]
+    out = c.matrix(balance=balanced)[
+        start_bin_1:end_bin_1, start_bin_2:end_bin_2
+    ][0:dim, 0:dim]
 
     # Store low quality bins
     low_quality_bins = np.where(np.isnan(out))
@@ -349,4 +384,78 @@ def get_frag(
     # Reassign a special value to cells with low quality
     out[low_quality_bins] = -1
 
-    return out.reshape(dim, dim)[:dim, :dim]
+    return out
+
+
+def get_cis_frag(
+    c,
+    chr_info,
+    pixels,
+    start_pos_1,
+    end_pos_1,
+    start_pos_2,
+    end_pos_2,
+    padding=10,
+    normalize=True,
+    balanced=True,
+    dim=22
+):
+    resolution = c.info['bin-size']
+
+    center_start_bin_1 = int(np.rint(float(start_pos_1) / resolution))
+    center_start_bin_2 = int(np.rint(float(start_pos_2) / resolution))
+    center_end_bin_1 = int(np.rint(float(end_pos_1) / resolution))
+    center_end_bin_2 = int(np.rint(float(end_pos_2) / resolution))
+
+    padding_1 = int((dim - (center_end_bin_1 - center_start_bin_1)) / 2)
+    padding_2 = int((dim - (center_end_bin_2 - center_start_bin_2)) / 2)
+
+    start_bin_1 = max(
+        center_start_bin_1 - padding_1, 0
+    )
+    start_bin_2 = max(
+        center_start_bin_2 - padding_2, 0
+    )
+    end_bin_1 = min(
+        center_end_bin_1 + padding_1,
+        pixels.shape[0]
+    )
+    end_bin_2 = min(
+        center_end_bin_2 + padding_2,
+        pixels.shape[1]
+    )
+
+    real_dim = abs(start_bin_1 - end_bin_1)
+    if real_dim < dim:
+        diff = dim - real_dim
+
+        if end_bin_1 + diff < pixels.shape[0]:
+            end_bin_1 += diff
+        elif start_bin_1 - diff > 0:
+            start_bin_1 -= diff
+
+    real_dim = abs(start_bin_2 - end_bin_2)
+    if real_dim < dim:
+        diff = dim - real_dim
+
+        if end_bin_2 + diff < pixels.shape[1]:
+            end_bin_2 += diff
+        elif start_bin_2 - diff > 0:
+            start_bin_2 -= diff
+
+    out = pixels[start_bin_1:end_bin_1, start_bin_2:end_bin_2][0:dim, 0:dim]
+
+    # Store low quality bins
+    low_quality_bins = np.where(np.isnan(out))
+
+    # Assign 0 for now to avoid influencing the max values
+    out[low_quality_bins] = 0
+
+    max_val = np.max(out)
+    if normalize and max_val > 0:
+        out = out / max_val
+
+    # Reassign a special value to cells with low quality
+    out[low_quality_bins] = -1
+
+    return out

@@ -21,6 +21,7 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
     )
 
     df = data[data['genome_start1'] >= start1]
+    df = df[df['genome_start2'] >= start2]
 
     binsize = dset[0].attrs[str(zoomLevel)]
     j = (df['genome_start1'].values - start1) // binsize

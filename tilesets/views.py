@@ -2,9 +2,9 @@
 from __future__ import print_function
 
 import base64
+import csv
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
-import csv
 import django.db.models as dbm
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
@@ -16,6 +16,7 @@ import math
 import numpy as np
 import os.path as op
 import rest_framework.exceptions as rfe
+import rest_framework.pagination as rfpa
 import rest_framework.parsers as rfp
 import rest_framework.status as rfs
 import tilesets.models as tm
@@ -621,10 +622,12 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
+
     if hss.UPLOAD_ENABLED:
         permission_classes = (tsp.UserPermission,)
     else:
         permission_classes = (tsp.UserPermissionReadOnly,)
+
     lookup_field = 'uuid'
     parser_classes = (rfp.MultiPartParser,)
 
@@ -659,10 +662,26 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             # Filter by datatype
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
-        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        if 'o' in request.GET:
+            if 'r' in request.GET:
+                queryset = queryset.order_by('-' + request.GET['o'])
+            else:
+                queryset = queryset.order_by(request.GET['o'])
+
+        #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ts_serializer(queryset, many=True)
+        return JsonResponse(serializer.data)
+
+        """
         return JsonResponse(
             {"count": len(queryset), "results": ts_serializer.data}
         )
+        """
 
     def perform_create(self, serializer):
         '''Add a new tileset
