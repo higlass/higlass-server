@@ -51,9 +51,6 @@ class Command(BaseCommand):
 
             # remove the filepath of the filename
             django_file.name = op.split(django_file.name)[1]
-            django_file = dcfu.SimpleUploadedFile(
-                django_file.name, django_file.read()
-            )
 
         tm.Tileset.objects.create(
             datafile=django_file,
