@@ -1,8 +1,14 @@
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals
+)
+
 import cooler
 import h5py
 import logging
 import numpy as np
 import pandas as pd
+
+from scipy.ndimage.interpolation import zoom
 
 logger = logging.getLogger(__name__)
 
@@ -108,18 +114,111 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
+def get_domains_by_loc(
+    cooler_file,
+    loci,
+    dim=64,
+    balanced=False,
+    zoomout_level=0,
+    minSize=100000,
+    maxSize=10000000,
+    padding=4
+):
+    with h5py.File(cooler_file, 'r') as f:
+        c = get_cooler(f, zoomout_level)
+        fetch_chr = c.info['bin-size'] >= 4000
+
+        resolution = c.info['bin-size']
+
+        domains = []
+
+        last_chrom = None
+
+        for index, locus in enumerate(loci):
+            chrom = 'chr{}'.format(locus[0])
+            start = locus[1]
+            end = locus[2]
+
+            futureMap = np.zeros((dim, dim), float)
+
+            # exclude by size
+            if ((end - start) < minSize) or ((end - start) > maxSize):
+                logger.info((
+                    'Exclude domain #{} because of size constraints'
+                ).format(index))
+                futureMap.fill(-1.0)
+                domains.append(futureMap.copy())
+                continue
+
+            # exclude if too close together (sort of redundant)
+            if abs(start - end) < 10 * resolution:
+                logger.info((
+                    'Exclude domain #{} because start and end is too close'
+                ).format(index))
+                futureMap.fill(-1.0)
+                domains.append(futureMap.copy())
+                continue
+
+            start_bin = int(np.rint(float(start) / resolution))
+            end_bin = int(np.rint(float(end) / resolution))
+            dom_len = end_bin - start_bin + 1
+
+            if fetch_chr:
+                if not chrom == last_chrom:
+                    data = c.matrix(balance=balanced).fetch(chrom)
+            else:
+                data = c.matrix(balance=balanced)
+
+            if start_bin - dom_len < 0:
+                logger.info((
+                    'Exclude domain #{} because too few bins'
+                ).format(index))
+                futureMap.fill(-1.0)
+                domains.append(futureMap.copy())
+                continue
+
+            if end_bin + dom_len >= len(data):
+                logger.info((
+                    'Exclude domain #{} because it\'s larger than the data'
+                ).format(index))
+                futureMap.fill(-1.0)
+                domains.append(futureMap.copy())
+                continue
+
+            singleMap = 1. * (data[
+                start_bin - padding:end_bin + padding + 1,
+                start_bin - padding:end_bin + padding + 1
+            ])
+
+            futureMap = futureMap + zoomArray(
+                singleMap, futureMap.shape
+            ).copy()
+
+            # Normalize
+            max_val = np.max(futureMap)
+            if max_val > 0:
+                futureMap /= max_val
+
+            domains.append(futureMap)
+
+            last_chrom = chrom
+
+    return domains
+
+
 def get_frag_by_loc(
     cooler_file,
     loci,
     is_rel=True,
     dim=22,
     balanced=True,
-    zoomout_level=0
+    zoomout_level=0,
+    padding=None
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
 
-        fragments = collect_frags(c, loci, is_rel, dim, balanced)
+        fragments = collect_frags(c, loci, is_rel, dim, balanced, padding)
 
     return fragments
 
@@ -203,7 +302,7 @@ def check_cis_only(loci):
     return np.all(loci[0:, 0] == loci[0:, 3])
 
 
-def collect_frags(c, loci, is_rel=False, dim=22, balanced=True):
+def collect_frags(c, loci, is_rel=False, dim=22, balanced=True, padding=None):
     chr_info = get_chrom_names_cumul_len(c)
     cis_only = check_cis_only(loci)
 
@@ -234,7 +333,8 @@ def collect_frags(c, loci, is_rel=False, dim=22, balanced=True):
                 locus[4],  # start 2
                 locus[5],  # end 2,
                 balanced=balanced,
-                dim=dim
+                dim=dim,
+                padding=padding
             )
 
             k += 1
@@ -250,7 +350,12 @@ def collect_frags(c, loci, is_rel=False, dim=22, balanced=True):
         k = 0
         for locus in loci:
             fragments[k] = get_frag(
-                c, chr_info, *locus, balanced=balanced, dim=dim
+                c,
+                chr_info,
+                *locus,
+                balanced=balanced,
+                dim=dim,
+                padding=padding
             )
 
             if max > 0 and k >= max:
@@ -395,10 +500,10 @@ def get_cis_frag(
     end_pos_1,
     start_pos_2,
     end_pos_2,
-    padding=10,
     normalize=True,
     balanced=True,
-    dim=22
+    dim=22,
+    padding=10
 ):
     resolution = c.info['bin-size']
 
@@ -459,3 +564,71 @@ def get_cis_frag(
     out[low_quality_bins] = -1
 
     return out
+
+
+def zoomArray(
+    inArray, finalShape, sameSum=False, zoomFunction=zoom, **zoomKwargs
+):
+    """
+    Normally, one can use scipy.ndimage.zoom to do array/image rescaling.
+    However, scipy.ndimage.zoom does not coarsegrain images well. It basically
+    takes nearest neighbor, rather than averaging all the pixels, when
+    coarsegraining arrays. This increases noise. Photoshop doesn't do that, and
+    performs some smart interpolation-averaging instead.
+
+    If you were to coarsegrain an array by an integer factor, e.g. 100x100 ->
+    25x25, you just need to do block-averaging, that's easy, and it reduces
+    noise. But what if you want to coarsegrain 100x100 -> 30x30?
+
+    Then my friend you are in trouble. But this function will help you. This
+    function will blow up your 100x100 array to a 120x120 array using
+    scipy.ndimage zoom Then it will coarsegrain a 120x120 array by
+    block-averaging in 4x4 chunks.
+
+    It will do it independently for each dimension, so if you want a 100x100
+    array to become a 60x120 array, it will blow up the first and the second
+    dimension to 120, and then block-average only the first dimension.
+
+    Parameters
+    ----------
+
+    inArray: n-dimensional numpy array (1D also works)
+    finalShape: resulting shape of an array
+    sameSum: bool, preserve a sum of the array, rather than values.
+             by default, values are preserved
+    zoomFunction: by default, scipy.ndimage.zoom. You can plug your own.
+    zoomKwargs:  a dict of options to pass to zoomFunction.
+    """
+    inArray = np.asarray(inArray, dtype=np.double)
+    inShape = inArray.shape
+    assert len(inShape) == len(finalShape)
+    mults = []  # multipliers for the final coarsegraining
+    for i in range(len(inShape)):
+        if finalShape[i] < inShape[i]:
+            mults.append(int(np.ceil(inShape[i] / finalShape[i])))
+        else:
+            mults.append(1)
+    # shape to which to blow up
+    tempShape = tuple([i * j for i, j in zip(finalShape, mults)])
+
+    # stupid zoom doesn't accept the final shape. Carefully crafting the
+    # multipliers to make sure that it will work.
+    zoomMultipliers = np.array(tempShape) / np.array(inShape) + 0.0000001
+    assert zoomMultipliers.min() >= 1
+
+    # applying scipy.ndimage.zoom
+    rescaled = zoomFunction(inArray, zoomMultipliers, **zoomKwargs)
+
+    for ind, mult in enumerate(mults):
+        if mult != 1:
+            sh = list(rescaled.shape)
+            assert sh[ind] % mult == 0
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1:]
+            rescaled.shape = newshape
+            rescaled = np.mean(rescaled, axis=ind + 1)
+    assert rescaled.shape == finalShape
+
+    if sameSum:
+        extraSize = np.prod(finalShape) / np.prod(inShape)
+        rescaled /= extraSize
+    return rescaled
