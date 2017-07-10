@@ -13,4 +13,3 @@ requests==2.12.3
 slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
-clodius
