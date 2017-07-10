@@ -78,7 +78,6 @@ def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
     '''
 
     tile_data = {}
-    print("tile_position:", tile_position)
 
     if cooler_filepath not in mats:
         make_mats(cooler_filepath)
@@ -223,7 +222,11 @@ def generate_tile(tile_id, request):
         tile_value = {'discrete': list([list(d) for d in dense])}
     elif tileset.filetype == "cooler":
         tile_position = map(int, tile_id_parts[1:4])
-        transform_method = tile_id_parts[4]
+
+        if len(tile_id_parts) > 4:
+            transform_method = tile_id_parts[4]
+        else:
+            transform_method = 'default'
         
         tile_value = make_cooler_tile(
             get_datapath(tileset.datafile.url), tile_position,

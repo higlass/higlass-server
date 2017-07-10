@@ -352,15 +352,21 @@ class CoolerTest(dt.TestCase):
         '''
         Try to get different transforms of the same tileset
         '''
+        ret = self.client.get('/api/v1/tileset_info/?d=md')
+        contents = json.loads(ret.content)
+
+        assert('transforms' in contents['md'])
+        assert(contents['md']['transforms'][0]['name'] == 'ICE')
+
         ret = self.client.get('/api/v1/tiles/?d=md.0.0.0.default')
         contents = json.loads(ret.content)
 
-        ret = self.client.get('/api/v1/tiles/?d=md.0.0.0.ICE')
+        ret = self.client.get('/api/v1/tiles/?d=md.0.0.0.none')
         contents1 = json.loads(ret.content)
 
         # make sure that different normalization methods result 
         # in different data being returned
-        assert(contents['md.0.0.0.default']['dense'] != contents1['md.0.0.0.ICE']['dense'])
+        assert(contents['md.0.0.0.default']['dense'] != contents1['md.0.0.0.none']['dense'])
 
     def test_unbalanced(self):
         '''
