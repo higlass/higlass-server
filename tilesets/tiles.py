@@ -7,7 +7,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def make_tile(zoomLevel, x_pos, y_pos, dset):
+def make_tile(zoomLevel, x_pos, y_pos, dset, transform_type):
     info = dset[1]
     divisor = 2 ** zoomLevel
 
@@ -17,7 +17,7 @@ def make_tile(zoomLevel, x_pos, y_pos, dset):
     end2 = (y_pos + 1) * info['max_width'] / divisor
 
     data = cch.get_data(
-        dset[0], zoomLevel, start1, end1 - 1, start2, end2 - 1
+        dset[0], zoomLevel, start1, end1 - 1, start2, end2 - 1, transform_type
     )
 
     df = data[data['genome_start1'] >= start1]
