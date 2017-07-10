@@ -109,10 +109,10 @@ def make_cooler_tile(cooler_filepath, tile_position):
         max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16
     ):
-        tile_data['dense'] = base64.b64encode(tile.astype('float16'))
+        tile_data['dense'] = base64.b64encode(tile.astype('float16')).decode('utf-8')
         tile_data['dtype'] = 'float16'
     else:
-        tile_data['dense'] = base64.b64encode(tile.astype('float32'))
+        tile_data['dense'] = base64.b64encode(tile.astype('float32')).decode('utf-8')
         tile_data['dtype'] = 'float32'
 
     return tile_data
@@ -137,7 +137,6 @@ def generate_tile(tile_id, request):
     '''
 
     tile_id_parts = tile_id.split('.')
-    tile_position = map(int, tile_id_parts[1:])
     tileset_uuid = tile_id_parts[0]
 
     tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
@@ -153,6 +152,8 @@ def generate_tile(tile_id, request):
         return (tile_id, tile_value)
 
     if tileset.filetype == "hitile":
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
         dense = hdft.get_data(
             h5py.File(
                 get_datapath(tileset.datafile.url)
@@ -176,16 +177,17 @@ def generate_tile(tile_id, request):
             min_dense > min_f16 and min_dense < max_f16
         ):
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')),
+                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
                 'dtype': 'float16'
             }
         else:
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')),
+                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
                 'dtype': 'float32'
             }
 
     elif tileset.filetype == 'beddb':
+        tile_position = list(map(int, tile_id_parts[1:3]))
         tile_value = cdt.get_tile(
             get_datapath(tileset.datafile.url),
             tile_position[0],
@@ -193,6 +195,7 @@ def generate_tile(tile_id, request):
         )
 
     elif tileset.filetype == 'bed2ddb':
+        tile_position = list(map(int, tile_id_parts[1:4]))
         tile_value = cdt.get_2d_tile(
             get_datapath(tileset.datafile.url),
             tile_position[0],
@@ -201,6 +204,7 @@ def generate_tile(tile_id, request):
         )
 
     elif tileset.filetype == 'hibed':
+        tile_position = list(map(int, tile_id_parts[1:3]))
         dense = hdft.get_discrete_data(
             h5py.File(
                 get_datapath(tileset.datafile.url)
@@ -218,6 +222,8 @@ def generate_tile(tile_id, request):
         tile_value = json.loads(response.read())["_source"]["tile_value"]
 
     elif tileset.filetype == "cooler":
+        tile_position = list(map(int, tile_id_parts[1:4]))
+
         tile_value = make_cooler_tile(
             get_datapath(tileset.datafile.url), tile_position
         )
@@ -568,15 +574,15 @@ def tileset_info(request):
             tileset_info = hdft.get_tileset_info(
                 h5py.File(get_datapath(tileset_object.datafile.url)))
             tileset_infos[tileset_uuid] = {
-                "min_pos": [tileset_info['min_pos']],
-                "max_pos": [tileset_info['max_pos']],
+                "min_pos": [int(tileset_info['min_pos'])],
+                "max_pos": [int(tileset_info['max_pos'])],
                 "max_width": 2 ** math.ceil(
                     math.log(
                         tileset_info['max_pos'] - tileset_info['min_pos']
                     ) / math.log(2)
                 ),
-                "tile_size": tileset_info['tile_size'],
-                "max_zoom": tileset_info['max_zoom']
+                "tile_size": int(tileset_info['tile_size']),
+                "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
@@ -608,6 +614,11 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
+
+    '''
+    for info in tileset_infos.values():
+        print('info:', info, type(info['max_width']), [type(x) for x in info['max_pos']], [type(x) for x in info['min_pos']], type(info['tile_size']), type(info['max_zoom']))
+    '''
 
     return JsonResponse(tileset_infos)
 
