@@ -1,4 +1,6 @@
--e git+https://github.com/mirnylab/cooler.git#egg=higlass-transforms
+-e git+https://github.com/mirnylab/cooler.git@higlass-transforms#egg=cooler
+pyBigWig
+clodius
 Cython==0.25.2
 django-cors-headers
 django-guardian
