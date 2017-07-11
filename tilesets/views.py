@@ -109,10 +109,10 @@ def make_cooler_tile(cooler_filepath, tile_position):
         max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16
     ):
-        tile_data['dense'] = base64.b64encode(tile.astype('float16')).decode('utf-8')
+        tile_data['dense'] = base64.b64encode(tile.astype('float16')).decode('latin-1')
         tile_data['dtype'] = 'float16'
     else:
-        tile_data['dense'] = base64.b64encode(tile.astype('float32')).decode('utf-8')
+        tile_data['dense'] = base64.b64encode(tile.astype('float32')).decode('latin-1')
         tile_data['dtype'] = 'float32'
 
     return tile_data
@@ -172,7 +172,10 @@ def generate_tile(tile_id, request):
         min_f16 = np.finfo('float16').min
         max_f16 = np.finfo('float16').max
 
+        has_nan = len([d for d in dense if np.isnan(d)]) > 0
+
         if (
+            not has_nan and
             max_dense > min_f16 and max_dense < max_f16 and
             min_dense > min_f16 and min_dense < max_f16
         ):
