@@ -622,6 +622,99 @@ def tileset_info(request):
 
     return JsonResponse(tileset_infos)
 
+@method_decorator(gzip_page, name="dispatch")
+class ViewConfViews(viewsets.ModelViewSet):
+    """
+    Viewconfs
+    """
+    queryset = tm.ViewConf.objects.all()
+    serliazer_class = tss.ViewConfSerializer
+
+    lookup_field = 'uuid'
+    parser_classes = (rfp.JsonParser,)
+
+    if hss.UPLOAD_ENABLED:
+        permission_classes = (tsp.UserPermission,)
+    else:
+        permission_classes = (tsp.UserPermissionReadOnly,)
+
+    def list(self, request, *args, **kwargs):
+        '''List the available viewconfs
+
+        Args:
+            request (django.http.HTTPRequest): The HTTP request containing
+                no parameters
+
+        Returns:
+            django.http.JsonResponse: A json file containing a 'count' as
+                well as 'results' with each tileset as an entry
+        '''
+        # only return tilesets which are accessible by this user
+        if request.user.is_anonymous:
+            user = gu.get_anonymous_user()
+        else:
+            user = request.user
+
+        queryset = self.queryset.filter(
+            dbm.Q(owner=user) | dbm.Q(private=False)
+        )
+
+        #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ts_serializer(queryset, many=True)
+        return JsonResponse(serializer.data)
+
+        """
+        return JsonResponse(
+            {"count": len(queryset), "results": ts_serializer.data}
+        )
+        """
+
+    def perform_create(self, serializer):
+        '''Add a new tileset
+
+        When adding a new dataset, we need to enforce permissions as well as
+        other rules like the uniqueness of uuids.
+
+        Args:
+            serializer (tilsets.serializer.TilesetSerializer): The serializer
+            to use to save the request.
+        '''
+
+        if 'uid' in self.request.data:
+            try:
+                self.queryset.get(uuid=self.request.data['uid'])
+                # this uid already exists, return an error
+                raise rfe.APIException("UID already exists")
+            except tm.Tileset.DoesNotExist:
+                uid = self.request.data['uid']
+        else:
+            uid = slugid.nice()
+
+        if 'filetype' not in self.request.data:
+            raise rfe.APIException('Missing filetype')
+
+        datafile_name = self.request.data.get('datafile').name
+
+        if 'name' in self.request.data:
+            name = self.request.data['name']
+        else:
+            name = op.split(datafile_name)[1]
+
+        if self.request.user.is_anonymous:
+            # can't create a private dataset as an anonymous user
+            serializer.save(
+                owner=gu.get_anonymous_user(),
+                private=False,
+                name=name,
+                uuid=uid
+            )
+        else:
+            serializer.save(owner=self.request.user, name=name, uuid=uid)
 
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
@@ -670,7 +763,9 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(datatype__in=request.GET.getlist('dt'))
 
         if 'o' in request.GET:
+            # order by a field
             if 'r' in request.GET:
+                # reverse the ordering
                 queryset = queryset.order_by('-' + request.GET['o'])
             else:
                 queryset = queryset.order_by(request.GET['o'])
