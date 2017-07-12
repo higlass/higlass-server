@@ -623,7 +623,7 @@ def tileset_info(request):
     return JsonResponse(tileset_infos)
 
 @method_decorator(gzip_page, name="dispatch")
-class ViewConfViews(viewsets.ModelViewSet):
+class ViewConfViewSet(viewsets.ModelViewSet):
     """
     Viewconfs
     """
@@ -631,7 +631,7 @@ class ViewConfViews(viewsets.ModelViewSet):
     serliazer_class = tss.ViewConfSerializer
 
     lookup_field = 'uuid'
-    parser_classes = (rfp.JsonParser,)
+    parser_classes = (rfp.JSONParser,)
 
     if hss.UPLOAD_ENABLED:
         permission_classes = (tsp.UserPermission,)
@@ -795,34 +795,34 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             serializer (tilsets.serializer.TilesetSerializer): The serializer
             to use to save the request.
         '''
+        if request.user.is_anonymous() and not hss.PUBLIC_UPLOAD_ENABLED:
+            return JsonResponse({
+                'error': 'Public uploads disabled'
+            }, status=403)
 
-        if 'uid' in self.request.data:
-            try:
-                self.queryset.get(uuid=self.request.data['uid'])
-                # this uid already exists, return an error
-                raise rfe.APIException("UID already exists")
-            except tm.Tileset.DoesNotExist:
-                uid = self.request.data['uid']
-        else:
-            uid = slugid.nice()
+        viewconf_wrapper = json.loads(self.request.body)
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
 
-        if 'filetype' not in self.request.data:
-            raise rfe.APIException('Missing filetype')
+        try:
+            viewconf = json.dumps(viewconf_wrapper['viewconf'])
+        except KeyError:
+            return JsonResponse({
+                'error': 'Broken view config'
+            }, status=400)
 
-        datafile_name = self.request.data.get('datafile').name
+        try:
+            higlass_version = viewconf_wrapper['higlassVersion']
+            print(higlass_version)
+        except KeyError:
+            higlass_version = ''
 
-        if 'name' in self.request.data:
-            name = self.request.data['name']
-        else:
-            name = op.split(datafile_name)[1]
+        if not serializer.is_valid():
+            return JsonResponse({
+                'error': 'Serializer not valid'
+            }, status=rfs.HTTP_400_BAD_REQUEST)
 
-        if self.request.user.is_anonymous:
-            # can't create a private dataset as an anonymous user
-            serializer.save(
-                owner=gu.get_anonymous_user(),
-                private=False,
-                name=name,
-                uuid=uid
-            )
-        else:
-            serializer.save(owner=self.request.user, name=name, uuid=uid)
+        serializer.save(
+            uuid=uid, viewconf=viewconf, higlassVersion=higlass_version
+        )
+
+        return JsonResponse({'uid': uid})
