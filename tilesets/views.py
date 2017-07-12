@@ -58,13 +58,14 @@ def make_mats(dset):
     mats[dset] = [f, cch.get_info(dset)]
 
 
-def make_cooler_tile(cooler_filepath, tile_position):
+def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
     '''Create a tile from a cooler file.
 
     Args:
         cooler_filepath (str): The location of the cooler file that we'll
             that we'll extract the tile data from.
         tile_position (list): The position of the tile ([z,x,y])
+        transform_type (str): The method used to transform the data (
 
     Returns:
         dict: The tile data consisting of a 'dense' member containing
@@ -93,7 +94,8 @@ def make_cooler_tile(cooler_filepath, tile_position):
         tile_position[0],
         tile_position[1],
         tile_position[2],
-        mats[cooler_filepath]
+        mats[cooler_filepath],
+        transform_type
     )
 
     min_dense = float(np.min(tile))
@@ -217,18 +219,18 @@ def generate_tile(tile_id, request):
         )
 
         tile_value = {'discrete': list([list(d) for d in dense])}
-
-    elif tileset.filetype == "elasticsearch":
-        response = urllib.urlopen(
-            tileset.datafile + '/' + '.'.join(map(str, tile_position))
-        )
-        tile_value = json.loads(response.read())["_source"]["tile_value"]
-
     elif tileset.filetype == "cooler":
         tile_position = list(map(int, tile_id_parts[1:4]))
 
+
+        if len(tile_id_parts) > 4:
+            transform_method = tile_id_parts[4]
+        else:
+            transform_method = 'default'
+        
         tile_value = make_cooler_tile(
-            get_datapath(tileset.datafile.url), tile_position
+            get_datapath(tileset.datafile.url), tile_position,
+            transform_method
         )
         if tile_value is None:
             return None
