@@ -245,7 +245,6 @@ def generate_tile(tile_id, request):
         if tile_value is None:
             return None
 
-    print("tile_value:", tile_value)
     rdb.set(tile_id, pickle.dumps(tile_value))
     return (tile_id, tile_value)
 
@@ -485,7 +484,6 @@ def viewconfs(request):
 
         try:
             higlass_version = viewconf_wrapper['higlassVersion']
-            print(higlass_version)
         except KeyError:
             higlass_version = ''
 
