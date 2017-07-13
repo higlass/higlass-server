@@ -55,7 +55,17 @@ rdb = getRdb()
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, cch.get_info(dset)]
+    info = cch.get_info(dset)
+
+    info["min_pos"] = [int(m) for m in info["min_pos"]]
+    info["max_pos"] = [int(m) for m in info["max_pos"]]
+    info["max_zoom"] = int(info["max_zoom"])
+    info["max_width"] = int(info["max_width"])
+
+    if "transforms" in info:
+        info["transforms"] = list(info["transforms"])
+
+    mats[dset] = [f, info]
 
 
 def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
@@ -218,7 +228,7 @@ def generate_tile(tile_id, request):
             tile_position[1]
         )
 
-        tile_value = {'discrete': list([list(d) for d in dense])}
+        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
     elif tileset.filetype == "cooler":
         tile_position = list(map(int, tile_id_parts[1:4]))
 
@@ -248,6 +258,17 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+@api_view(['GET'])
+def uids_by_filename(request):
+    '''
+    Retrieve a list uids corresponding to a given filename
+    '''
+    queryset = tm.Tileset.objects.all()
+    queryset = queryset.filter(datafile__contains=request.GET['d'])
+
+    serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+
+    return JsonResponse({"count": len(queryset), "results": serializer.data})
 
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
@@ -714,7 +735,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             except tm.Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
-            uid = slugid.nice()
+            uid = slugid.nice().decode('utf-8')
 
         if 'filetype' not in self.request.data:
             raise rfe.APIException('Missing filetype')

@@ -15,7 +15,7 @@ import logging
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
-import tilesets.tiles
+import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
 
@@ -403,7 +403,7 @@ class CoolerTest(dt.TestCase):
         contents = json.loads(ret.content)
 
         import base64
-        r = base64.decodestring(contents['aa.0.0.0']['dense'])
+        r = base64.decodestring(contents['aa.0.0.0']['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
         q = q.reshape((256,256))
@@ -416,7 +416,7 @@ class CoolerTest(dt.TestCase):
         import tilesets.views as tsv
 
         tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
-        tile = tiles.make_tile(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
+        tile = tt.make_tile(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
 
         # this tile stretches down beyond the end of data and should thus contain no values
         assert(tile[-1] == 0.)
@@ -546,10 +546,44 @@ class Bed2DDBTest(dt.TestCase):
             owner=self.user1,
             uuid='ahd')
 
+
+        upload_file1 = open('data/Rao_RepH_GM12878_InsulationScore.txt.multires.db', 'rb')
+
+        self.tileset1 = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file1.name, upload_file1.read()),
+            filetype='bed2ddb',
+            datatype='2d-rectangle-domains',
+            owner=self.user1,
+            uuid='ahe')
+
+    def test_uids_by_filename(self):
+        ret = self.client.get('/api/v1/uids_by_filename/?d=Rao_RepH_GM12878_InsulationScore.txt')
+
+        contents = json.loads(ret.content)
+
+        assert(contents["count"] == 1)
+
+        ret = self.client.get('/api/v1/uids_by_filename/?d=xRao_RepH_GM12878_InsulationScore')
+
+        contents = json.loads(ret.content)
+
+        assert(contents["count"] == 0)
+
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
         returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
         returned = json.loads(returned_text.content)
+
+        ret = self.client.get('/api/v1/tiles/?d={}.0.0.0'.format(self.tileset1.uuid))
+        assert(ret.status_code == 200)
+
+        contents = json.loads(ret.content)
+
+    def test_get_info(self):
+        ret = self.client.get('/api/v1/tileset_info/?d={}'.format(self.tileset1.uuid))
+
+        assert(ret.status_code == 200)
+
 
 class BedDBTest(dt.TestCase):
     def setUp(self):
@@ -642,18 +676,18 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.{z}.{x}.{y}'.format(
-                    uuid=self.cooler.uuid, x=x, y=y, z=z
+                    uuid=self.cooler.uuid.decode('utf-8'), x=x, y=y, z=z
                 )
             ).content
         )
 
-        r = base64.decodestring(returned[returned.keys()[0]]['dense'])
+        r = base64.decodestring(returned[list(returned.keys())[0]]['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
         with h5py.File(self.cooler.datafile.url) as f:
 
             mat = [f, cch.get_info(self.cooler.datafile.url)]
-            t = tiles.make_tile(z, x, y, mat)
+            t = tt.make_tile(z, x, y, mat)
 
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
@@ -676,10 +710,11 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_post_dataset(self):
         c = dt.Client()
         c.login(username='user1', password='pass')
+        f = open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')
         ret = c.post(
             '/api/v1/tilesets/',
             {
-                'datafile': open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb'),
+                'datafile': f,
                 'filetype': 'hitile',
                 'private': 'True',
                 'coordSystem': 'hg19'
@@ -687,7 +722,8 @@ class TilesetsViewSetTest(dt.TestCase):
             ,
             format='multipart'
         )
-        ret_obj = json.loads(ret.content)
+        f.close()
+        ret_obj = json.loads(ret.content.decode('utf-8'))
 
         if hss.UPLOAD_ENABLED:
             t = tm.Tileset.objects.get(uuid=ret_obj['uuid'])
@@ -774,16 +810,16 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
-                    uuid=self.cooler.uuid
+                    uuid=self.cooler.uuid.decode('utf-8')
                 )
             ).content
         )
 
         self.assertTrue('{uuid}.1.0.0'.format(
-            uuid=self.cooler.uuid) in returned.keys()
+            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
         )
         self.assertTrue('{uuid}.1.0.1'.format(
-            uuid=self.cooler.uuid) in returned.keys()
+            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
         )
 
     def test_get_same_tiles(self):
@@ -793,7 +829,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
-                    uuid=self.cooler.uuid
+                    uuid=self.cooler.uuid.decode('utf-8')
                 )
             ).content
         )
@@ -809,7 +845,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
+                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
             ).content
         )
 
@@ -821,27 +857,27 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
+                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
             ).content
         )
 
         self.assertTrue(
             '{uuid}.1.5.5'.format(
-                uuid=self.cooler.uuid
+                uuid=self.cooler.uuid.decode('utf-8')
             ) not in returned.keys()
         )
 
     def test_get_hitile_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid.decode('utf-8'))
             ).content
         )
 
-        uuid = "{uuid}".format(uuid=self.hitile.uuid)
+        uuid = "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8'))
 
         self.assertTrue(
-            "{uuid}".format(uuid=self.hitile.uuid) in returned.keys()
+            "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8')) in returned.keys()
         )
         self.assertEqual(returned[uuid][u'max_zoom'], 22)
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
@@ -851,22 +887,22 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_cooler_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid.decode('utf-8'))
             ).content
         )
 
-        uuid = "{uuid}".format(uuid=self.cooler.uuid)
+        uuid = "{uuid}".format(uuid=self.cooler.uuid.decode('utf-8'))
         self.assertTrue(u'name' in returned[uuid])
 
 
     def test_get_hitile_tile(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)
+                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid.decode('utf-8'))
             ).content
         )
 
-        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid) in returned)
+        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid.decode('utf-8')) in returned)
         pass
 
     def test_list_tilesets(self):

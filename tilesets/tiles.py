@@ -37,6 +37,7 @@ def make_tile(zoomLevel, x_pos, y_pos, dset, transform_type='default'):
 
     if len(index) > 0:
         # need this otherwise we get an error
+        index = [int(i) for i in index]
         out[index] = v
 
     return out

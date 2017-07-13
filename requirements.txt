@@ -1,4 +1,4 @@
--e git+https://github.com/mirnylab/cooler.git@higlass-transforms#egg=cooler
+cooler==0.7.5
 pyBigWig==0.3.2
 Cython==0.25.2
 django-cors-headers
