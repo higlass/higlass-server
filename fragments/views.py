@@ -10,7 +10,7 @@ except:
     import pickle
 
 from rest_framework.authentication import BasicAuthentication
-from drf_disable_csrf import CsrfExemptSessionAuthentication
+from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
