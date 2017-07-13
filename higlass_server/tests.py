@@ -8,7 +8,7 @@ class CommandlineTest(unittest.TestCase):
         pass
 
     def assertRun(self, command,  output_res=[]):
-        output = subprocess.check_output(command , shell=True).strip()
+        output = subprocess.check_output(command , shell=True).decode('utf-8').strip()
         for output_re in output_res:
             self.assertRegexpMatches(output, output_re)
 
