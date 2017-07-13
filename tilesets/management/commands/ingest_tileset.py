@@ -47,7 +47,7 @@ class Command(BaseCommand):
                 raise CommandError('File does not exist under media root')
             django_file = filename
         else:
-            django_file = File(open(filename, 'r'))
+            django_file = File(open(filename, 'rb'))
 
             # remove the filepath of the filename
             django_file.name = op.split(django_file.name)[1]
