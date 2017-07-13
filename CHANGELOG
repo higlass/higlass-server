@@ -1,3 +1,8 @@
+v1.0.2 (2017-07-13)
+
+- Removed some print statements
+- Fixed issues with testing in py3
+
 v1.0.1 (2017-07-13)
 
 - Removed Python 2 support
