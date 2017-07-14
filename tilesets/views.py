@@ -41,13 +41,9 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.authentication import BasicAuthentication
 from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
-from tiles import make_tile
+from .tiles import make_tile
 
 from higlass_server.utils import getRdb
-
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 logger = logging.getLogger(__name__)
 
@@ -59,16 +55,27 @@ rdb = getRdb()
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
-    mats[dset] = [f, cch.get_info(dset)]
+    info = cch.get_info(dset)
+
+    info["min_pos"] = [int(m) for m in info["min_pos"]]
+    info["max_pos"] = [int(m) for m in info["max_pos"]]
+    info["max_zoom"] = int(info["max_zoom"])
+    info["max_width"] = int(info["max_width"])
+
+    if "transforms" in info:
+        info["transforms"] = list(info["transforms"])
+
+    mats[dset] = [f, info]
 
 
-def make_cooler_tile(cooler_filepath, tile_position):
+def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
     '''Create a tile from a cooler file.
 
     Args:
         cooler_filepath (str): The location of the cooler file that we'll
             that we'll extract the tile data from.
         tile_position (list): The position of the tile ([z,x,y])
+        transform_type (str): The method used to transform the data (
 
     Returns:
         dict: The tile data consisting of a 'dense' member containing
@@ -97,7 +104,8 @@ def make_cooler_tile(cooler_filepath, tile_position):
         tile_position[0],
         tile_position[1],
         tile_position[2],
-        mats[cooler_filepath]
+        mats[cooler_filepath],
+        transform_type
     )
 
     min_dense = float(np.min(tile))
@@ -113,10 +121,10 @@ def make_cooler_tile(cooler_filepath, tile_position):
         max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16
     ):
-        tile_data['dense'] = base64.b64encode(tile.astype('float16'))
+        tile_data['dense'] = base64.b64encode(tile.astype('float16')).decode('latin-1')
         tile_data['dtype'] = 'float16'
     else:
-        tile_data['dense'] = base64.b64encode(tile.astype('float32'))
+        tile_data['dense'] = base64.b64encode(tile.astype('float32')).decode('latin-1')
         tile_data['dtype'] = 'float32'
 
     return tile_data
@@ -141,7 +149,6 @@ def generate_tile(tile_id, request):
     '''
 
     tile_id_parts = tile_id.split('.')
-    tile_position = map(int, tile_id_parts[1:])
     tileset_uuid = tile_id_parts[0]
 
     tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
@@ -157,6 +164,8 @@ def generate_tile(tile_id, request):
         return (tile_id, tile_value)
 
     if tileset.filetype == "hitile":
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
         dense = hdft.get_data(
             h5py.File(
                 get_datapath(tileset.datafile.url)
@@ -175,21 +184,25 @@ def generate_tile(tile_id, request):
         min_f16 = np.finfo('float16').min
         max_f16 = np.finfo('float16').max
 
+        has_nan = len([d for d in dense if np.isnan(d)]) > 0
+
         if (
+            not has_nan and
             max_dense > min_f16 and max_dense < max_f16 and
             min_dense > min_f16 and min_dense < max_f16
         ):
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')),
+                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
                 'dtype': 'float16'
             }
         else:
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')),
+                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
                 'dtype': 'float32'
             }
 
     elif tileset.filetype == 'beddb':
+        tile_position = list(map(int, tile_id_parts[1:3]))
         tile_value = cdt.get_tile(
             get_datapath(tileset.datafile.url),
             tile_position[0],
@@ -197,6 +210,7 @@ def generate_tile(tile_id, request):
         )
 
     elif tileset.filetype == 'bed2ddb':
+        tile_position = list(map(int, tile_id_parts[1:4]))
         tile_value = cdt.get_2d_tile(
             get_datapath(tileset.datafile.url),
             tile_position[0],
@@ -205,6 +219,7 @@ def generate_tile(tile_id, request):
         )
 
     elif tileset.filetype == 'hibed':
+        tile_position = list(map(int, tile_id_parts[1:3]))
         dense = hdft.get_discrete_data(
             h5py.File(
                 get_datapath(tileset.datafile.url)
@@ -213,17 +228,19 @@ def generate_tile(tile_id, request):
             tile_position[1]
         )
 
-        tile_value = {'discrete': list([list(d) for d in dense])}
-
-    elif tileset.filetype == "elasticsearch":
-        response = urllib.urlopen(
-            tileset.datafile + '/' + '.'.join(map(str, tile_position))
-        )
-        tile_value = json.loads(response.read())["_source"]["tile_value"]
-
+        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
     elif tileset.filetype == "cooler":
+        tile_position = list(map(int, tile_id_parts[1:4]))
+
+
+        if len(tile_id_parts) > 4:
+            transform_method = tile_id_parts[4]
+        else:
+            transform_method = 'default'
+        
         tile_value = make_cooler_tile(
-            get_datapath(tileset.datafile.url), tile_position
+            get_datapath(tileset.datafile.url), tile_position,
+            transform_method
         )
         if tile_value is None:
             return None
@@ -241,6 +258,17 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+@api_view(['GET'])
+def uids_by_filename(request):
+    '''
+    Retrieve a list uids corresponding to a given filename
+    '''
+    queryset = tm.Tileset.objects.all()
+    queryset = queryset.filter(datafile__contains=request.GET['d'])
+
+    serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+
+    return JsonResponse({"count": len(queryset), "results": serializer.data})
 
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
@@ -336,7 +364,7 @@ def sizes(request):
     # Try to load the CSV file
     try:
         f = chrom_sizes.datafile
-        f.open('rb')
+        f.open('r')
 
         if res_type == 'json':
             reader = csv.reader(f, delimiter='\t')
@@ -444,8 +472,9 @@ def viewconfs(request):
                 'error': 'Public uploads disabled'
             }, status=403)
 
+        #print("request.body:", request.body)
         viewconf_wrapper = json.loads(request.body)
-        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
         try:
             viewconf = json.dumps(viewconf_wrapper['viewconf'])
@@ -456,7 +485,6 @@ def viewconfs(request):
 
         try:
             higlass_version = viewconf_wrapper['higlassVersion']
-            print(higlass_version)
         except KeyError:
             higlass_version = ''
 
@@ -572,15 +600,15 @@ def tileset_info(request):
             tileset_info = hdft.get_tileset_info(
                 h5py.File(get_datapath(tileset_object.datafile.url)))
             tileset_infos[tileset_uuid] = {
-                "min_pos": [tileset_info['min_pos']],
-                "max_pos": [tileset_info['max_pos']],
+                "min_pos": [int(tileset_info['min_pos'])],
+                "max_pos": [int(tileset_info['max_pos'])],
                 "max_width": 2 ** math.ceil(
                     math.log(
                         tileset_info['max_pos'] - tileset_info['min_pos']
                     ) / math.log(2)
                 ),
-                "tile_size": tileset_info['tile_size'],
-                "max_zoom": tileset_info['max_zoom']
+                "tile_size": int(tileset_info['tile_size']),
+                "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
@@ -612,6 +640,11 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
+
+    '''
+    for info in tileset_infos.values():
+        print('info:', info, type(info['max_width']), [type(x) for x in info['max_pos']], [type(x) for x in info['min_pos']], type(info['tile_size']), type(info['max_zoom']))
+    '''
 
     return JsonResponse(tileset_infos)
 
@@ -702,7 +735,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             except tm.Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
-            uid = slugid.nice()
+            uid = slugid.nice().decode('utf-8')
 
         if 'filetype' not in self.request.data:
             raise rfe.APIException('Missing filetype')

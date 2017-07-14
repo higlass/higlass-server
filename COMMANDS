@@ -1,3 +1,9 @@
+python \
+		manage.py ingest_tileset \
+		--filename /tmp/cnvs_hw.hitile \
+		--filetype hitile \
+		--datatype vector
+
 mkvirtualenv higlass-server
 
 pip install Django uwsgi
