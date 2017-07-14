@@ -10,7 +10,7 @@ except:
     import pickle
 
 from rest_framework.authentication import BasicAuthentication
-from drf_disable_csrf import CsrfExemptSessionAuthentication
+from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
@@ -199,8 +199,9 @@ def fragments_by_loci(request):
     Return:
 
     '''
-
     loci = request.data.get('loci', [])
+
+    print("loci:", loci, type(loci))
 
     try:
         precision = int(request.GET.get('precision', False))
@@ -281,9 +282,9 @@ def fragments_by_loci(request):
         }, status=500)
 
     # Get a unique string for caching
-    uuid = hashlib.md5(
-        json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
-    ).hexdigest()
+    print("loci:", loci)
+    dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
+    uuid = hashlib.md5( dump.encode('utf-8') ).hexdigest()
 
     # Check if something is cached
     if not no_cache:
@@ -316,10 +317,11 @@ def fragments_by_loci(request):
                     matrices[loci_lists[dataset][zoomout_level][i][6]] =\
                         raw_matrix.tolist()
                     i += 1
-    except Exception as e:
+    except Exception as ex:
+        raise
         return JsonResponse({
             'error': 'Could not retrieve fragments.',
-            'error_message': str(e)
+            'error_message': str(ex)
         }, status=500)
 
     # Create results

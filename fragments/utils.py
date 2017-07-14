@@ -72,7 +72,12 @@ def rel_2_abs_loci(loci, chr_info):
     chr_info[3] = chromosome ids
     '''
     def absolutize(chr, x, y):
-        offset = chr_info[2][chr_info[3]['chr%s' % str(chr)]]
+        chrom = str(chr)
+
+        if not chrom.startswith('chr'):
+            chrom = 'chr{}'.format(chrom)
+
+        offset = chr_info[2][chr_info[3][chrom]]
 
         return (offset + x, offset + y)
 
@@ -82,14 +87,14 @@ def rel_2_abs_loci(loci, chr_info):
             absolutize(*tuple[3:6])
         )
 
-    return map(absolutize_tuple, loci)
+    return list(map(absolutize_tuple, loci))
 
 
 def get_cooler(f, zoomout_level=0):
     c = None
 
     try:
-        zoom_levels = np.array(f.keys(), dtype=int)
+        zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
         min_zoom = np.min(zoom_levels)
@@ -108,7 +113,7 @@ def get_cooler(f, zoomout_level=0):
 
     try:
         c = cooler.Cooler(f)
-    except Exception:
+    except Exception as e:
         logger.error(e)
 
     return c
