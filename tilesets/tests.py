@@ -41,9 +41,18 @@ class ChromosomeSizes(dt.TestCase):
         assert(ret["count"] == 1)
         assert(len(ret["results"]) == 1)
 
-        ret = self.client.get('/api/v1/chrom-sizes/?id=cs-hg19').content
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cs-hg19')
 
-        assert(len(ret) > 300)
+        assert(ret.status_code == 200)
+        assert(len(ret.content) > 300)
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cs-hg19&type=json')
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('chr1' in data)
+
+
 
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):

@@ -364,7 +364,7 @@ def sizes(request):
     # Try to load the CSV file
     try:
         f = chrom_sizes.datafile
-        f.open('rb')
+        f.open('r')
 
         if res_type == 'json':
             reader = csv.reader(f, delimiter='\t')
