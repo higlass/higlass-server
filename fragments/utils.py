@@ -102,8 +102,8 @@ def get_cooler(f, zoomout_level=0):
 
     try:
         c = cooler.Cooler(f)
-    except Exception:
-        logger.error(e)
+    except Exception as ex:
+        logger.error(ex)
 
     return c
 

@@ -18,8 +18,12 @@ import rest_framework.status as rfs
 import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
+import fragments.views as fv
+
+
 
 logger = logging.getLogger(__name__)
+
 
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):
