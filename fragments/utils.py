@@ -363,9 +363,6 @@ def collect_frags(c, loci, is_rel=False, dim=22, balanced=True, padding=None):
                 padding=padding
             )
 
-            if max > 0 and k >= max:
-                break
-
             k += 1
 
     return fragments

@@ -219,7 +219,9 @@ def fragments_by_loci(request):
         dims = 22
 
     try:
-        padding = int(request.GET.get('padding', None))
+        padding = int(request.GET.get('padding'))
+    except TypeError:
+        padding = None
     except ValueError:
         padding = None
 
