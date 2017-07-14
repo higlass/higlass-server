@@ -42,10 +42,54 @@ class FragmentsTest(dt.TestCase):
             ]
         }
 
-        ret = self.client.post(
+        response = self.client.post(
             '/api/v1/fragments_by_loci/?precision=2&dims=22',
             json.dumps(data),
             content_type="application/json"
         )
 
-        print(ret.status_code)
+        self.assertEqual(response.status_code, 200)
+
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        self.assertTrue('fragments' in ret)
+
+        self.assertEqual(len(ret['fragments']), 1)
+
+        self.assertEqual(len(ret['fragments'][0]), 22)
+
+        self.assertEqual(len(ret['fragments'][0][0]), 22)
+
+    def test_domains_by_loci(self):
+        data = {
+            "loci": [
+                [
+                    "chr1",
+                    0,
+                    5000000,
+                    "1",
+                    0,
+                    5000000,
+                    "c1",
+                    0
+                ]
+            ]
+        }
+
+        response = self.client.post(
+            '/api/v1/domains_by_loci/?precision=2&dims=44',
+            json.dumps(data),
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        self.assertTrue('fragments' in ret)
+
+        self.assertEqual(len(ret['fragments']), 1)
+
+        self.assertEqual(len(ret['fragments'][0]), 44)
+
+        self.assertEqual(len(ret['fragments'][0][0]), 44)

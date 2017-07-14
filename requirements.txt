@@ -1,4 +1,4 @@
-git+https://github.com/mirnylab/cooler.git@master#egg=cooler
+-e git+https://github.com/mirnylab/cooler.git@master#egg=cooler
 pyBigWig==0.3.2
 Cython==0.25.2
 django-cors-headers
