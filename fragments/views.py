@@ -132,9 +132,8 @@ def domains_by_loci(request):
         }, status=500)
 
     # Get a unique string for caching
-    uuid = hashlib.md5(
-        json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
-    ).hexdigest()
+    dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
+    uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
     # Check if something is cached
     if not no_cache:
@@ -284,9 +283,8 @@ def fragments_by_loci(request):
         }, status=500)
 
     # Get a unique string for caching
-    print("loci:", loci)
     dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
-    uuid = hashlib.md5( dump.encode('utf-8') ).hexdigest()
+    uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
     # Check if something is cached
     if not no_cache:
