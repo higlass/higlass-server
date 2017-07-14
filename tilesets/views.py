@@ -472,8 +472,9 @@ def viewconfs(request):
                 'error': 'Public uploads disabled'
             }, status=403)
 
+        #print("request.body:", request.body)
         viewconf_wrapper = json.loads(request.body)
-        uid = viewconf_wrapper.get('uid') or slugid.nice()
+        uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
         try:
             viewconf = json.dumps(viewconf_wrapper['viewconf'])
