@@ -66,7 +66,12 @@ def rel_2_abs_loci(loci, chr_info):
     chr_info[3] = chromosome ids
     '''
     def absolutize(chr, x, y):
-        offset = chr_info[2][chr_info[3]['chr%s' % str(chr)]]
+        chrom = str(chr)
+
+        if not chrom.startswith('chr'):
+            chrom = 'chr{}'.format(chrom)
+
+        offset = chr_info[2][chr_info[3][chrom]]
 
         return (offset + x, offset + y)
 
@@ -76,14 +81,14 @@ def rel_2_abs_loci(loci, chr_info):
             absolutize(*tuple[3:6])
         )
 
-    return map(absolutize_tuple, loci)
+    return list(map(absolutize_tuple, loci))
 
 
 def get_cooler(f, zoomout_level=0):
     c = None
 
     try:
-        zoom_levels = np.array(f.keys(), dtype=int)
+        zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
         min_zoom = np.min(zoom_levels)
@@ -102,8 +107,8 @@ def get_cooler(f, zoomout_level=0):
 
     try:
         c = cooler.Cooler(f)
-    except Exception as ex:
-        logger.error(ex)
+    except Exception as e:
+        logger.error(e)
 
     return c
 
@@ -212,9 +217,6 @@ def collect_frags(c, loci, is_rel=False, dim=22, balanced=True):
             c, chr_info, *locus, balanced=balanced, dim=dim
         )
 
-        if max > 0 and k >= max:
-            break
-
         k += 1
 
     return fragments
@@ -320,12 +322,13 @@ def get_frag(
         as_pixels=True, max_chunk=np.inf, balance=balanced
     )[start_bin_1:end_bin_1, start_bin_2:end_bin_2]
 
-    pixels['index'] = (
+    pixels['idx'] = (
         (pixels['bin1_id'] - start_bin_1) * dim +
         pixels['bin2_id'] - start_bin_2
     )
 
     flat_dim = dim**2
+    pixels = pixels[pixels.idx < flat_dim]
 
     out = np.zeros(flat_dim, dtype=np.float)
 
@@ -334,7 +337,7 @@ def get_frag(
     if balanced:
         accessor = 'balanced'
 
-    out[pixels['index'].values[:flat_dim]] = pixels[accessor].values[:flat_dim]
+    out[pixels['idx'].values[:flat_dim]] = pixels[accessor].values[:flat_dim]
 
     # Store low quality bins
     low_quality_bins = np.where(np.isnan(out))
