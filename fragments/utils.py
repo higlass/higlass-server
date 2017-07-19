@@ -127,86 +127,92 @@ def get_domains_by_loc(
     zoomout_level=0,
     minSize=100000,
     maxSize=10000000,
-    padding=4
+    padding=10,  # Percent padding, e.g., 10 = 10% padding (5% per side)
+    percentile=100,  # Percentile clip, e.g., 99 = 99-percentile is max
+    ignore_diags=0  # Number of diagonals to be ignored
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
-        fetch_chr = c.info['bin-size'] >= 4000
 
         resolution = c.info['bin-size']
 
         domains = []
 
-        last_chrom = None
+        # Restrict padding to be [0, 100]%
+        padding = min(100, max(0, padding)) / 100
 
         for index, locus in enumerate(loci):
-            chrom = 'chr{}'.format(locus[0])
+            chrom = locus[0]
+            if not locus[0].startswith('chr'):
+                chrom = 'chr{}'.format(locus[0])
+
             start = locus[1]
             end = locus[2]
 
             futureMap = np.zeros((dim, dim), float)
 
-            # exclude by size
-            if ((end - start) < minSize) or ((end - start) > maxSize):
-                logger.info((
-                    'Exclude domain #{} because of size constraints'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
+            bin_offset = c.offset(chrom)
+            start_bin = bin_offset + int(np.rint(float(start) / resolution))
+            end_bin = bin_offset + int(np.rint(float(end) / resolution)) + 1
+            max_bin = bin_offset + int(
+                np.rint(c.chromsizes[chrom] / resolution)
+            )
+            dom_len = end_bin - start_bin
+            abs_padding = int(np.rint((dom_len / 2) * padding))
 
-            # exclude if too close together (sort of redundant)
-            if abs(start - end) < 10 * resolution:
-                logger.info((
-                    'Exclude domain #{} because start and end is too close'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
+            if max_bin - end_bin > abs_padding and start_bin > abs_padding:
+                start_bin -= abs_padding
+                end_bin += abs_padding
 
-            start_bin = int(np.rint(float(start) / resolution))
-            end_bin = int(np.rint(float(end) / resolution))
-            dom_len = end_bin - start_bin + 1
+            dom_len = end_bin - start_bin
 
-            if fetch_chr:
-                if not chrom == last_chrom:
-                    data = c.matrix(balance=balanced).fetch(chrom)
-            else:
-                data = c.matrix(balance=balanced)
+            data = c.matrix(
+                as_pixels=True, balance=False, max_chunk=np.inf
+            )[start_bin:end_bin, start_bin:end_bin]
 
-            if start_bin - dom_len < 0:
-                logger.info((
-                    'Exclude domain #{} because too few bins'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
+            bins = c.bins(convert_enum=False)[['weight']]
+            data = cooler.annotate(data, bins, replace=False)
+            data['rel_bin1'] = data['bin1_id'] - start_bin
+            data['rel_bin2'] = data['bin2_id'] - start_bin
 
-            if end_bin + dom_len >= len(data):
-                logger.info((
-                    'Exclude domain #{} because it\'s larger than the data'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
+            data['balanced'] = (
+                data['count'] * data['weight1'] * data['weight2']
+            )
+            data['idx1'] = (data['rel_bin1'] * dom_len) + data['rel_bin2']
+            data['idx2'] = (data['rel_bin2'] * dom_len) + data['rel_bin1']
 
-            singleMap = 1. * (data[
-                start_bin - padding:end_bin + padding + 1,
-                start_bin - padding:end_bin + padding + 1
-            ])
+            singleMap = np.zeros(dom_len**2, dtype=np.float32)
+            singleMap[data['idx1']] = np.nan_to_num(data['balanced'])
+            singleMap[data['idx2']] = np.nan_to_num(data['balanced'])
+            singleMap = singleMap.reshape((dom_len, dom_len))
 
             futureMap = futureMap + zoomArray(
-                singleMap, futureMap.shape
+                singleMap, futureMap.shape, order=1
             ).copy()
 
-            # Normalize
-            max_val = np.max(futureMap)
+            # Normalize min
+            min_val = np.min(futureMap)
+            futureMap -= min_val
+
+            # Normalize max
+            if ignore_diags > 0:
+                futureMap[np.diag_indices(dim)] = 0
+
+                if ignore_diags > 1:
+                    for i in range(1, ignore_diags):
+                        idx = np.diag_indices(dim)
+                        print(i, ((idx[0] + i)[:-i], (idx[1] + i)[:-i]))
+
+                        futureMap[((idx[0] - i)[i:], (idx[1])[i:])] = 0
+                        futureMap[((idx[0] + i)[:-i], (idx[1])[:-i])] = 0
+
+            max_val = np.percentile(futureMap, percentile)
+            futureMap = np.clip(futureMap, 0, max_val)
+
             if max_val > 0:
                 futureMap /= max_val
 
             domains.append(futureMap)
-
-            last_chrom = chrom
 
     return domains
 
@@ -618,7 +624,7 @@ def zoomArray(
     zoomMultipliers = np.array(tempShape) / np.array(inShape) + 0.0000001
     assert zoomMultipliers.min() >= 1
 
-    # applying scipy.ndimage.zoom
+    # applying zoom
     rescaled = zoomFunction(inArray, zoomMultipliers, **zoomKwargs)
 
     for ind, mult in enumerate(mults):

@@ -69,14 +69,24 @@ def domains_by_loci(request):
         dims = 22
 
     try:
-        balanced = bool(request.GET.get('balanced', False))
+        no_balance = bool(request.GET.get('no_balance', False))
     except ValueError:
-        balanced = False
+        no_balance = False
 
     try:
-        padding = int(request.GET.get('padding', 4))
+        padding = int(request.GET.get('padding', 10))
     except ValueError:
-        padding = 4
+        padding = 10
+
+    try:
+        percentile = float(request.GET.get('percentile', 100.0))
+    except ValueError:
+        percentile = 100.0
+
+    try:
+        ignore_diags = int(request.GET.get('ignore-diags', 0))
+    except ValueError:
+        ignore_diags = 0
 
     '''
     Loci list must be of type:
@@ -154,8 +164,10 @@ def domains_by_loci(request):
                     loci_lists[dataset][zoomout_level],
                     zoomout_level=zoomout_level,
                     dim=dims,
-                    balanced=balanced,
-                    padding=padding
+                    balanced=not no_balance,
+                    padding=padding,
+                    percentile=percentile,
+                    ignore_diags=ignore_diags
                 )
 
                 if precision > 0:
