@@ -123,7 +123,7 @@ def get_domains_by_loc(
     cooler_file,
     loci,
     dim=64,
-    balanced=False,
+    balanced=True,
     zoomout_level=0,
     minSize=100000,
     maxSize=10000000,
@@ -175,15 +175,19 @@ def get_domains_by_loc(
             data['rel_bin1'] = data['bin1_id'] - start_bin
             data['rel_bin2'] = data['bin2_id'] - start_bin
 
-            data['balanced'] = (
-                data['count'] * data['weight1'] * data['weight2']
-            )
+            if balanced:
+                data['final'] = (
+                    data['count'] * data['weight1'] * data['weight2']
+                )
+            else:
+                data['final'] = data['count']
+
             data['idx1'] = (data['rel_bin1'] * dom_len) + data['rel_bin2']
             data['idx2'] = (data['rel_bin2'] * dom_len) + data['rel_bin1']
 
             singleMap = np.zeros(dom_len**2, dtype=np.float32)
-            singleMap[data['idx1']] = np.nan_to_num(data['balanced'])
-            singleMap[data['idx2']] = np.nan_to_num(data['balanced'])
+            singleMap[data['idx1']] = np.nan_to_num(data['final'])
+            singleMap[data['idx2']] = np.nan_to_num(data['final'])
             singleMap = singleMap.reshape((dom_len, dom_len))
 
             futureMap = futureMap + zoomArray(

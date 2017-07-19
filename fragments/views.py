@@ -69,7 +69,7 @@ def domains_by_loci(request):
         dims = 22
 
     try:
-        no_balance = bool(request.GET.get('no_balance', False))
+        no_balance = bool(request.GET.get('no-balance', False))
     except ValueError:
         no_balance = False
 
