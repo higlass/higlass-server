@@ -127,7 +127,8 @@ def get_frag_by_loc(
     balanced=True,
     padding=None,
     percentile=100.0,
-    ignore_diags=0
+    ignore_diags=0,
+    no_normalize=False
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
@@ -146,7 +147,8 @@ def get_frag_by_loc(
             padding=padding,
             balanced=balanced,
             percentile=percentile,
-            ignore_diags=ignore_diags
+            ignore_diags=ignore_diags,
+            no_normalize=no_normalize
         )
 
     return fragments
@@ -240,7 +242,8 @@ def collect_frags(
     padding=0,
     balanced=True,
     percentile=100.0,
-    ignore_diags=0
+    ignore_diags=0,
+    no_normalize=False
 ):
     fragments = np.zeros((len(loci), dim, dim))
 
@@ -255,7 +258,8 @@ def collect_frags(
             padding=padding,
             balanced=balanced,
             percentile=percentile,
-            ignore_diags=ignore_diags
+            ignore_diags=ignore_diags,
+            no_normalize=no_normalize
         )
 
         k += 1
@@ -348,7 +352,8 @@ def get_frag(
     normalize: bool = True,
     balanced: bool = True,
     percentile: float = 100.0,
-    ignore_diags: int = 0
+    ignore_diags: int = 0,
+    no_normalize: bool = False
 ) -> np.ndarray:
     """
     Retrieves a matrix fragment.
@@ -389,6 +394,9 @@ def get_frag(
         ignore_diags:
             Number of diagonals to be ignored, i.e., set to 0.
             Defaults to `0`.
+        no_normalize:
+            If `true` the returned matrix is not normalized.
+            Defaults to `False`.
 
     Returns:
 
@@ -513,8 +521,9 @@ def get_frag(
         scaled = True
 
     # Normalize by minimum
-    min_val = np.min(frag)
-    frag -= min_val
+    if not no_normalize:
+        min_val = np.min(frag)
+        frag -= min_val
 
     # Remove diagonals
     if ignore_diags > 0:
@@ -534,11 +543,12 @@ def get_frag(
                 'Ignoring the diagonal only supported for squared features'
             )
 
-    # Normalize by maximum
+    # Capp by percentile
     max_val = np.percentile(frag, percentile)
     frag = np.clip(frag, 0, max_val)
 
-    if max_val > 0:
+    # Normalize by maximum
+    if not no_normalize and max_val > 0:
         frag /= max_val
 
     if not scaled:
