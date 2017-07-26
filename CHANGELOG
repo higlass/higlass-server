@@ -2,10 +2,11 @@ v1.1.0 (2017-07-26)
 
 - Extend endpoint for retrieval of normalized domains
 - Retrieve complete snippets (and not just the upper triangle)
-- Add option to balance domain snippets
-- Add percentage-based padding to domain snippets
-- Add diagonal ignoring to domain snippets
-- Add percentile clipping to domain snippets
+- Add option to balance the fragment endpoint
+- Add percentage-based padding to the fragment endpoint
+- Add diagonal ignoring to the fragment endpoint
+- Add percentile clipping to the fragment endpoint
+- Add [0,1]-normalization ignoring to the fragment endpoint
 
 v1.0.4 (2017-07-14)
 
