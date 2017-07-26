@@ -48,7 +48,12 @@ def fragments_by_loci(request):
     Return:
 
     '''
-    loci = request.data.get('loci', [])
+    try:
+        loci = request.data.get('loci', [])
+    except AttributeError:
+        loci = request.data
+    except:
+        loci = []
 
     try:
         precision = int(request.GET.get('precision', False))

@@ -63,16 +63,54 @@ class FragmentsTest(dt.TestCase):
 
         self.assertEqual(len(ret['fragments'][0][0]), 22)
 
+    def test_both_body_data_types(self):
+        loci = [
+            [
+                "chr1",
+                1000000000,
+                2000000000,
+                "1",
+                1000000000,
+                2000000000,
+                "c1",
+                0
+            ]
+        ]
+
+        obj = {
+            "loci": loci
+        }
+
+        response = self.client.post(
+            '/api/v1/fragments_by_loci/?precision=2&dims=22',
+            json.dumps(obj),
+            content_type="application/json"
+        )
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        mat1 = np.array(ret['fragments'][0], float)
+
+        response = self.client.post(
+            '/api/v1/fragments_by_loci/?precision=2&dims=22',
+            json.dumps(loci),
+            content_type="application/json"
+        )
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        mat2 = np.array(ret['fragments'][0], float)
+
+        self.assertTrue(np.array_equal(mat1, mat2))
+
     def test_domains_by_loci(self):
         data = {
             "loci": [
                 [
                     "chr1",
                     0,
-                    5000000,
+                    2000000000,
                     "1",
                     0,
-                    5000000,
+                    2000000000,
                     "c1",
                     0
                 ]
