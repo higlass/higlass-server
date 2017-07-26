@@ -21,7 +21,6 @@ from fragments.utils import (
     calc_measure_size,
     calc_measure_noise,
     calc_measure_sharpness,
-    get_domains_by_loc,
     get_frag_by_loc,
     get_intra_chr_loops_from_looplist,
     rel_loci_2_obj
