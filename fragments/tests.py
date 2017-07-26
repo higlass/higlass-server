@@ -77,7 +77,7 @@ class FragmentsTest(dt.TestCase):
         }
 
         response = self.client.post(
-            '/api/v1/domains_by_loci/?precision=2&dims=44',
+            '/api/v1/fragments_by_loci/?precision=2&dims=44',
             json.dumps(data),
             content_type="application/json"
         )
