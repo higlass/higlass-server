@@ -39,7 +39,6 @@ v0.7.6 (2017-07-08)
 v0.7.5 (2017-07-07)
 
 - Use the binsizes for the individual zoom levels
->>>>>>> develop
 
 v0.7.4 (2017-06-20)
 
