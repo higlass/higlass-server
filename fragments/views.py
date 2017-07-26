@@ -85,6 +85,11 @@ def fragments_by_loci(request):
     except ValueError:
         ignore_diags = 0
 
+    try:
+        no_normalize = bool(request.GET.get('no-normalize', False))
+    except ValueError:
+        no_normalize = False
+
     '''
     Loci list must be of type:
     0: chrom1
@@ -164,7 +169,8 @@ def fragments_by_loci(request):
                     balanced=not no_balance,
                     padding=padding,
                     percentile=percentile,
-                    ignore_diags=ignore_diags
+                    ignore_diags=ignore_diags,
+                    no_normalize=no_normalize
                 )
 
                 if precision > 0:
