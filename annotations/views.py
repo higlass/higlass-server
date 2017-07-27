@@ -38,3 +38,23 @@ def annotation(request: HttpRequest) -> JsonResponse:
         return annotation_get(request)
 
     return annotation_create(request)
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes((IsAuthenticatedOrReadOnly,))
+def annotation_set(request: HttpRequest) -> JsonResponse:
+    """Get or create an annotation set.
+
+    Args:
+        request:
+            Incoming HTTP request
+
+    Returns:
+        JSON response.
+    """
+
+    if request.method == 'GET':
+        return annotation_set_get(request)
+
+    return annotation_set_create(request)
