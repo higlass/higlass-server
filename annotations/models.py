@@ -1,6 +1,5 @@
-from __future__ import unicode_literals
-
 import slugid
+import uuid
 
 from django.db import models
 from tilsets.models import Tileset
@@ -58,10 +57,11 @@ class Pattern(models.Model):
     Since we can only coarsify raw data the zoom out level makes most sense to
     me as it has a natural start while the zoom (in) level does not.
     """
-    zoom_out_level = models.IntegerField(blank=True, null=True, default=None)
+    zoom_out_level = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ('updated',)
+        unique_together = ('locus', 'tileset', 'zoom_out_level')
 
     def __str__(self):
         return "Pattern [uuid: " + self.uuid + ']'
@@ -71,7 +71,8 @@ class Annotation(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    slug = models.SlugField(max_length=100, unique=True, default=slugid.nice)
+    slug = models.SlugField(max_length=100, blank=True, null=True, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     description = models.TextField()
     patterns = models.ManyToManyField(Pattern)
@@ -90,7 +91,8 @@ class AnnotationSet(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    slug = models.SlugField(max_length=100, unique=True, default=slugid.nice)
+    slug = models.SlugField(max_length=100, blank=True, null=True, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     description = models.TextField()
     annotations = models.ManyToManyField(Annotation)
