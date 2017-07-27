@@ -117,12 +117,12 @@ def annotation_get(request: HttpRequest) -> JsonResponse:
     """
 
     try:
-        uuid = request.GET.get('precision', None)
+        uuid = request.GET.get('uuid', None)
     except ValueError:
         uuid = None
 
     try:
-        slug = request.GET.get('precision', None)
+        slug = request.GET.get('slug', None)
     except ValueError:
         slug = None
 
