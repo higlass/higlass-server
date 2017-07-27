@@ -97,3 +97,21 @@ For example:
 - precision _(int)_:
 
   Determines the float precision of the returned fragment. Defaults to `2`.
+
+**Return** _(obj)_:
+
+```
+{
+  "fragments": [
+    [
+      [0, 0.48, 0, 0.04],
+      [0.48, 0, 1, 0.07],
+      [0, 1, 0, 0.47],
+      [0.04, 0.07, 0.47, 0]
+    ],
+    ...
+  ]
+}
+```
+
+_(This example comes from a request of `/api/v1/fragments_by_loci/?precision=2&dims=4&ignore-diags=1&percentile=99`)_
