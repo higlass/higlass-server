@@ -87,9 +87,9 @@ def annotation_set_get(request: HttpRequest) -> JsonResponse:
         slug = None
 
     try:
-        fetch_annotations = request.GET.get('fetch-annotations', False)
+        fetch_patterns = request.GET.get('fetch-patterns', False)
     except ValueError:
-        fetch_annotations = False
+        fetch_patterns = False
 
     if not uuid and not slug:
         return JsonResponse({
@@ -102,8 +102,8 @@ def annotation_set_get(request: HttpRequest) -> JsonResponse:
     if slug:
         kwargs['slug'] = slug
 
-    prefetch = 'annotations'
-    if fetch_annotations:
+    prefetch = 'annotations__patterns'
+    if fetch_patterns:
         prefetch = 'annotations__patterns__locus__tileset'
 
     try:
@@ -122,9 +122,10 @@ def annotation_set_get(request: HttpRequest) -> JsonResponse:
     for annotation in annotation_set.annotations.all():
         patterns = []
 
-        if fetch_annotations:
+        if fetch_patterns:
             for pattern in annotation.patterns.all():
                 pattern.append({
+                    'uuid': pattern.uuid,
                     'chrom1': pattern.locus.chrom1,
                     'start1': pattern.locus.start1,
                     'end1': pattern.locus.end1,
