@@ -1,3 +1,7 @@
+v1.1.2 (2017-08-08)
+
+- Return the created field as part of the serializer
+
 v1.1.1 (2017-08-08)
 
 - Introduced case insensitive ordering
