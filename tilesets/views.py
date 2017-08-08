@@ -6,6 +6,7 @@ import csv
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
 import django.db.models as dbm
+import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import higlass_server.settings as hss
@@ -697,9 +698,9 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         if 'o' in request.GET:
             if 'r' in request.GET:
-                queryset = queryset.order_by('-' + request.GET['o'])
+                queryset = queryset.order_by(dbmf.Lower(request.GET['o']).desc())
             else:
-                queryset = queryset.order_by(request.GET['o'])
+                queryset = queryset.order_by(dbmf.Lower(request.GET['o']).asc())
 
         #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         page = self.paginate_queryset(queryset)

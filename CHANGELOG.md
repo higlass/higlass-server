@@ -1,3 +1,7 @@
+v1.1.1 (2017-08-08)
+
+- Introduced case insensitive ordering
+
 v1.1.0 (2017-07-26)
 
 - Extend endpoint for retrieval of normalized domains
