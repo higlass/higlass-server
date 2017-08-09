@@ -14,14 +14,19 @@ from rest_framework.decorators import (
     authentication_classes,
     permission_classes
 )
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
 logger = logging.getLogger(__name__)
 
+AUTH_CLASSES = (
+    JSONWebTokenAuthentication, SessionAuthentication, BasicAuthentication
+)
+
 
 @api_view(['GET', 'POST'])
-@authentication_classes((SessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
 @permission_classes((IsAuthenticatedOrReadOnly,))
 def annotation(request: HttpRequest) -> JsonResponse:
     """Get or create an annotation.
@@ -41,7 +46,7 @@ def annotation(request: HttpRequest) -> JsonResponse:
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes((SessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
 @permission_classes((IsAuthenticatedOrReadOnly,))
 def annotation_set(request: HttpRequest) -> JsonResponse:
     """Get or create an annotation set.
