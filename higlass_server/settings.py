@@ -179,7 +179,8 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',  # this is default
+    # 'django.contrib.auth.backends.ModelBackend',  # this is default
+    'higlass_server.backends.UsernameOrEmailBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
