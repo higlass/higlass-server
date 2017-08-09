@@ -37,14 +37,22 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.gzip import gzip_page
-from rest_framework import generics
-from rest_framework import viewsets
-from rest_framework.decorators import api_view, authentication_classes
-from rest_framework.authentication import BasicAuthentication
-from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
+from rest_framework import generics, viewsets
+from rest_framework.authentication import (
+    BasicAuthentication, SessionAuthentication
+)
+from rest_framework.decorators import (
+    api_view, authentication_classes, permission_classes
+)
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from .tiles import make_tile
 
 from higlass_server.utils import getRdb
+
+AUTH_CLASSES = (
+    JSONWebTokenAuthentication, SessionAuthentication, BasicAuthentication
+)
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +246,7 @@ def generate_tile(tile_id, request):
             transform_method = tile_id_parts[4]
         else:
             transform_method = 'default'
-        
+
         tile_value = make_cooler_tile(
             get_datapath(tileset.datafile.url), tile_position,
             transform_method
@@ -260,6 +268,8 @@ class UserDetail(generics.RetrieveAPIView):
     serializer_class = tss.UserSerializer
 
 @api_view(['GET'])
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def uids_by_filename(request):
     '''
     Retrieve a list uids corresponding to a given filename
@@ -272,7 +282,8 @@ def uids_by_filename(request):
     return JsonResponse({"count": len(queryset), "results": serializer.data})
 
 @api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def available_chrom_sizes(request):
     '''
     Get the list of available chromosome size lists.
@@ -292,7 +303,8 @@ def available_chrom_sizes(request):
 
 
 @api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def sizes(request):
     '''Return chromosome sizes.
 
@@ -429,6 +441,8 @@ def sizes(request):
 
 
 @api_view(['GET'])
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def suggest(request):
     '''
     Suggest gene names based on the input text
@@ -450,6 +464,8 @@ def suggest(request):
 
 
 @api_view(['GET', 'POST'])
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((AllowAny,))
 def viewconfs(request):
     '''
     Retrieve a viewconfs with a given uid
@@ -474,7 +490,7 @@ def viewconfs(request):
             }, status=403)
 
         #print("request.body:", request.body)
-        viewconf_wrapper = json.loads(request.body)
+        viewconf_wrapper = json.loads(request.body.decode('utf-8'))
         uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
         try:
@@ -520,6 +536,8 @@ def viewconfs(request):
 
 
 @api_view(['GET'])
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def tiles(request):
     '''Retrieve a set of tiles
 
@@ -561,6 +579,8 @@ def get_datapath(relpath):
 
 
 @api_view(['GET'])
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((IsAuthenticatedOrReadOnly,))
 def tileset_info(request):
     ''' Get information about a tileset
 

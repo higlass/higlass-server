@@ -9,11 +9,17 @@ try:
 except:
     import pickle
 
-from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
 from django.http import JsonResponse
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.authentication import (
+    BasicAuthentication, SessionAuthentication
+)
+from rest_framework.decorators import (
+    api_view, authentication_classes, permission_classes
+)
+from rest_framework.permissions import AllowAny
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from tilesets.models import Tileset
 from tilesets.views import get_datapath
 from fragments.utils import (
@@ -33,9 +39,14 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_MEASURES = ['distance-to-diagonal', 'noise', 'size', 'sharpness']
 
+AUTH_CLASSES = (
+    JSONWebTokenAuthentication, SessionAuthentication, BasicAuthentication
+)
+
 
 @api_view(['POST'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((AllowAny,))
 def fragments_by_loci(request):
     '''
     Retrieve a list of locations and return the corresponding matrix fragments
@@ -205,7 +216,8 @@ def fragments_by_loci(request):
 
 
 @api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((AllowAny,))
 def fragments_by_chr(request):
     chrom = request.GET.get('chrom', False)
     cooler_file = request.GET.get('cooler', False)
@@ -403,7 +415,8 @@ def fragments_by_chr(request):
 
 
 @api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@authentication_classes(AUTH_CLASSES)
+@permission_classes((AllowAny,))
 def loci(request):
     chrom = request.GET.get('chrom', False)
     loop_list = request.GET.get('loop-list', False)
