@@ -20,11 +20,13 @@ from rest_framework_jwt.views import (
     refresh_jwt_token,
     verify_jwt_token
 )
+from .views import current
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api/v1/', include('tilesets.urls')),
     url(r'^api/v1/', include('fragments.urls')),
+    url(r'^api/v1/current/', current),
     url(r'^api-token-auth/', obtain_jwt_token),
     url(r'^api-token-refresh/', refresh_jwt_token),
     url(r'^api-token-verify/', verify_jwt_token),
