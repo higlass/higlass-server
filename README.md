@@ -28,6 +28,7 @@ git clone https://github.com/hms-dbmi/higlass-server && cd higlass-server
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
 pip install --upgrade -r ./requirements-secondary.txt
+python manage.py runserver
 ```
 
 ---
