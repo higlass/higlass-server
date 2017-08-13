@@ -345,3 +345,52 @@ For example:
 ```
 
 _(This example comes from a request of `/api/v1/fragments_by_loci/?precision=2&dims=4&ignore-diags=1&percentile=99`)_
+
+---
+
+## `/api/v1/chrom-sizes/`
+
+### `GET`
+
+**Parameters**:
+
+- id _(string)_:
+
+  The UUID of the chrom-sizes.
+
+- type _(string)_:
+
+  Return type. Currently supports `tsv` and `json`.
+
+- cum _(boolean)_:
+
+  If `type` is `json`, one can additionally return the cumulative size by setting this to a truthy value like `1`.
+
+**Return**:
+
+A TSV response looks like this:
+```
+chr1    3
+chr2    2
+chr2    1
+...
+```
+
+A JSON response looks like this:
+```javascript
+{
+    chr1: {
+        size: 3,
+        offset: 0
+    },
+    chr2: {
+        size: 2,
+        offset: 3
+    },
+    chr2: {
+        size: 1,
+        offset: 5
+    },
+    ...
+}
+```
