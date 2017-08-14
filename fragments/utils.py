@@ -119,111 +119,37 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
-def get_domains_by_loc(
-    cooler_file,
-    loci,
-    dim=64,
-    balanced=False,
-    zoomout_level=0,
-    minSize=100000,
-    maxSize=10000000,
-    padding=4
-):
-    with h5py.File(cooler_file, 'r') as f:
-        c = get_cooler(f, zoomout_level)
-        fetch_chr = c.info['bin-size'] >= 4000
-
-        resolution = c.info['bin-size']
-
-        domains = []
-
-        last_chrom = None
-
-        for index, locus in enumerate(loci):
-            chrom = 'chr{}'.format(locus[0])
-            start = locus[1]
-            end = locus[2]
-
-            futureMap = np.zeros((dim, dim), float)
-
-            # exclude by size
-            if ((end - start) < minSize) or ((end - start) > maxSize):
-                logger.info((
-                    'Exclude domain #{} because of size constraints'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
-
-            # exclude if too close together (sort of redundant)
-            if abs(start - end) < 10 * resolution:
-                logger.info((
-                    'Exclude domain #{} because start and end is too close'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
-
-            start_bin = int(np.rint(float(start) / resolution))
-            end_bin = int(np.rint(float(end) / resolution))
-            dom_len = end_bin - start_bin + 1
-
-            if fetch_chr:
-                if not chrom == last_chrom:
-                    data = c.matrix(balance=balanced).fetch(chrom)
-            else:
-                data = c.matrix(balance=balanced)
-
-            if start_bin - dom_len < 0:
-                logger.info((
-                    'Exclude domain #{} because too few bins'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
-
-            if end_bin + dom_len >= len(data):
-                logger.info((
-                    'Exclude domain #{} because it\'s larger than the data'
-                ).format(index))
-                futureMap.fill(-1.0)
-                domains.append(futureMap.copy())
-                continue
-
-            singleMap = 1. * (data[
-                start_bin - padding:end_bin + padding + 1,
-                start_bin - padding:end_bin + padding + 1
-            ])
-
-            futureMap = futureMap + zoomArray(
-                singleMap, futureMap.shape
-            ).copy()
-
-            # Normalize
-            max_val = np.max(futureMap)
-            if max_val > 0:
-                futureMap /= max_val
-
-            domains.append(futureMap)
-
-            last_chrom = chrom
-
-    return domains
-
-
 def get_frag_by_loc(
     cooler_file,
     loci,
-    is_rel=True,
-    dim=22,
-    balanced=True,
+    dim,
     zoomout_level=0,
-    padding=None
+    balanced=True,
+    padding=None,
+    percentile=100.0,
+    ignore_diags=0,
+    no_normalize=False
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
 
-        fragments = collect_frags(c, loci, is_rel, dim, balanced, padding)
+        # Calculate the offsets once
+        resolution = c.info['bin-size']
+        chromsizes = np.ceil(c.chromsizes / resolution).astype(int)
+        offsets = np.cumsum(chromsizes) - chromsizes
+
+        fragments = collect_frags(
+            c,
+            loci,
+            dim,
+            resolution,
+            offsets,
+            padding=padding,
+            balanced=balanced,
+            percentile=percentile,
+            ignore_diags=ignore_diags,
+            no_normalize=no_normalize
+        )
 
     return fragments
 
@@ -307,63 +233,36 @@ def check_cis_only(loci):
     return np.all(loci[0:, 0] == loci[0:, 3])
 
 
-def collect_frags(c, loci, is_rel=False, dim=22, balanced=True, padding=None):
-    chr_info = get_chrom_names_cumul_len(c)
-    cis_only = check_cis_only(loci)
+def collect_frags(
+    c,
+    loci,
+    dim,
+    resolution,
+    offsets,
+    padding=0,
+    balanced=True,
+    percentile=100.0,
+    ignore_diags=0,
+    no_normalize=False
+):
+    fragments = np.zeros((len(loci), dim, dim))
 
-    if cis_only and c.info['bin-size'] >= 4000:
-        # Sort loci by chromosome
-        loci.sort(key=lambda locus: locus[0])
+    k = 0
+    for locus in loci:
+        fragments[k] = get_frag(
+            c,
+            resolution,
+            offsets,
+            *locus[:6],
+            width=dim,
+            padding=padding,
+            balanced=balanced,
+            percentile=percentile,
+            ignore_diags=ignore_diags,
+            no_normalize=no_normalize
+        )
 
-        fragments = np.zeros((len(loci), dim, dim))
-
-        k = 0
-        last_chrom = None
-        pixels = None
-        for locus in loci:
-            chrom = 'chr{}'.format(loci[k][0])
-
-            if (
-                not chrom == last_chrom or
-                pixels is None
-            ):
-                pixels = c.matrix(balance=balanced).fetch(chrom)
-
-            fragments[k] = get_cis_frag(
-                c,
-                chr_info,
-                pixels,
-                locus[1],  # start 1
-                locus[2],  # end 1
-                locus[4],  # start 2
-                locus[5],  # end 2,
-                balanced=balanced,
-                dim=dim,
-                padding=padding
-            )
-
-            k += 1
-
-            last_chrom = chrom
-
-    else:
-        if is_rel:
-            loci = rel_2_abs_loci(loci, chr_info)
-
-        fragments = np.zeros((len(loci), dim, dim))
-
-        k = 0
-        for locus in loci:
-            fragments[k] = get_frag(
-                c,
-                chr_info,
-                *locus,
-                balanced=balanced,
-                dim=dim,
-                padding=padding
-            )
-
-            k += 1
+        k += 1
 
     return fragments
 
@@ -438,134 +337,225 @@ def abs_coord_2_bin(c, pos, chr_info):
 
 
 def get_frag(
-    c,
-    chr_info,
-    start_pos_1,
-    end_pos_1,
-    start_pos_2,
-    end_pos_2,
-    padding=10,
-    normalize=True,
-    balanced=True,
-    dim=22
-):
-    resolution = c.info['bin-size']
+    c: cooler.api.Cooler,
+    resolution: int,
+    offsets: pd.core.series.Series,
+    chrom1: str,
+    start1: int,
+    end1: int,
+    chrom2: str,
+    start2: int,
+    end2: int,
+    width: int = 22,
+    height: int = -1,
+    padding: int = 10,
+    normalize: bool = True,
+    balanced: bool = True,
+    percentile: float = 100.0,
+    ignore_diags: int = 0,
+    no_normalize: bool = False
+) -> np.ndarray:
+    """
+    Retrieves a matrix fragment.
 
-    center_start_bin_1 = int(np.rint(float(start_pos_1) / resolution))
-    center_start_bin_2 = int(np.rint(float(start_pos_2) / resolution))
-    center_end_bin_1 = int(np.rint(float(end_pos_1) / resolution))
-    center_end_bin_2 = int(np.rint(float(end_pos_2) / resolution))
+    Args:
+        c:
+            Cooler object.
+        chrom1:
+            Chromosome 1. E.g.: `1` or `chr1`.
+        start1:
+            First start position in base pairs relative to `chrom1`.
+        end1:
+            First end position in base pairs relative to `chrom1`.
+        chrom2:
+            Chromosome 2. E.g.: `1` or `chr1`.
+        start2:
+            Second start position in base pairs relative to `chrom2`.
+        end2:
+            Second end position in base pairs relative to `chrom2`.
+        offsets:
+            Pandas Series of chromosome offsets in bins.
+        width:
+            Width of the fragment in pixels.
+        height:
+            Height of the fragments in pixels. If `-1` `height` will equal
+            `width`. Defaults to `-1`.
+        padding: Percental padding related to the dimension of the fragment.
+            E.g., 10 = 10% padding (5% per side). Defaults to `10`.
+        normalize:
+            If `True` the fragment will be normalized to [0, 1].
+            Defaults to `True`.
+        balanced:
+            If `True` the fragment will be balanced using Cooler.
+            Defaults to `True`.
+        percentile:
+            Percentile clip. E.g., For 99 the maximum will be
+            capped at the 99-percentile. Defaults to `100.0`.
+        ignore_diags:
+            Number of diagonals to be ignored, i.e., set to 0.
+            Defaults to `0`.
+        no_normalize:
+            If `true` the returned matrix is not normalized.
+            Defaults to `False`.
 
-    padding_1 = int((dim - (center_end_bin_1 - center_start_bin_1)) / 2)
-    padding_2 = int((dim - (center_end_bin_2 - center_start_bin_2)) / 2)
+    Returns:
 
-    # abs_coord_2_bin(...) returns the inclusive bin ID but in the python world
-    # the end position is always exclusive
-    start_bin_1 = max(abs_coord_2_bin(c, start_pos_1, chr_info) - padding_1, 0)
-    start_bin_2 = max(abs_coord_2_bin(c, start_pos_2, chr_info) - padding_2, 0)
-    end_bin_1 = abs_coord_2_bin(c, end_pos_1, chr_info) + padding_1
-    end_bin_2 = abs_coord_2_bin(c, end_pos_2, chr_info) + padding_2
+    """
 
-    real_dim = abs(start_bin_1 - end_bin_1)
-    if real_dim < dim:
-        end_bin_1 += dim - real_dim
+    if height is -1:
+        height = width
 
-    real_dim = abs(start_bin_2 - end_bin_2)
-    if real_dim < dim:
-        end_bin_2 += dim - real_dim
+    # Restrict padding to be [0, 100]%
+    padding = min(100, max(0, padding)) / 100
 
-    out = c.matrix(balance=balanced)[
-        start_bin_1:end_bin_1, start_bin_2:end_bin_2
-    ][0:dim, 0:dim]
+    # Normalize chromosome names
+    if not chrom1.startswith('chr'):
+        chrom1 = 'chr{}'.format(chrom1)
+    if not chrom2.startswith('chr'):
+        chrom2 = 'chr{}'.format(chrom2)
+
+    # Get chromosome offset
+    offset1 = offsets[chrom1]
+    offset2 = offsets[chrom2]
+
+    start_bin1 = offset1 + int(round(float(start1) / resolution))
+    end_bin1 = offset1 + int(round(float(end1) / resolution)) + 1
+
+    start_bin2 = offset2 + int(round(float(start2) / resolution))
+    end_bin2 = offset2 + int(round(float(end2) / resolution)) + 1
+
+    # Apply percental padding
+    padding1 = int(round(((end_bin1 - start_bin1) / 2) * padding))
+    padding2 = int(round(((end_bin2 - start_bin2) / 2) * padding))
+    start_bin1 -= padding1
+    start_bin2 -= padding2
+    end_bin1 += padding1
+    end_bin2 += padding2
+
+    # Get the size of the region
+    dim1 = end_bin1 - start_bin1
+    dim2 = end_bin2 - start_bin2
+
+    # Get additional absolute padding if needed
+    padding1 = 0
+    if dim1 < width:
+        padding1 = int((width - dim1) / 2)
+        start_bin1 -= padding1
+        end_bin1 += padding1
+
+    padding2 = 0
+    if dim2 < height:
+        padding2 = int((height - dim2) / 2)
+        start_bin2 -= padding2
+        end_bin2 += padding2
+
+    # In case the final dimension does not math the desired domension we
+    # increase the end bin. This can be caused when the padding is not
+    # divisable by 2, since the padding is rounded to the nearest integer.
+    abs_dim1 = abs(start_bin1 - end_bin1)
+    if abs_dim1 < width:
+        end_bin1 += width - abs_dim1
+        abs_dim1 = width
+
+    abs_dim2 = abs(start_bin2 - end_bin2)
+    if abs_dim2 < height:
+        end_bin2 += height - abs_dim2
+        abs_dim2 = height
+
+    # Get the data
+    data = c.matrix(
+        as_pixels=True, balance=False, max_chunk=np.inf
+    )[start_bin1:end_bin1, start_bin2:end_bin2]
+
+    # Annotate pixels for balancing
+    bins = c.bins(convert_enum=False)[['weight']]
+    data = cooler.annotate(data, bins, replace=False)
+
+    # Calculate relative bin IDs
+    rel_bin1 = np.add(data['bin1_id'].values, -start_bin1)
+    rel_bin2 = np.add(data['bin2_id'].values, -start_bin2)
+
+    # Balance counts
+    if balanced:
+        values = data['count'].values.astype(np.float32)
+        values *= data['weight1'].values * data['weight2'].values
+    else:
+        values = data['count'].values
+
+    # Get pixel IDs for the upper triangle
+    idx1 = np.add(np.multiply(rel_bin1, abs_dim1), rel_bin2)
+
+    # Mirror matrix
+    idx2_1 = np.add(data['bin2_id'].values, -start_bin1)
+    idx2_2 = np.add(data['bin1_id'].values, -start_bin2)
+    idx2 = np.add(np.multiply(idx2_1, abs_dim1), idx2_2)
+    validBins = np.where((idx2_1 < abs_dim1) & (idx2_2 >= 0))
+
+    # Ignore diagonals
+    if ignore_diags > 0:
+        diags_start_idx = np.min(
+            np.where(data['bin1_id'].values == data['bin2_id'].values)
+        )
+        diags_start_row = rel_bin1[diags_start_idx] - rel_bin2[diags_start_idx]
+
+    # Copy pixel values onto the final array
+    frag = np.zeros(abs_dim1 * abs_dim2, dtype=np.float32)
+    frag[idx1] = values
+    frag[idx2[validBins]] = values[validBins]
+    frag = frag.reshape((abs_dim1, abs_dim2))
 
     # Store low quality bins
-    low_quality_bins = np.where(np.isnan(out))
+    low_quality_bins = np.where(np.isnan(frag))
 
     # Assign 0 for now to avoid influencing the max values
-    out[low_quality_bins] = 0
+    frag[low_quality_bins] = 0
 
-    max_val = np.max(out)
-    if normalize and max_val > 0:
-        out = out / max_val
+    # Scale array if needed
+    scaled = False
+    scale_x = width / frag.shape[0]
+    if frag.shape[0] > width or frag.shape[1] > height:
+        scaledFrag = np.zeros((width, height), float)
+        frag = scaledFrag + zoomArray(
+            frag, scaledFrag.shape, order=1
+        )
+        scaled = True
 
-    # Reassign a special value to cells with low quality
-    out[low_quality_bins] = -1
+    # Normalize by minimum
+    if not no_normalize:
+        min_val = np.min(frag)
+        frag -= min_val
 
-    return out
+    # Remove diagonals
+    if ignore_diags > 0:
+        if width == height:
+            scaled_row = int(np.rint(diags_start_row / scale_x))
 
+            for i in range(scaled_row, ignore_diags + scaled_row):
+                idx = np.diag_indices(width)
 
-def get_cis_frag(
-    c,
-    chr_info,
-    pixels,
-    start_pos_1,
-    end_pos_1,
-    start_pos_2,
-    end_pos_2,
-    normalize=True,
-    balanced=True,
-    dim=22,
-    padding=10
-):
-    resolution = c.info['bin-size']
+                if i == 0:
+                    frag[np.diag_indices(width)] = 0
+                else:
+                    frag[((idx[0] - i)[i:], (idx[1])[i:])] = 0
+                    frag[((idx[0] + i)[:-i], (idx[1])[:-i])] = 0
+        else:
+            logger.warn(
+                'Ignoring the diagonal only supported for squared features'
+            )
 
-    center_start_bin_1 = int(np.rint(float(start_pos_1) / resolution))
-    center_start_bin_2 = int(np.rint(float(start_pos_2) / resolution))
-    center_end_bin_1 = int(np.rint(float(end_pos_1) / resolution))
-    center_end_bin_2 = int(np.rint(float(end_pos_2) / resolution))
+    # Capp by percentile
+    max_val = np.percentile(frag, percentile)
+    frag = np.clip(frag, 0, max_val)
 
-    padding_1 = int((dim - (center_end_bin_1 - center_start_bin_1)) / 2)
-    padding_2 = int((dim - (center_end_bin_2 - center_start_bin_2)) / 2)
+    # Normalize by maximum
+    if not no_normalize and max_val > 0:
+        frag /= max_val
 
-    start_bin_1 = max(
-        center_start_bin_1 - padding_1, 0
-    )
-    start_bin_2 = max(
-        center_start_bin_2 - padding_2, 0
-    )
-    end_bin_1 = min(
-        center_end_bin_1 + padding_1,
-        pixels.shape[0]
-    )
-    end_bin_2 = min(
-        center_end_bin_2 + padding_2,
-        pixels.shape[1]
-    )
+    if not scaled:
+        # Recover low quality bins
+        frag[low_quality_bins] = -1
 
-    real_dim = abs(start_bin_1 - end_bin_1)
-    if real_dim < dim:
-        diff = dim - real_dim
-
-        if end_bin_1 + diff < pixels.shape[0]:
-            end_bin_1 += diff
-        elif start_bin_1 - diff > 0:
-            start_bin_1 -= diff
-
-    real_dim = abs(start_bin_2 - end_bin_2)
-    if real_dim < dim:
-        diff = dim - real_dim
-
-        if end_bin_2 + diff < pixels.shape[1]:
-            end_bin_2 += diff
-        elif start_bin_2 - diff > 0:
-            start_bin_2 -= diff
-
-    out = pixels[start_bin_1:end_bin_1, start_bin_2:end_bin_2][0:dim, 0:dim]
-
-    # Store low quality bins
-    low_quality_bins = np.where(np.isnan(out))
-
-    # Assign 0 for now to avoid influencing the max values
-    out[low_quality_bins] = 0
-
-    max_val = np.max(out)
-    if normalize and max_val > 0:
-        out = out / max_val
-
-    # Reassign a special value to cells with low quality
-    out[low_quality_bins] = -1
-
-    return out
+    return frag
 
 
 def zoomArray(
@@ -618,7 +608,7 @@ def zoomArray(
     zoomMultipliers = np.array(tempShape) / np.array(inShape) + 0.0000001
     assert zoomMultipliers.min() >= 1
 
-    # applying scipy.ndimage.zoom
+    # applying zoom
     rescaled = zoomFunction(inArray, zoomMultipliers, **zoomKwargs)
 
     for ind, mult in enumerate(mults):

@@ -329,8 +329,18 @@ class CoolerTest(dt.TestCase):
             owner=self.user1,
             coordSystem='hg19',
             coordSystem2='hg19',
+            name="Z",
+            uuid='a')
+
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
             name="v",
-            uuid='sd')
+            uuid='sd1')
 
     def test_order_by(self):
         '''
@@ -358,7 +368,9 @@ class CoolerTest(dt.TestCase):
         contents = json.loads(ret.content)
 
         names = [r['name'] for r in contents['results']]
-        assert(names[0] > names[1])
+
+        assert(names[0].lower() > names[1].lower())
+        assert(names[0].lower() > names[-1].lower())
 
 
     def test_transforms(self):

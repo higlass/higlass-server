@@ -21,7 +21,6 @@ from fragments.utils import (
     calc_measure_size,
     calc_measure_noise,
     calc_measure_sharpness,
-    get_domains_by_loc,
     get_frag_by_loc,
     get_intra_chr_loops_from_looplist,
     rel_loci_2_obj
@@ -33,155 +32,6 @@ rdb = getRdb()
 logger = logging.getLogger(__name__)
 
 SUPPORTED_MEASURES = ['distance-to-diagonal', 'noise', 'size', 'sharpness']
-
-
-@api_view(['POST'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def domains_by_loci(request):
-    '''
-    Retrieve a list of locations and return the corresponding matrix fragments
-    for domains.
-
-    Args:
-
-    request (django.http.HTTPRequest): The request object containing the
-        list of loci.
-
-    Return:
-
-    '''
-
-    loci = request.data.get('loci', [])
-
-    try:
-        precision = int(request.GET.get('precision', False))
-    except ValueError:
-        precision = False
-
-    try:
-        no_cache = bool(request.GET.get('no-cache', False))
-    except ValueError:
-        no_cache = False
-
-    try:
-        dims = int(request.GET.get('dims', 64))
-    except ValueError:
-        dims = 22
-
-    try:
-        balanced = bool(request.GET.get('balanced', False))
-    except ValueError:
-        balanced = False
-
-    try:
-        padding = int(request.GET.get('padding', 4))
-    except ValueError:
-        padding = 4
-
-    '''
-    Loci list must be of type:
-    0: chrom1
-    1: start1
-    2: end1
-    3: chrom2
-    4: start2
-    5: end2
-    6: dataset
-    7: zoomOutLevel [0]
-    '''
-
-    i = 0
-    loci_lists = {}
-    try:
-        for locus in loci:
-            cooler_file = ''
-
-            if locus[6]:
-                if locus[6].endswith('.cool'):
-                    cooler_file = path.join('data', locus[6])
-                else:
-                    try:
-                        cooler_file = get_datapath(
-                            Tileset.objects.get(
-                                uuid=locus[6]
-                            ).datafile.url
-                        )
-                    except AttributeError:
-                        return JsonResponse({
-                            'error': 'Dataset (cooler file) not in database',
-                        }, status=500)
-            else:
-                return JsonResponse({
-                    'error': 'Dataset (cooler file) not specified',
-                }, status=500)
-
-            if cooler_file not in loci_lists:
-                loci_lists[cooler_file] = {}
-
-            if locus[7] not in loci_lists[cooler_file]:
-                loci_lists[cooler_file][locus[7]] = []
-
-            loci_lists[cooler_file][locus[7]].append(locus[0:6] + [i])
-
-            i += 1
-
-    except Exception as e:
-        return JsonResponse({
-            'error': 'Could not convert loci.',
-            'error_message': str(e)
-        }, status=500)
-
-    # Get a unique string for caching
-    dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
-    uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
-
-    # Check if something is cached
-    if not no_cache:
-        try:
-            results = rdb.get('domains_by_loci_%s' % uuid)
-
-            if results:
-                return JsonResponse(pickle.loads(results))
-        except:
-            pass
-
-    matrices = [None] * i
-    try:
-        for dataset in loci_lists:
-            for zoomout_level in loci_lists[dataset]:
-                raw_matrices = get_domains_by_loc(
-                    dataset,
-                    loci_lists[dataset][zoomout_level],
-                    zoomout_level=zoomout_level,
-                    dim=dims,
-                    balanced=balanced,
-                    padding=padding
-                )
-
-                if precision > 0:
-                    raw_matrices = np.around(raw_matrices, decimals=precision)
-
-                i = 0
-                for raw_matrix in raw_matrices:
-                    matrices[loci_lists[dataset][zoomout_level][i][6]] =\
-                        raw_matrix.tolist()
-                    i += 1
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({
-            'error': 'Could not retrieve domains.',
-            'error_message': str(e)
-        }, status=500)
-
-    # Create results
-    results = {
-        'fragments': matrices
-    }
-
-    # Cache results for 30 minutes
-    rdb.set('domains_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
-
-    return JsonResponse(results)
 
 
 @api_view(['POST'])
@@ -198,9 +48,12 @@ def fragments_by_loci(request):
     Return:
 
     '''
-    loci = request.data.get('loci', [])
-
-    print("loci:", loci, type(loci))
+    try:
+        loci = request.data.get('loci', [])
+    except AttributeError:
+        loci = request.data
+    except:
+        loci = []
 
     try:
         precision = int(request.GET.get('precision', False))
@@ -218,16 +71,29 @@ def fragments_by_loci(request):
         dims = 22
 
     try:
-        padding = int(request.GET.get('padding'))
-    except TypeError:
-        padding = None
+        padding = int(request.GET.get('padding', 0))
     except ValueError:
-        padding = None
+        padding = 0
 
     try:
         no_balance = bool(request.GET.get('no-balance', False))
     except ValueError:
         no_balance = False
+
+    try:
+        percentile = float(request.GET.get('percentile', 100.0))
+    except ValueError:
+        percentile = 100.0
+
+    try:
+        ignore_diags = int(request.GET.get('ignore-diags', 0))
+    except ValueError:
+        ignore_diags = 0
+
+    try:
+        no_normalize = bool(request.GET.get('no-normalize', False))
+    except ValueError:
+        no_normalize = False
 
     '''
     Loci list must be of type:
@@ -303,10 +169,13 @@ def fragments_by_loci(request):
                 raw_matrices = get_frag_by_loc(
                     dataset,
                     loci_lists[dataset][zoomout_level],
+                    dims,
                     zoomout_level=zoomout_level,
-                    dim=dims,
                     balanced=not no_balance,
-                    padding=padding
+                    padding=padding,
+                    percentile=percentile,
+                    ignore_diags=ignore_diags,
+                    no_normalize=no_normalize
                 )
 
                 if precision > 0:

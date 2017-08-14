@@ -1,8 +1,20 @@
-v1.1.0 (2017-07-14)
+v1.1.2 (2017-08-08)
 
-- Add endpoint for retrieval of normalized domains
-- Improved performance of fragment retrieval for lower resolutions
-- Retrieve mirrored matrix (and not just the upper triangle)
+- Return the created field as part of the serializer
+
+v1.1.1 (2017-08-08)
+
+- Introduced case insensitive ordering
+
+v1.1.0 (2017-07-26)
+
+- Extend endpoint for retrieval of normalized domains
+- Retrieve complete snippets (and not just the upper triangle)
+- Add option to balance the fragment endpoint
+- Add percentage-based padding to the fragment endpoint
+- Add diagonal ignoring to the fragment endpoint
+- Add percentile clipping to the fragment endpoint
+- Add [0,1]-normalization ignoring to the fragment endpoint
 
 v1.0.4 (2017-07-14)
 
@@ -35,7 +47,6 @@ v0.7.6 (2017-07-08)
 v0.7.5 (2017-07-07)
 
 - Use the binsizes for the individual zoom levels
->>>>>>> develop
 
 v0.7.4 (2017-06-20)
 
