@@ -119,6 +119,44 @@ class FragmentsTest(dt.TestCase):
 
         self.assertTrue(np.array_equal(mat1, mat2))
 
+    def test_negative_start_fragments(self):
+        data = [
+            [
+                "1",
+                0,
+                1,
+                "2",
+                0,
+                1,
+                "c1",
+                20
+            ]
+        ]
+
+        dims = 60
+        dims_h = (dims // 2) - 1
+
+        response = self.client.post(
+            '/api/v1/fragments_by_loci/'
+            '?precision=2&dims={}&no-balance=1'.format(dims),
+            json.dumps(data),
+            content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        self.assertTrue('fragments' in ret)
+
+        mat = np.array(ret['fragments'][0], float)
+
+        # Upper half should be empty
+        self.assertTrue(np.sum(mat[0:dims_h]) == 0)
+
+        # Lower half should not be empty
+        self.assertTrue(np.sum(mat[dims_h:dims]) > 0)
+
     def test_domains_by_loci(self):
         data = {
             "loci": [
