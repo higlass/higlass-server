@@ -462,10 +462,16 @@ def get_frag(
         end_bin2 += height - abs_dim2
         abs_dim2 = height
 
+    # Finally, adjust to negative values.
+    # Since relative bin IDs are adjusted by the start this will lead to a
+    # white offset.
+    real_start_bin1 = start_bin1 if start_bin1 >= 0 else 0
+    real_start_bin2 = start_bin2 if start_bin2 >= 0 else 0
+
     # Get the data
     data = c.matrix(
         as_pixels=True, balance=False, max_chunk=np.inf
-    )[start_bin1:end_bin1, start_bin2:end_bin2]
+    )[real_start_bin1:end_bin1, real_start_bin2:end_bin2]
 
     # Annotate pixels for balancing
     bins = c.bins(convert_enum=False)[['weight']]
