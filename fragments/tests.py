@@ -63,6 +63,24 @@ class FragmentsTest(dt.TestCase):
 
         self.assertEqual(len(ret['fragments'][0][0]), 22)
 
+    def test_string_request_body(self):
+        data = (
+            '{loci: [["chr1", 1000000000, 2000000000, "1",'
+            ' 1000000000, 2000000000, "c1", 0]]}'
+        )
+
+        response = self.client.post(
+            '/api/v1/fragments_by_loci/?precision=2&dims=22',
+            json.dumps(data),
+            content_type="application/json"
+        )
+
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('error' in ret)
+        self.assertTrue('error_message' in ret)
+
     def test_both_body_data_types(self):
         loci = [
             [
