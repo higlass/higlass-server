@@ -48,12 +48,22 @@ def fragments_by_loci(request):
     Return:
 
     '''
+
+    if type(request.data) is str:
+        return JsonResponse({
+            'error': 'Request body needs to be an array or object.',
+            'error_message': 'Request body needs to be an array or object.'
+        }, status=400)
+
     try:
         loci = request.data.get('loci', [])
     except AttributeError:
         loci = request.data
-    except:
-        loci = []
+    except Exception as e:
+        return JsonResponse({
+            'error': 'Could not read request body.',
+            'error_message': str(e)
+        }, status=400)
 
     try:
         precision = int(request.GET.get('precision', False))

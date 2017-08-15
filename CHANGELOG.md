@@ -1,3 +1,8 @@
+v1.1.3 (2017-08-14)
+
+- Fix retrieval of snippets starting at negative positions
+- Return 400 error for unsupported request bodies
+
 v1.1.2 (2017-08-08)
 
 - Return the created field as part of the serializer
