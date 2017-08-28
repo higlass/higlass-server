@@ -456,6 +456,13 @@ class CoolerTest(dt.TestCase):
         assert('min_pos' in contents['md'])
         assert(contents['md']['coordSystem'] == 'hg19')
 
+    def test_get_multi_tiles(self):
+        ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98')
+        content = json.loads(ret.content)
+
+        assert('md.7.92.97' in content)
+        assert('dense' in content['md.7.92.97'])
+
     def test_get_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
         content = json.loads(ret.content)

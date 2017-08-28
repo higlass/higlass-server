@@ -7,7 +7,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def make_tile(zoomLevel, x_pos, y_pos, dset, transform_type='default'):
+def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default'):
     info = dset[1]
     divisor = 2 ** zoomLevel
 

@@ -5,6 +5,7 @@ import base64
 import csv
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
+import collections as col
 import django.db.models as dbm
 import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
@@ -42,7 +43,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.authentication import BasicAuthentication
 from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
-from .tiles import make_tile
+from .tiles import make_tiles
 
 from higlass_server.utils import getRdb
 
@@ -101,7 +102,7 @@ def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
         # tile is out of bounds
         return None
 
-    tile = make_tile(
+    tile = make_tiles(
         tile_position[0],
         tile_position[1],
         tile_position[2],
@@ -131,6 +132,339 @@ def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
     return tile_data
 
 
+def extract_tileset_uid(tile_id):
+    '''
+    Get the tileset uid from a tile id. Should usually be all the text
+    before the first dot.
+
+    Parameters
+    ----------
+    tile_id : str
+        The id of the tile we're getting the tileset info for (e.g. xyz.0.0.1)
+    Returns
+    -------
+    tileset_uid : str
+        The uid of the tileset that this tile comes from
+    '''
+    tile_id_parts = tile_id.split('.')
+    tileset_uuid = tile_id_parts[0]
+
+    return tileset_uuid
+
+def generate_hitile_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a hitile file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_list: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
+        dense = hdft.get_data(
+            h5py.File(
+                get_datapath(tileset.datafile.url)
+            ),
+            tile_position[0],
+            tile_position[1]
+        )
+
+        if len(dense):
+            max_dense = max(dense)
+            min_dense = min(dense)
+        else:
+            max_dense = 0
+            min_dense = 0
+
+        min_f16 = np.finfo('float16').min
+        max_f16 = np.finfo('float16').max
+
+        has_nan = len([d for d in dense if np.isnan(d)]) > 0
+
+        if (
+            not has_nan and
+            max_dense > min_f16 and max_dense < max_f16 and
+            min_dense > min_f16 and min_dense < max_f16
+        ):
+            tile_value = {
+                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
+                'dtype': 'float16'
+            }
+        else:
+            tile_value = {
+                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
+                'dtype': 'float32'
+            }
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
+def generate_beddb_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a beddb file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+
+    for tile_id in tile_ids:
+        tile_position = list(map(int, tile_id_parts[1:3]))
+        tile_value = cdt.get_tile(
+            get_datapath(tileset.datafile.url),
+            tile_position[0],
+            tile_position[1]
+        )
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
+def generate_bed2ddb_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a bed2db file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+
+    for tile_id in tile_ids:
+        tile_position = list(map(int, tile_id_parts[1:4]))
+        tile_value = cdt.get_2d_tile(
+            get_datapath(tileset.datafile.url),
+            tile_position[0],
+            tile_position[1],
+            tile_position[2]
+        )
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
+def generate_hibed_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a hibed file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+    for tile_id in tile_ds:
+        tile_position = list(map(int, tile_id_parts[1:3]))
+        dense = hdft.get_discrete_data(
+            h5py.File(
+                get_datapath(tileset.datafile.url)
+            ),
+            tile_position[0],
+            tile_position[1]
+        )
+
+        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
+def bin_tiles_by_zoom_level_and_transform(tile_ids):
+    '''
+    Place these tiles into separate lists according to their
+    zoom level and transform type
+
+    Parameters
+    ----------
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_lists: [tile_ids, tile_ids]
+        A list of lists of tiles each of which have the same zoom level
+        and transform type
+    '''
+    tile_id_lists = col.defaultdict(set)
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:4]))
+        zoom_level = tile_position[0]
+
+        if len(tile_id_parts) > 4:
+            transform_method = tile_id_parts[4]
+        else:
+            transform_method = 'default'
+
+        tile_id_lists[(zoom_level, transform_method)].add(tile_id)
+
+    return tile_id_lists
+
+def partition_to_adjacent_tiles(tile_ids):
+    '''
+    Partition a set of tile ids into sets of adjacent tiles
+
+    Parameters
+    ----------
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_lists: [tile_ids, tile_ids]
+        A list of tile lists, all of which have tiles that
+        are within 1 position of another tile in the list
+    '''
+    tile_id_lists = []
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+
+        # exclude the zoom level in the position
+        # because the tiles should already have been partitioned
+        # by zoom level
+        tile_position = list(map(int, tile_id_parts[2:4]))
+
+        added = False
+
+        for tile_id_list in tile_id_lists:
+            far_apart = False
+
+            for ct_tile_id in tile_id_list:
+                ct_tile_id_parts = ct_tile_id.split('.')
+                ct_tile_position = list(map(int, tile_id_parts[1:4]))
+
+                for p1,p2 in zip(tile_position, ct_tile_position):
+                    if abs(int(p1) - int(p2)) >= 1:
+                        # too far apart can't be part of the same group
+                        far_apart = True
+
+                if not far_apart:
+                    tile_id_list += [tile_id]
+                    added = True
+                    break
+                
+            if added:
+                break
+        if not added:
+            tile_id_lists += [[tile_id]]
+
+    return tile_id_lists
+
+def generate_cooler_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a cooler file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    tile_ids_by_zoom_and_transform = bin_tiles_by_zoom_level_and_transform(tile_ids)
+    print("tile_ids_by_zoom_and_transform:", tile_ids_by_zoom_and_transform)
+
+    print("gct tile_ids:", tile_ids)
+    tile_position = list(map(int, tile_id_parts[1:4]))
+
+    if len(tile_id_parts) > 4:
+        transform_method = tile_id_parts[4]
+    else:
+        transform_method = 'default'
+    
+    tile_value = make_cooler_tile(
+        get_datapath(tileset.datafile.url), tile_position,
+        transform_method
+    )
+    if tile_value is None:
+        return None
+    
+def generate_tiles(tileset, tile_ids):
+    '''
+    Generate a tiles for the give tile_ids.
+
+    All of the tile_ids must come from the same tileset. This function
+    will determine the appropriate handler this tile given the tileset's
+    filetype and datatype
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_list: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+
+    if tileset.filetype == 'hitile':
+        return generate_hitile_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'beddb':
+        return generate_beddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'bed2db':
+        generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'hibed':
+        return generate_hibed_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'cooler':
+        return generate_cooler_tiles(tileset, tile_ids)
+    else:
+        raise("Unknown tileset type:", tileset.filetype)
+
 def generate_tile(tile_id, request):
     '''
     Create a tile. The tile_id specifies the dataset as well
@@ -149,8 +483,8 @@ def generate_tile(tile_id, request):
         (string, dict): A tuple containing the tile ID tile data
     '''
 
+    tileset_uuid = extract_tileset_uid(tile_id)
     tile_id_parts = tile_id.split('.')
-    tileset_uuid = tile_id_parts[0]
 
     tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
 
@@ -548,7 +882,40 @@ def tiles(request):
     res = p.map(parallelize, hargs)
     '''
 
+    tileids_by_tileset = col.defaultdict(set)
+    generated_tiles = []
+
+    # sort tile_ids by the dataset they come from
+    for tile_id in tileids_to_fetch:
+        # see if the tile is cached
+        tile_value = rdb.get(tile_id)
+
+        if tile_value is not None:
+            # we found the tile in the cache, no need to fetch it again
+            tile_value = pickle.loads(tile_value)
+            generated_tiles += [(tile_id, tile_value)]
+            continue
+            
+        tileset_uuid = extract_tileset_uid(tile_id)
+        tileids_by_tileset[tileset_uuid].add(tile_id)
+
+    print('tileids_to_fetch', tileids_to_fetch)
+    print('tileids_by_tileset:', tileids_by_tileset)
+
+    # fetch the tiles
+    for tileset_uuid in tileids_by_tileset:
+        # load the tileset object
+        tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
+
+        # check permissions
+        if tileset.private and request.user != tileset.owner:
+            generated_tiles += [(tile_id, {'error': "Forbidden"}) for tile_id in tileids_by_tileset[tileset_uuid]]
+        else:
+            generated_tiles += generate_tiles(tileset, tileids_by_tileset[tileset_uuid])
+
     res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
+
+    #print("res:", res)
 
     # create a dictionary of tileids
     result_dict = dict([i for i in res if i is not None])
