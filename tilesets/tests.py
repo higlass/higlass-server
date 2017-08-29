@@ -25,6 +25,8 @@ import fragments.views as fv
 logger = logging.getLogger(__name__)
 
 
+
+
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):
         self.user1 = dcam.User.objects.create_user(
@@ -74,6 +76,29 @@ class TilesetModelTest(dt.TestCase):
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
 
+
+class UnknownTilesetTypeTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bar',
+            datatype='foo',
+            owner=self.user1,
+            uuid='cli-huge-test'
+        )
+
+    def test_file_size(self):
+        # make sure that the returned tiles are not overly large
+        ret = self.client.get('/api/v1/tiles/?d=cli-huge-test.0.0.0')
+        val = json.loads(ret.content)
+
+        # 32 bit:  349528
+        # 16 bit:  174764
 
 class TilesizeTest(dt.TestCase):
     def setUp(self):
@@ -441,10 +466,11 @@ class CoolerTest(dt.TestCase):
         import tilesets.views as tsv
 
         tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
-        tile = tt.make_tile(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
+        tile = tt.make_tiles(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
 
+        print("tile.keys()", tile.keys())
         # this tile stretches down beyond the end of data and should thus contain no values
-        assert(tile[-1] == 0.)
+        assert(tile[(5,6)][-1] == 0.)
 
 
     def test_get_tileset_info(self):
@@ -455,6 +481,13 @@ class CoolerTest(dt.TestCase):
         assert('md' in contents)
         assert('min_pos' in contents['md'])
         assert(contents['md']['coordSystem'] == 'hg19')
+
+    def test_get_multi_tiles(self):
+        ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')
+        content = json.loads(ret.content)
+
+        assert('md.7.92.97' in content)
+        assert('dense' in content['md.7.92.97'])
 
     def test_get_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
@@ -712,7 +745,7 @@ class TilesetsViewSetTest(dt.TestCase):
         with h5py.File(self.cooler.datafile.url) as f:
 
             mat = [f, cch.get_info(self.cooler.datafile.url)]
-            t = tt.make_tile(z, x, y, mat)
+            t = tt.make_tiles(z, x, y, mat)[(x,y)]
 
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
