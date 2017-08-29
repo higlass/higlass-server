@@ -388,7 +388,6 @@ def partition_by_adjacent_tiles(tile_ids):
                     if abs(int(p1) - int(p2)) > 1:
                         # too far apart can't be part of the same group
                         far_apart = True
-                        print("fa:", tile_position, ct_tile_position)
 
                 if not far_apart:
                     # no tile found that was too far in this group
@@ -492,8 +491,6 @@ def generate_tiles(tileset, tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    print("tileset filetype", tileset.filetype)
-
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
@@ -507,129 +504,9 @@ def generate_tiles(tileset, tile_ids):
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
-def generate_tile(tile_id, request):
-    '''
-    Create a tile. The tile_id specifies the dataset as well
-    as the position.
-
-    This function will look at the filetype and determine what type
-    of tile to retrieve (e..g cooler -> 2D dense, hitile -> 1D dense,
-    elasticsearch -> anything)
-
-    Args:
-        tile_id (str): The id of a tile, consisting of the tileset id,
-            followed by the tile position (e.g. PIYqJpdyTCmAZGmA6jNHJw.4.0.0)
-        request (django.http.HTTPRequest): The request that included this tile.
-
-    Returns:
-        (string, dict): A tuple containing the tile ID tile data
-    '''
-
-    tileset_uuid = extract_tileset_uid(tile_id)
-    tile_id_parts = tile_id.split('.')
-
-    tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
-
-    if tileset.private and request.user != tileset.owner:
-        # dataset is not public return an empty set
-        return (tileset_uuid, {'error': "Forbidden"})
-
-    tile_value = rdb.get(tile_id)
-
-    if tile_value is not None:
-        tile_value = pickle.loads(tile_value)
-        return (tile_id, tile_value)
-
-    if tileset.filetype == "hitile":
-        tile_position = list(map(int, tile_id_parts[1:3]))
-
-        dense = hdft.get_data(
-            h5py.File(
-                get_datapath(tileset.datafile.url)
-            ),
-            tile_position[0],
-            tile_position[1]
-        )
-
-        if len(dense):
-            max_dense = max(dense)
-            min_dense = min(dense)
-        else:
-            max_dense = 0
-            min_dense = 0
-
-        min_f16 = np.finfo('float16').min
-        max_f16 = np.finfo('float16').max
-
-        has_nan = len([d for d in dense if np.isnan(d)]) > 0
-
-        if (
-            not has_nan and
-            max_dense > min_f16 and max_dense < max_f16 and
-            min_dense > min_f16 and min_dense < max_f16
-        ):
-            tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
-                'dtype': 'float16'
-            }
-        else:
-            tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
-                'dtype': 'float32'
-            }
-
-    elif tileset.filetype == 'beddb':
-        tile_position = list(map(int, tile_id_parts[1:3]))
-        tile_value = cdt.get_tile(
-            get_datapath(tileset.datafile.url),
-            tile_position[0],
-            tile_position[1]
-        )
-
-    elif tileset.filetype == 'bed2ddb':
-        tile_position = list(map(int, tile_id_parts[1:4]))
-        tile_value = cdt.get_2d_tile(
-            get_datapath(tileset.datafile.url),
-            tile_position[0],
-            tile_position[1],
-            tile_position[2]
-        )
-
-    elif tileset.filetype == 'hibed':
-        tile_position = list(map(int, tile_id_parts[1:3]))
-        dense = hdft.get_discrete_data(
-            h5py.File(
-                get_datapath(tileset.datafile.url)
-            ),
-            tile_position[0],
-            tile_position[1]
-        )
-
-        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
-    elif tileset.filetype == "cooler":
-        tile_position = list(map(int, tile_id_parts[1:4]))
-
-
-        if len(tile_id_parts) > 4:
-            transform_method = tile_id_parts[4]
-        else:
-            transform_method = 'default'
-        
-        tile_value = make_cooler_tile(
-            get_datapath(tileset.datafile.url), tile_position,
-            transform_method
-        )
-        if tile_value is None:
-            return None
-
-    rdb.set(tile_id, pickle.dumps(tile_value))
-    return (tile_id, tile_value)
-
-
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
-
 
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
@@ -849,7 +726,6 @@ def viewconfs(request):
                 'error': 'Public uploads disabled'
             }, status=403)
 
-        #print("request.body:", request.body)
         viewconf_wrapper = json.loads(request.body)
         uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
@@ -972,6 +848,7 @@ def tiles(request):
 
         # see if the tile is cached
         tile_value = rdb.get(tile_id)
+        #tile_value = None
 
         if tile_value is not None:
             # we found the tile in the cache, no need to fetch it again
@@ -979,7 +856,6 @@ def tiles(request):
             generated_tiles += [(tile_id, tile_value)]
             continue
             
-        print("adding", tile_id)
         tileids_by_tileset[tileset_uuid].add(tile_id)
 
     # fetch the tiles
@@ -1000,13 +876,16 @@ def tiles(request):
     for (tile_id, tile_value) in generated_tiles:
         rdb.set(tile_id, pickle.dumps(tile_value))
 
-        print("transform_id_to_original_id:", transform_id_to_original_id)
-        original_tile_id = transform_id_to_original_id[tile_id]
+        if tile_id in transform_id_to_original_id:
+            original_tile_id = transform_id_to_original_id[tile_id]
+        else:
+            # not in our list of reformatted tile ids, so it probably
+            # wasn't requested
+            continue
 
         if original_tile_id in tileids_to_fetch:
             tiles_to_return[original_tile_id] = tile_value
 
-    print("ttr:", tiles_to_return.keys())
     return JsonResponse(tiles_to_return, safe=False)
 
 
@@ -1095,11 +974,6 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
-
-    '''
-    for info in tileset_infos.values():
-        print('info:', info, type(info['max_width']), [type(x) for x in info['max_pos']], [type(x) for x in info['min_pos']], type(info['tile_size']), type(info['max_zoom']))
-    '''
 
     return JsonResponse(tileset_infos)
 
