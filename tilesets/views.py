@@ -214,6 +214,7 @@ def generate_beddb_tiles(tileset, tile_ids):
     generated_tiles = []
 
     for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
         tile_position = list(map(int, tile_id_parts[1:3]))
         tile_value = cdt.get_tile(
             get_datapath(tileset.datafile.url),
@@ -245,6 +246,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
     generated_tiles = []
 
     for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
         tile_position = list(map(int, tile_id_parts[1:4]))
         tile_value = cdt.get_2d_tile(
             get_datapath(tileset.datafile.url),
@@ -275,7 +277,8 @@ def generate_hibed_tiles(tileset, tile_ids):
         A list of tile_id, tile_data tuples
     '''
     generated_tiles = []
-    for tile_id in tile_ds:
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
         tile_position = list(map(int, tile_id_parts[1:3]))
         dense = hdft.get_discrete_data(
             h5py.File(
@@ -489,19 +492,20 @@ def generate_tiles(tileset, tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+    print("tileset filetype", tileset.filetype)
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2db':
-        generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'bed2ddb':
+        return generate_bed2ddb_tiles(tileset, tile_ids)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
         return generate_cooler_tiles(tileset, tile_ids)
     else:
-        raise("Unknown tileset type:", tileset.filetype)
+        raise Exception("Unknown tileset type:", tileset.filetype)
 
 def generate_tile(tile_id, request):
     '''

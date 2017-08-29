@@ -720,7 +720,7 @@ class TilesetsViewSetTest(dt.TestCase):
         with h5py.File(self.cooler.datafile.url) as f:
 
             mat = [f, cch.get_info(self.cooler.datafile.url)]
-            t = tt.make_tile(z, x, y, mat)
+            t = tt.make_tiles(z, x, y, mat)[(x,y)]
 
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
