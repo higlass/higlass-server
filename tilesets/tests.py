@@ -25,6 +25,8 @@ import fragments.views as fv
 logger = logging.getLogger(__name__)
 
 
+
+
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):
         self.user1 = dcam.User.objects.create_user(
@@ -74,6 +76,29 @@ class TilesetModelTest(dt.TestCase):
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
 
+
+class UnknownTilesetTypeTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
+        self.cooler = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bar',
+            datatype='foo',
+            owner=self.user1,
+            uuid='cli-huge-test'
+        )
+
+    def test_file_size(self):
+        # make sure that the returned tiles are not overly large
+        ret = self.client.get('/api/v1/tiles/?d=cli-huge-test.0.0.0')
+        val = json.loads(ret.content)
+
+        # 32 bit:  349528
+        # 16 bit:  174764
 
 class TilesizeTest(dt.TestCase):
     def setUp(self):

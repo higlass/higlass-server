@@ -505,7 +505,7 @@ def generate_tiles(tileset, tile_ids):
     elif tileset.filetype == 'cooler':
         return generate_cooler_tiles(tileset, tile_ids)
     else:
-        raise Exception("Unknown tileset type:", tileset.filetype)
+        return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
 def generate_tile(tile_id, request):
     '''
