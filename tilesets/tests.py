@@ -441,10 +441,11 @@ class CoolerTest(dt.TestCase):
         import tilesets.views as tsv
 
         tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
-        tile = tt.make_tile(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
+        tile = tt.make_tiles(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
 
+        print("tile.keys()", tile.keys())
         # this tile stretches down beyond the end of data and should thus contain no values
-        assert(tile[-1] == 0.)
+        assert(tile[(5,6)][-1] == 0.)
 
 
     def test_get_tileset_info(self):

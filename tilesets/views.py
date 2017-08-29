@@ -71,48 +71,28 @@ def make_mats(dset):
     mats[dset] = [f, info]
 
 
-def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
-    '''Create a tile from a cooler file.
+def format_cooler_tile(tile_data_array):
+    '''
+    Format raw cooler cooler data into a more structured tile
+    containing either float16 or float32 data along with a 
+    dtype to differentiate between the two.
 
-    Args:
-        cooler_filepath (str): The location of the cooler file that we'll
-            that we'll extract the tile data from.
-        tile_position (list): The position of the tile ([z,x,y])
-        transform_type (str): The method used to transform the data (
+    Parameters
+    ----------
+    tile_data_array: np.array
+        An array containing a flattened 256x256 chunk of data
 
-    Returns:
-        dict: The tile data consisting of a 'dense' member containing
-            the data array as well as 'min_value' and 'max_value' which
-            contain the minimum and maximum values in the 'dense' array.
+    Returns
+    -------
+    tile_data: {'dense': str, 'dtype': str}
+        The tile data reformatted to use float16 or float32 as the
+        datatype. The dtype indicates which format is chosen.
     '''
 
     tile_data = {}
 
-    if cooler_filepath not in mats:
-        make_mats(cooler_filepath)
-
-    tileset_file_and_info = mats[cooler_filepath]
-
-    if tile_position[0] > tileset_file_and_info[1]['max_zoom']:
-        # we don't have enough zoom levels
-        return None
-    if tile_position[1] >= 2 ** tile_position[0]:
-        # tile is out of bounds
-        return None
-    if tile_position[2] >= 2 ** tile_position[0]:
-        # tile is out of bounds
-        return None
-
-    tile = make_tiles(
-        tile_position[0],
-        tile_position[1],
-        tile_position[2],
-        mats[cooler_filepath],
-        transform_type
-    )
-
-    min_dense = float(np.min(tile))
-    max_dense = float(np.max(tile))
+    min_dense = float(np.min(tile_data_array))
+    max_dense = float(np.max(tile_data_array))
 
     tile_data["min_value"] = min_dense
     tile_data["max_value"] = max_dense
@@ -124,10 +104,10 @@ def make_cooler_tile(cooler_filepath, tile_position, transform_type='default'):
         max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16
     ):
-        tile_data['dense'] = base64.b64encode(tile.astype('float16')).decode('latin-1')
+        tile_data['dense'] = base64.b64encode(tile_data_array.astype('float16')).decode('latin-1')
         tile_data['dtype'] = 'float16'
     else:
-        tile_data['dense'] = base64.b64encode(tile.astype('float32')).decode('latin-1')
+        tile_data['dense'] = base64.b64encode(tile_data_array.astype('float32')).decode('latin-1')
         tile_data['dtype'] = 'float32'
 
     return tile_data
@@ -449,6 +429,8 @@ def generate_cooler_tiles(tileset, tile_ids):
     partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
         for t in tile_ids_by_zoom_and_transform]))
 
+    generated_tiles = []
+
     for tile_group in partitioned_tile_ids:
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
@@ -474,32 +456,18 @@ def generate_cooler_tiles(tileset, tile_ids):
         miny = min([t[1] for t in tile_positions])
         maxy = max([t[1] for t in tile_positions])
 
-        tiles_data = make_tiles(zoom_level, minx, maxx, 
+        tile_data_by_position = make_tiles(zoom_level, minx, miny, 
                 tileset_file_and_info, transform_type,
                 maxx-minx+1, maxy-miny+1)
 
-        print("tile_group:", tile_group, minx, maxx, miny, maxy)
-        
-        
-    print("partitioned_tile_ids:", partitioned_tile_ids)
+        tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position) + [transform_type])), format_cooler_tile(tile_data))
+                for (position, tile_data) in tile_data_by_position.items()]
 
-    return []
 
-    print("gct tile_ids:", tile_ids)
-    tile_position = list(map(int, tile_id_parts[1:4]))
+        generated_tiles += tiles
 
-    if len(tile_id_parts) > 4:
-        transform_method = tile_id_parts[4]
-    else:
-        transform_method = 'default'
-    
-    tile_value = make_cooler_tile(
-        get_datapath(tileset.datafile.url), tile_position,
-        transform_method
-    )
-    if tile_value is None:
-        return None
-    
+    return generated_tiles
+
 def generate_tiles(tileset, tile_ids):
     '''
     Generate a tiles for the give tile_ids.
@@ -922,6 +890,28 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
+def add_transform_type(tile_id): 
+    '''
+    Add a transform type to a cooler tile id if it's not already
+    present.
+
+    Parameters
+    ----------
+    tile_id: str
+        A tile id (e.g. xyz.0.1.0)
+
+    Returns
+    -------
+    new_tile_id: str
+        A formatted tile id, potentially with an added transform_type
+    '''
+    tile_id_parts = tile_id.split('.')
+    tileset_uuid = tile_id_parts[0]
+    tile_position = tile_id_parts[1:4]
+
+    transform_type = get_transform_type(tile_id)
+    new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
+    return new_tile_id
 
 @api_view(['GET'])
 def tiles(request):
@@ -955,8 +945,27 @@ def tiles(request):
     tileids_by_tileset = col.defaultdict(set)
     generated_tiles = []
 
+    tilesets = {}
+    transform_id_to_original_id = {}
+
     # sort tile_ids by the dataset they come from
     for tile_id in tileids_to_fetch:
+        tileset_uuid = extract_tileset_uid(tile_id)
+
+        # get the tileset object first
+        if tileset_uuid in tilesets:
+            tileset = tilesets[tileset_uuid]
+        else:
+            tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
+            tilesets[tileset_uuid] = tileset
+
+        if tileset.filetype == 'cooler':
+            new_tile_id = add_transform_type(tile_id)
+            transform_id_to_original_id[new_tile_id] = tile_id
+            tile_id = new_tile_id
+        else:
+            transform_id_to_original_id[tile_id] = tile_id
+
         # see if the tile is cached
         tile_value = rdb.get(tile_id)
 
@@ -966,16 +975,13 @@ def tiles(request):
             generated_tiles += [(tile_id, tile_value)]
             continue
             
-        tileset_uuid = extract_tileset_uid(tile_id)
+        print("adding", tile_id)
         tileids_by_tileset[tileset_uuid].add(tile_id)
-
-    print('tileids_to_fetch', tileids_to_fetch)
-    print('tileids_by_tileset:', tileids_by_tileset)
 
     # fetch the tiles
     for tileset_uuid in tileids_by_tileset:
         # load the tileset object
-        tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
+        tileset = tilesets[tileset_uuid]
 
         # check permissions
         if tileset.private and request.user != tileset.owner:
@@ -983,14 +989,21 @@ def tiles(request):
         else:
             generated_tiles += generate_tiles(tileset, tileids_by_tileset[tileset_uuid])
 
-    #res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
+    # store the tiles in redis
 
-    #print("res:", res)
+    tiles_to_return = {}
 
-    # create a dictionary of tileids
-    result_dict = dict([i for i in res if i is not None])
+    for (tile_id, tile_value) in generated_tiles:
+        rdb.set(tile_id, pickle.dumps(tile_value))
 
-    return JsonResponse(result_dict, safe=False)
+        print("transform_id_to_original_id:", transform_id_to_original_id)
+        original_tile_id = transform_id_to_original_id[tile_id]
+
+        if original_tile_id in tileids_to_fetch:
+            tiles_to_return[original_tile_id] = tile_value
+
+    print("ttr:", tiles_to_return.keys())
+    return JsonResponse(tiles_to_return, safe=False)
 
 
 def get_datapath(relpath):
