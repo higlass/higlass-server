@@ -1,3 +1,7 @@
+v1.2.0 (2017-08-29)
+
+- Group cooler tile requests so they can be retrieved more quickly
+
 v1.1.3 (2017-08-14)
 
 - Fix retrieval of snippets starting at negative positions
