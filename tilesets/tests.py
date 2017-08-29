@@ -457,7 +457,7 @@ class CoolerTest(dt.TestCase):
         assert(contents['md']['coordSystem'] == 'hg19')
 
     def test_get_multi_tiles(self):
-        ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98')
+        ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')
         content = json.loads(ret.content)
 
         assert('md.7.92.97' in content)

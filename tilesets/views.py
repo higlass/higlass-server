@@ -11,6 +11,7 @@ import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
 import guardian.utils as gu
 import higlass_server.settings as hss
+import itertools as it
 import h5py
 import json
 import logging
@@ -310,6 +311,29 @@ def generate_hibed_tiles(tileset, tile_ids):
 
     return generated_tiles
 
+def get_transform_type(tile_id):
+    '''
+    Get the transform type specified in the tile id.
+
+    Parameters
+    ----------
+    cooler_tile_id: str
+        A tile id for a 2D tile (cooler)
+
+    Returns
+    -------
+    transform_type: str
+        The transform type requested for this tile
+    '''
+    tile_id_parts = tile_id.split('.')
+
+    if len(tile_id_parts) > 4:
+        transform_method = tile_id_parts[4]
+    else:
+        transform_method = 'default'
+
+    return transform_method
+
 def bin_tiles_by_zoom_level_and_transform(tile_ids):
     '''
     Place these tiles into separate lists according to their
@@ -334,16 +358,14 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
         tile_position = list(map(int, tile_id_parts[1:4]))
         zoom_level = tile_position[0]
 
-        if len(tile_id_parts) > 4:
-            transform_method = tile_id_parts[4]
-        else:
-            transform_method = 'default'
+        transform_method = get_transform_type(tile_id)
+
 
         tile_id_lists[(zoom_level, transform_method)].add(tile_id)
 
     return tile_id_lists
 
-def partition_to_adjacent_tiles(tile_ids):
+def partition_by_adjacent_tiles(tile_ids):
     '''
     Partition a set of tile ids into sets of adjacent tiles
 
@@ -361,7 +383,7 @@ def partition_to_adjacent_tiles(tile_ids):
     '''
     tile_id_lists = []
 
-    for tile_id in tile_ids:
+    for tile_id in sorted(tile_ids, key=lambda x: [int(p) for p in x.split('.')[2:4]]):
         tile_id_parts = tile_id.split('.')
 
         # exclude the zoom level in the position
@@ -372,18 +394,21 @@ def partition_to_adjacent_tiles(tile_ids):
         added = False
 
         for tile_id_list in tile_id_lists:
+            # iterate over each group of adjacent tiles
             far_apart = False
 
             for ct_tile_id in tile_id_list:
                 ct_tile_id_parts = ct_tile_id.split('.')
-                ct_tile_position = list(map(int, tile_id_parts[1:4]))
+                ct_tile_position = list(map(int, ct_tile_id_parts[2:4]))
 
                 for p1,p2 in zip(tile_position, ct_tile_position):
-                    if abs(int(p1) - int(p2)) >= 1:
+                    if abs(int(p1) - int(p2)) > 1:
                         # too far apart can't be part of the same group
                         far_apart = True
+                        print("fa:", tile_position, ct_tile_position)
 
                 if not far_apart:
+                    # no tile found that was too far in this group
                     tile_id_list += [tile_id]
                     added = True
                     break
@@ -412,8 +437,53 @@ def generate_cooler_tiles(tileset, tile_ids):
     generated_tiles: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tile_ids_by_zoom_and_transform = bin_tiles_by_zoom_level_and_transform(tile_ids)
-    print("tile_ids_by_zoom_and_transform:", tile_ids_by_zoom_and_transform)
+    filename = get_datapath(tileset.datafile.url)
+
+    if filename not in mats:
+        # check if this tileset is open
+        make_mats(filename)
+
+    tileset_file_and_info = mats[filename]
+
+    tile_ids_by_zoom_and_transform = bin_tiles_by_zoom_level_and_transform(tile_ids).values()
+    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
+        for t in tile_ids_by_zoom_and_transform]))
+
+    for tile_group in partitioned_tile_ids:
+        zoom_level = int(tile_group[0].split('.')[1])
+        tileset_id = tile_group[0].split('.')[0]
+        transform_type = get_transform_type(tile_group[0])
+
+        if zoom_level > tileset_file_and_info[1]['max_zoom']:
+            # this tile has too high of a zoom level specified
+            continue
+
+        tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
+
+        # filter for tiles that are in bounds for this zoom level
+        tile_positions = list(filter(lambda x: x[0] < 2 ** zoom_level, tile_positions))
+        tile_positions = list(filter(lambda x: x[1] < 2 ** zoom_level, tile_positions))
+
+        if len(tile_positions) == 0:
+            # no in bounds tiles
+            continue
+
+        minx = min([t[0] for t in tile_positions])
+        maxx = max([t[0] for t in tile_positions])
+
+        miny = min([t[1] for t in tile_positions])
+        maxy = max([t[1] for t in tile_positions])
+
+        tiles_data = make_tiles(zoom_level, minx, maxx, 
+                tileset_file_and_info, transform_type,
+                maxx-minx+1, maxy-miny+1)
+
+        print("tile_group:", tile_group, minx, maxx, miny, maxy)
+        
+        
+    print("partitioned_tile_ids:", partitioned_tile_ids)
+
+    return []
 
     print("gct tile_ids:", tile_ids)
     tile_position = list(map(int, tile_id_parts[1:4]))
@@ -913,7 +983,7 @@ def tiles(request):
         else:
             generated_tiles += generate_tiles(tileset, tileids_by_tileset[tileset_uuid])
 
-    res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
+    #res = map(lambda x: generate_tile(x, request), tileids_to_fetch)
 
     #print("res:", res)
 
