@@ -1,3 +1,7 @@
+v1.2.1 (2017-08-30)
+
+- Fixed an out-of-bounds error
+
 v1.2.0 (2017-08-29)
 
 - Group cooler tile requests so they can be retrieved more quickly
