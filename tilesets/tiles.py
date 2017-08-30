@@ -60,10 +60,10 @@ def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default', x_width=
             end2 = (y_pos + y_offset + 1) * info['max_width'] / divisor
 
             df = data[data['genome_start1'] >= start1]
-            df = df[df['genome_start1'] <= end1]
+            df = df[df['genome_start1'] < end1]
 
             df = df[df['genome_start2'] >= start2]
-            df = df[df['genome_start2'] <= end2]
+            df = df[df['genome_start2'] < end2]
 
             binsize = dset[0].attrs[str(zoomLevel)]
             j = (df['genome_start1'].values - start1) // binsize
