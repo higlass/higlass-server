@@ -16,6 +16,7 @@ import h5py
 import json
 import logging
 import math
+import multiprocessing as mp
 import numpy as np
 import os.path as op
 import rest_framework.exceptions as rfe
@@ -27,6 +28,7 @@ import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import slugid
+import time
 import urllib
 
 try:
@@ -211,18 +213,32 @@ def generate_beddb_tiles(tileset, tile_ids):
     generated_tiles: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+    tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
+    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t, dimension=1) 
+        for t in tile_ids_by_zoom]))
+
     generated_tiles = []
 
-    for tile_id in tile_ids:
-        tile_id_parts = tile_id.split('.')
-        tile_position = list(map(int, tile_id_parts[1:3]))
-        tile_value = cdt.get_tile(
-            get_datapath(tileset.datafile.url),
-            tile_position[0],
-            tile_position[1]
-        )
+    for tile_group in partitioned_tile_ids:
+        zoom_level = int(tile_group[0].split('.')[1])
+        tileset_id = tile_group[0].split('.')[0]
+        tile_positions = [[int(x) for x in t.split('.')[2:3]] for t in tile_group]
 
-        generated_tiles += [(tile_id, tile_value)]
+        if len(tile_positions) == 0:
+            continue
+
+        minx = min([t[0] for t in tile_positions])
+        maxx = max([t[0] for t in tile_positions])
+
+        t1 = time.time()
+        tile_data_by_position = cdt.get_tiles(
+            get_datapath(tileset.datafile.url),
+            zoom_level,
+            minx,
+            maxx - minx + 1
+        )
+        generated_tiles += [(".".join(map(str, [tileset_id] + [zoom_level] + [position])), tile_data)
+            for (position, tile_data) in tile_data_by_position.items()]
 
     return generated_tiles
 
@@ -245,17 +261,45 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
     '''
     generated_tiles = []
 
-    for tile_id in tile_ids:
-        tile_id_parts = tile_id.split('.')
-        tile_position = list(map(int, tile_id_parts[1:4]))
-        tile_value = cdt.get_2d_tile(
-            get_datapath(tileset.datafile.url),
-            tile_position[0],
-            tile_position[1],
-            tile_position[2]
-        )
+    tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
+    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
+        for t in tile_ids_by_zoom]))
 
-        generated_tiles += [(tile_id, tile_value)]
+    for tile_group in partitioned_tile_ids:
+        print("tile_group:", tile_group)
+        zoom_level = int(tile_group[0].split('.')[1])
+        tileset_id = tile_group[0].split('.')[0]
+
+        tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
+
+        # filter for tiles that are in bounds for this zoom level
+        tile_positions = list(filter(lambda x: x[0] < 2 ** zoom_level, tile_positions))
+        tile_positions = list(filter(lambda x: x[1] < 2 ** zoom_level, tile_positions))
+
+        if len(tile_positions) == 0:
+            # no in bounds tiles
+            continue
+
+        minx = min([t[0] for t in tile_positions])
+        maxx = max([t[0] for t in tile_positions])
+
+        miny = min([t[1] for t in tile_positions])
+        maxy = max([t[1] for t in tile_positions])
+
+        tile_data_by_position = cdt.get_2d_tiles(
+                get_datapath(tileset.datafile.url),
+                zoom_level,
+                minx, maxx,
+                maxx - minx + 1,
+                maxy - miny + 1
+            )
+
+        tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position))), tile_data)
+                for (position, tile_data) in tile_data_by_position.items()]
+
+        print("tiles:", tiles)
+
+        generated_tiles += tiles
 
     return generated_tiles
 
@@ -317,6 +361,34 @@ def get_transform_type(tile_id):
 
     return transform_method
 
+def bin_tiles_by_zoom(tile_ids):
+    '''
+    Place these tiles into separate lists according to their
+    zoom level.
+
+    Parameters
+    ----------
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_lists: {zoomLevel: [tile_id, tile_id]}
+        A dictionary of tile lists
+    '''
+    tile_id_lists = col.defaultdict(set)
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:4]))
+        zoom_level = tile_position[0]
+
+        tile_id_lists[zoom_level].add(tile_id)
+
+    return tile_id_lists
+
+
 def bin_tiles_by_zoom_level_and_transform(tile_ids):
     '''
     Place these tiles into separate lists according to their
@@ -330,9 +402,8 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
 
     Returns
     -------
-    tile_lists: [tile_ids, tile_ids]
-        A list of lists of tiles each of which have the same zoom level
-        and transform type
+    tile_lists: {(zoomLevel, transformType): [tile_id, tile_id]}
+        A dictionary of tile ids
     '''
     tile_id_lists = col.defaultdict(set)
 
@@ -348,7 +419,7 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
 
     return tile_id_lists
 
-def partition_by_adjacent_tiles(tile_ids):
+def partition_by_adjacent_tiles(tile_ids, dimension=2):
     '''
     Partition a set of tile ids into sets of adjacent tiles
 
@@ -357,6 +428,8 @@ def partition_by_adjacent_tiles(tile_ids):
     tile_ids: [str,...]
         A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
         to be retrieved
+    dimension: int
+        The dimensionality of the tiles
 
     Returns
     -------
@@ -366,7 +439,7 @@ def partition_by_adjacent_tiles(tile_ids):
     '''
     tile_id_lists = []
 
-    for tile_id in sorted(tile_ids, key=lambda x: [int(p) for p in x.split('.')[2:4]]):
+    for tile_id in sorted(tile_ids, key=lambda x: [int(p) for p in x.split('.')[2:2+dimension]]):
         tile_id_parts = tile_id.split('.')
 
         # exclude the zoom level in the position
@@ -378,19 +451,21 @@ def partition_by_adjacent_tiles(tile_ids):
 
         for tile_id_list in tile_id_lists:
             # iterate over each group of adjacent tiles
-            far_apart = False
+            has_close_tile = False
 
             for ct_tile_id in tile_id_list:
                 ct_tile_id_parts = ct_tile_id.split('.')
-                ct_tile_position = list(map(int, ct_tile_id_parts[2:4]))
+                ct_tile_position = list(map(int, ct_tile_id_parts[2:2+dimension]))
+                far_apart = False
 
+                # iterate over each dimension and see if this tile is close
                 for p1,p2 in zip(tile_position, ct_tile_position):
                     if abs(int(p1) - int(p2)) > 1:
                         # too far apart can't be part of the same group
                         far_apart = True
 
                 if not far_apart:
-                    # no tile found that was too far in this group
+                    # no position was too far
                     tile_id_list += [tile_id]
                     added = True
                     break
@@ -470,7 +545,7 @@ def generate_cooler_tiles(tileset, tile_ids):
 
     return generated_tiles
 
-def generate_tiles(tileset, tile_ids):
+def generate_tiles(tileset_tile_ids):
     '''
     Generate a tiles for the give tile_ids.
 
@@ -491,6 +566,8 @@ def generate_tiles(tileset, tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+    tileset, tile_ids = tileset_tile_ids
+
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
@@ -859,6 +936,14 @@ def tiles(request):
         tileids_by_tileset[tileset_uuid].add(tile_id)
 
     # fetch the tiles
+    tilesets = [tilesets[tu] for tu in tileids_by_tileset]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid]) for t in tilesets if ((not t.private) or request.user == t.owner)]
+
+    pool = mp.Pool(6)
+
+    generated_tiles = list(it.chain(*pool.map(generate_tiles, accessible_tilesets)))
+
+    '''
     for tileset_uuid in tileids_by_tileset:
         # load the tileset object
         tileset = tilesets[tileset_uuid]
@@ -868,6 +953,7 @@ def tiles(request):
             generated_tiles += [(tile_id, {'error': "Forbidden"}) for tile_id in tileids_by_tileset[tileset_uuid]]
         else:
             generated_tiles += generate_tiles(tileset, tileids_by_tileset[tileset_uuid])
+    '''
 
     # store the tiles in redis
 
