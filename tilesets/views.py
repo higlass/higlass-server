@@ -289,7 +289,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         tile_data_by_position = cdt.get_2d_tiles(
                 get_datapath(tileset.datafile.url),
                 zoom_level,
-                minx, maxx,
+                minx, miny,
                 maxx - minx + 1,
                 maxy - miny + 1
             )
@@ -509,6 +509,7 @@ def generate_cooler_tiles(tileset, tile_ids):
     generated_tiles = []
 
     for tile_group in partitioned_tile_ids:
+        print("tile_group:", len(tile_group), tile_group)
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
         transform_type = get_transform_type(tile_group[0])
@@ -939,9 +940,9 @@ def tiles(request):
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
     accessible_tilesets = [(t, tileids_by_tileset[t.uuid]) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
-    pool = mp.Pool(6)
+    #pool = mp.Pool(6)
 
-    generated_tiles = list(it.chain(*pool.map(generate_tiles, accessible_tilesets)))
+    generated_tiles = list(it.chain(*map(generate_tiles, accessible_tilesets)))
 
     '''
     for tileset_uuid in tileids_by_tileset:
