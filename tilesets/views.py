@@ -6,6 +6,7 @@ import csv
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
 import collections as col
+import contextlib
 import django.db.models as dbm
 import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
@@ -18,6 +19,7 @@ import logging
 import math
 import multiprocessing as mp
 import numpy as np
+import os
 import os.path as op
 import rest_framework.exceptions as rfe
 import rest_framework.pagination as rfpa
@@ -27,8 +29,10 @@ import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
+import shutil
 import slugid
 import time
+import tempfile
 import urllib
 
 try:
@@ -196,6 +200,8 @@ def generate_hitile_tiles(tileset, tile_ids):
 
     return generated_tiles
 
+
+
 def generate_beddb_tiles(tileset, tile_ids):
     '''
     Generate tiles from a beddb file.
@@ -232,7 +238,7 @@ def generate_beddb_tiles(tileset, tile_ids):
 
         t1 = time.time()
         tile_data_by_position = cdt.get_tiles(
-            get_datapath(tileset.datafile.url),
+            get_cached_datapath(tileset.datafile.url),
             zoom_level,
             minx,
             maxx - minx + 1
@@ -266,7 +272,6 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         for t in tile_ids_by_zoom]))
 
     for tile_group in partitioned_tile_ids:
-        print("tile_group:", tile_group)
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
 
@@ -286,8 +291,10 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         miny = min([t[1] for t in tile_positions])
         maxy = max([t[1] for t in tile_positions])
 
+        cached_datapath = get_cached_datapath(tileset.datafile.url)
+        print("cached_datapath", cached_datapath)
         tile_data_by_position = cdt.get_2d_tiles(
-                get_datapath(tileset.datafile.url),
+                cached_datapath,
                 zoom_level,
                 minx, miny,
                 maxx - minx + 1,
@@ -296,8 +303,6 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
 
         tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position))), tile_data)
                 for (position, tile_data) in tile_data_by_position.items()]
-
-        print("tiles:", tiles)
 
         generated_tiles += tiles
 
@@ -509,7 +514,7 @@ def generate_cooler_tiles(tileset, tile_ids):
     generated_tiles = []
 
     for tile_group in partitioned_tile_ids:
-        print("tile_group:", len(tile_group), tile_group)
+        #print("tile_group:", len(tile_group), tile_group)
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
         transform_type = get_transform_type(tile_group[0])
@@ -975,9 +980,55 @@ def tiles(request):
 
     return JsonResponse(tiles_to_return, safe=False)
 
-
 def get_datapath(relpath):
     return op.join(hss.BASE_DIR, relpath)
+
+def get_cached_datapath(relpath):
+    '''
+    Check if we need to cache this file or if we have a cached copy
+
+    Parameters
+    ----------
+    filename: str
+        The original filename
+
+    Returns
+    -------
+    filename: str
+        Either the cached filename if we're caching or the original
+        filename
+    '''
+    print("relpath", relpath)
+    if hss.CACHE_DIR is None:
+        # no caching requested
+        return get_datapath(relpath)
+
+    orig_path = get_datapath(relpath)
+    cached_path = op.join(hss.CACHE_DIR, relpath)
+
+    if op.exists(cached_path):
+        # this file has already been cached
+        print("here", cached_path)
+        return cached_path
+
+    with tempfile.TemporaryDirectory() as dirpath:
+        tmp = op.join(dirpath, 'cached_file')
+        shutil.copyfile(orig_path, tmp)
+
+        # check to make sure the destination directory exists
+        dest_dir = op.dirname(cached_path)
+        print("dest_dir:", dest_dir)
+
+        if not op.exists(dest_dir):
+            os.makedirs(dest_dir)
+
+        print("moving:", cached_path)
+        print("stat:", os.stat(tmp))
+        shutil.move(tmp, cached_path)
+        print("stat:", os.stat(cached_path))
+        print('abspath:', op.abspath(cached_path))
+
+    return cached_path
 
 
 @api_view(['GET'])

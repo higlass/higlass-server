@@ -28,6 +28,13 @@ if 'HIGLASS_SERVER_BASE_DIR' in os.environ:
 else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+if 'HIGLASS_CACHE_DIR' in os.environ:
+    # cache uploaded files
+    # useful when using a mounted media directory
+    CACHE_DIR = os.environ['HIGLASS_CACHE_DIR']
+else:
+    CACHE_DIR = None
+
 local_settings_file_path = os.path.join(
     BASE_DIR, 'config.json'
 )
