@@ -367,6 +367,17 @@ class CoolerTest(dt.TestCase):
             name="v",
             uuid='sd1')
 
+        upload_file = open('data/hic-resolutions.cool', 'rb')
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            coordSystem='x',
+            coordSystem2='x',
+            name="nuhr",
+            uuid='nuhr')
+
     def test_order_by(self):
         '''
         Test to make sure that tilesets are correctly ordered when returned
@@ -481,6 +492,12 @@ class CoolerTest(dt.TestCase):
         assert('md' in contents)
         assert('min_pos' in contents['md'])
         assert(contents['md']['coordSystem'] == 'hg19')
+
+        ### test getting tileset info from files with non-powers of two resolutions
+        ret = self.client.get('/api/v1/tileset_info/?d=nuhr')
+
+        assert('nuhr' in contents)
+        print("contents:", contents)
 
     def test_get_multi_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')

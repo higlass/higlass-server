@@ -58,6 +58,14 @@ rdb = getRdb()
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
+
+    if 'resolutions' in f:
+        print("resolutions present")
+        info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
+        print("info:", info)
+        mats[dset] = [f, info]
+        return
+
     info = cch.get_info(dset)
 
     info["min_pos"] = [int(m) for m in info["min_pos"]]
