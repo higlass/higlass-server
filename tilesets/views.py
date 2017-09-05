@@ -55,11 +55,40 @@ mats = {}
 
 rdb = getRdb()
 
+def get_available_transforms(cooler):
+    '''
+    Get the available resolutions from a single cooler file.
+
+    Parameters
+    ----------
+    cooler: h5py File
+        A cooler file containing binned 2D data
+
+    Returns
+    -------
+    transforms: dict
+        A list of transforms available for this dataset
+    '''
+    transforms = {}
+
+    f_for_zoom = cooler['bins']
+
+    if 'weight' in f_for_zoom:
+        transforms['weight'] = {'name': 'ICE', 'value': 'weight'}
+    if 'KR' in f_for_zoom:
+        transforms['KR'] = {'name': 'KR', 'value': 'KR'}
+    if 'VC' in f_for_zoom:
+        transforms['VC'] = {'name': 'VC', 'value': 'VC'}
+    if 'VC_SQRT' in f_for_zoom:
+        transforms['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
+
+    return transforms
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
 
     if 'resolutions' in f:
+        # this file contains raw resolutions 
         print("resolutions present")
         info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
         print("info:", info)
