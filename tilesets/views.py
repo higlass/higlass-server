@@ -55,6 +55,13 @@ mats = {}
 
 rdb = getRdb()
 
+transform_descriptions = {}
+transform_descriptions['weight'] = {'name': 'ICE', 'value': 'weight'}
+transform_descriptions['KR'] = {'name': 'KR', 'value': 'KR'}
+transform_descriptions['VC'] = {'name': 'VC', 'value': 'VC'}
+transform_descriptions['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
+
+
 def get_available_transforms(cooler):
     '''
     Get the available resolutions from a single cooler file.
@@ -69,18 +76,18 @@ def get_available_transforms(cooler):
     transforms: dict
         A list of transforms available for this dataset
     '''
-    transforms = {}
+    transforms = set()
 
     f_for_zoom = cooler['bins']
 
     if 'weight' in f_for_zoom:
-        transforms['weight'] = {'name': 'ICE', 'value': 'weight'}
+        transforms.add('weight')
     if 'KR' in f_for_zoom:
-        transforms['KR'] = {'name': 'KR', 'value': 'KR'}
+        transforms.add('KR')
     if 'VC' in f_for_zoom:
-        transforms['VC'] = {'name': 'VC', 'value': 'VC'}
+        transforms.add('VC')
     if 'VC_SQRT' in f_for_zoom:
-        transforms['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
+        transforms.add('VC_SQRT')
 
     return transforms
 
@@ -89,10 +96,20 @@ def make_mats(dset):
 
     if 'resolutions' in f:
         # this file contains raw resolutions 
-        print("resolutions present")
         info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
-        print("info:", info)
         mats[dset] = [f, info]
+
+        # see which transforms are available, a transform has to be
+        # available at every available resolution in order for it to
+        # be provided as an option
+        available_transforms_per_resolution = {}
+
+        for resolution in info['resolutions']:
+            available_transforms_per_resolution[resolution] = get_available_transforms(f['resolutions'][str(resolution)])
+
+        all_available_transforms = set.intersection(*available_transforms_per_resolution.values())
+
+        info['transforms'] = [transform_descriptions[t] for t in all_available_transforms]
         return
 
     info = cch.get_info(dset)
@@ -1012,6 +1029,7 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
 
+    print("tileset_infos:", tileset_infos)
     return JsonResponse(tileset_infos)
 
 

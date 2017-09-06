@@ -496,6 +496,7 @@ class CoolerTest(dt.TestCase):
         ### test getting tileset info from files with non-powers of two resolutions
         ret = self.client.get('/api/v1/tileset_info/?d=nuhr')
 
+        contents = json.loads(ret.content)
         assert('nuhr' in contents)
         print("contents:", contents)
 
