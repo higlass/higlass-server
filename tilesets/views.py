@@ -95,7 +95,8 @@ def make_mats(dset):
     f = h5py.File(dset, 'r')
 
     if 'resolutions' in f:
-        # this file contains raw resolutions 
+        # this file contains raw resolutions so it'll return a different
+        # sort of tileset info
         info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
         mats[dset] = [f, info]
 
@@ -110,6 +111,15 @@ def make_mats(dset):
         all_available_transforms = set.intersection(*available_transforms_per_resolution.values())
 
         info['transforms'] = [transform_descriptions[t] for t in all_available_transforms]
+
+        # get the genome size
+        resolution = list(f['resolutions'].keys())[0]
+        genome_length = int(sum(f['resolutions'][resolution]['chroms']['length']))
+        
+        info['max_pos'] = [genome_length, genome_length]
+        info['min_pos'] = [1,1]
+
+
         return
 
     info = cch.get_info(dset)
