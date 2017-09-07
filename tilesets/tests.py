@@ -508,6 +508,26 @@ class CoolerTest(dt.TestCase):
         assert('dense' in content['md.7.92.97'])
 
     def test_get_tiles(self):
+        # this should fail in some manner because the tile is out of
+        # bounds of the dataset
+
+        ret = self.client.get('/api/v1/tiles/?d=nuhr.2.0.0')
+        content = json.loads(ret.content)
+
+        assert('nuhr.2.0.0' in content)
+        assert('dense' in content['nuhr.2.0.0'])
+        return
+
+        # this is to ensure that no exception is thrown
+        ret = self.client.get('/api/v1/tiles/?d=nuhr.2.12.13')
+        content = json.loads(ret.content)
+
+        assert('nuhr.2.0.0' in content)
+        assert('dense' in content['nuhr.2.0.0'])
+
+        #print('contents:', content)
+        return
+
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
         content = json.loads(ret.content)
 
