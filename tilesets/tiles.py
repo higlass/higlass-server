@@ -7,6 +7,39 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+def make_hic_tiles(f, resolution, x_pos, 
+        y_pox, transform_type='default', 
+        x_width=1, y_width=1):
+    '''
+
+    Generate tiles for a given location. This function retrieves tiles from a
+    hic file for a rectangular region of width x_width and height y_width.
+
+    The positions may span chromosomes so care must be taken to ensure that the
+    correct chromosome pairs are fetched.
+
+    Parameters
+    ---------
+    hdf_for_resolution: h5py.File
+        An HDF group containing the cooler for the given resolution
+    x_pos: int
+        The starting x position
+    y_pos: int
+        The starting y position
+    cooler_file: string
+        The filename of the cooler file to get the data from
+    x_width: int 
+        The number of tiles to retrieve along the x dimension
+    y_width: int
+        The number of tiles to retrieve along the y dimension
+
+    Returns
+    -------
+    data_by_tilepos: {(x_pos, y_pos) : np.array}
+        A dictionary of tile data indexed by tile positions
+    '''
+
+
 def make_tiles(hdf_for_resolution, resolution, x_pos, y_pos, transform_type='default', x_width=1, y_width=1):
     '''
     Generate tiles for a given location. This function retrieves tiles for
