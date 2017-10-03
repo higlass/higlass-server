@@ -498,11 +498,17 @@ def get_frag(
     validBins = np.where((idx2_1 < abs_dim1) & (idx2_2 >= 0))
 
     # Ignore diagonals
+    diags_start_row = None
     if ignore_diags > 0:
-        diags_start_idx = np.min(
-            np.where(data['bin1_id'].values == data['bin2_id'].values)
-        )
-        diags_start_row = rel_bin1[diags_start_idx] - rel_bin2[diags_start_idx]
+        try:
+            diags_start_idx = np.min(
+                np.where(data['bin1_id'].values == data['bin2_id'].values)
+            )
+            diags_start_row = (
+                rel_bin1[diags_start_idx] - rel_bin2[diags_start_idx]
+            )
+        except ValueError:
+            pass
 
     # Copy pixel values onto the final array
     frag = np.zeros(abs_dim1 * abs_dim2, dtype=np.float32)
@@ -532,7 +538,7 @@ def get_frag(
         frag -= min_val
 
     # Remove diagonals
-    if ignore_diags > 0:
+    if ignore_diags > 0 and diags_start_row is not None:
         if width == height:
             scaled_row = int(np.rint(diags_start_row / scale_x))
 
