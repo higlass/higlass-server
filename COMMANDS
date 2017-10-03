@@ -7,6 +7,22 @@ python \
 		--filetype hitile \
 		--datatype vector
 
+wget -N -P data http://hgdownload.cse.ucsc.edu/goldenpath/hg19/encodeDCC/wgEncodeCaltechRnaSeq/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 mkvirtualenv higlass-server
 
 pip install Django uwsgi

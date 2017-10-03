@@ -132,6 +132,68 @@ def extract_tileset_uid(tile_id):
 
     return tileset_uuid
 
+def generate_bigwig_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a bigwig file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_list: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
+        dense = hdft.get_data(
+            h5py.File(
+                get_datapath(tileset.datafile.url)
+            ),
+            tile_position[0],
+            tile_position[1]
+        )
+
+        if len(dense):
+            max_dense = max(dense)
+            min_dense = min(dense)
+        else:
+            max_dense = 0
+            min_dense = 0
+
+        min_f16 = np.finfo('float16').min
+        max_f16 = np.finfo('float16').max
+
+        has_nan = len([d for d in dense if np.isnan(d)]) > 0
+
+        if (
+            not has_nan and
+            max_dense > min_f16 and max_dense < max_f16 and
+            min_dense > min_f16 and min_dense < max_f16
+        ):
+            tile_value = {
+                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
+                'dtype': 'float16'
+            }
+        else:
+            tile_value = {
+                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
+                'dtype': 'float32'
+            }
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
 def generate_hitile_tiles(tileset, tile_ids):
     '''
     Generate tiles from a hitile file.
