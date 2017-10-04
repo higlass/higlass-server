@@ -1,3 +1,7 @@
+v1.3.0 (2017-10-xx)
+
+- Support arbitrary resolution cooler files
+
 v1.2.3 (2017-10-03)
 
 - Same changes as last time. They didn't actually make it into v1.2.2
