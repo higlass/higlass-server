@@ -55,9 +55,71 @@ mats = {}
 
 rdb = getRdb()
 
+transform_descriptions = {}
+transform_descriptions['weight'] = {'name': 'ICE', 'value': 'weight'}
+transform_descriptions['KR'] = {'name': 'KR', 'value': 'KR'}
+transform_descriptions['VC'] = {'name': 'VC', 'value': 'VC'}
+transform_descriptions['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
+
+
+def get_available_transforms(cooler):
+    '''
+    Get the available resolutions from a single cooler file.
+
+    Parameters
+    ----------
+    cooler: h5py File
+        A cooler file containing binned 2D data
+
+    Returns
+    -------
+    transforms: dict
+        A list of transforms available for this dataset
+    '''
+    transforms = set()
+
+    f_for_zoom = cooler['bins']
+
+    if 'weight' in f_for_zoom:
+        transforms.add('weight')
+    if 'KR' in f_for_zoom:
+        transforms.add('KR')
+    if 'VC' in f_for_zoom:
+        transforms.add('VC')
+    if 'VC_SQRT' in f_for_zoom:
+        transforms.add('VC_SQRT')
+
+    return transforms
 
 def make_mats(dset):
     f = h5py.File(dset, 'r')
+
+    if 'resolutions' in f:
+        # this file contains raw resolutions so it'll return a different
+        # sort of tileset info
+        info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
+        mats[dset] = [f, info]
+
+        # see which transforms are available, a transform has to be
+        # available at every available resolution in order for it to
+        # be provided as an option
+        available_transforms_per_resolution = {}
+
+        for resolution in info['resolutions']:
+            available_transforms_per_resolution[resolution] = get_available_transforms(f['resolutions'][str(resolution)])
+
+        all_available_transforms = set.intersection(*available_transforms_per_resolution.values())
+
+        info['transforms'] = [transform_descriptions[t] for t in all_available_transforms]
+
+        # get the genome size
+        resolution = list(f['resolutions'].keys())[0]
+        genome_length = int(sum(f['resolutions'][resolution]['chroms']['length']))
+        
+        info['max_pos'] = [genome_length, genome_length]
+        info['min_pos'] = [1,1]
+        return
+
     info = cch.get_info(dset)
 
     info["min_pos"] = [int(m) for m in info["min_pos"]]
@@ -419,6 +481,7 @@ def generate_cooler_tiles(tileset, tile_ids):
     generated_tiles: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+    BINS_PER_TILE = 256
     filename = get_datapath(tileset.datafile.url)
 
     if filename not in mats:
@@ -437,16 +500,30 @@ def generate_cooler_tiles(tileset, tile_ids):
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
         transform_type = get_transform_type(tile_group[0])
+        tileset_info = tileset_file_and_info[1]
+        tileset_file = tileset_file_and_info[0]
 
-        if zoom_level > tileset_file_and_info[1]['max_zoom']:
-            # this tile has too high of a zoom level specified
-            continue
+        if 'resolutions' in tileset_info:
+            sorted_resolutions = sorted([int(r) for r in tileset_info['resolutions']], reverse=True)
+            print("sorted_resolutions:", sorted_resolutions)
+            if zoom_level > len(sorted_resolutions):
+                # this tile has too high of a zoom level specified
+                continue
+
+            resolution = sorted_resolutions[zoom_level]
+            hdf_for_resolution = tileset_file['resolutions'][str(resolution)]
+        else:
+            if zoom_level > tileset_info['max_zoom']:
+                # this tile has too high of a zoom level specified
+                continue
+            hdf_for_resolution = tileset_file[str(zoom_level)]
+            resolution = (tileset_info['max_width'] / 2**zoom_level) / BINS_PER_TILE
 
         tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
 
         # filter for tiles that are in bounds for this zoom level
-        tile_positions = list(filter(lambda x: x[0] < 2 ** zoom_level, tile_positions))
-        tile_positions = list(filter(lambda x: x[1] < 2 ** zoom_level, tile_positions))
+        tile_positions = list(filter(lambda x: x[0] < tileset_info['max_pos'][0]+1, tile_positions))
+        tile_positions = list(filter(lambda x: x[1] < tileset_info['max_pos'][1]+1, tile_positions))
 
         if len(tile_positions) == 0:
             # no in bounds tiles
@@ -458,8 +535,10 @@ def generate_cooler_tiles(tileset, tile_ids):
         miny = min([t[1] for t in tile_positions])
         maxy = max([t[1] for t in tile_positions])
 
-        tile_data_by_position = make_tiles(zoom_level, minx, miny, 
-                tileset_file_and_info, transform_type,
+        tile_data_by_position = make_tiles(hdf_for_resolution, 
+                resolution,
+                minx, miny, 
+                transform_type,
                 maxx-minx+1, maxy-miny+1)
 
         tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position) + [transform_type])), format_cooler_tile(tile_data))
@@ -975,6 +1054,7 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
 
+    #print("tileset_infos:", tileset_infos)
     return JsonResponse(tileset_infos)
 
 
