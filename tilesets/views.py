@@ -292,7 +292,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        print("cached_datapath", cached_datapath)
+        #print("cached_datapath", cached_datapath)
         tile_data_by_position = cdt.get_2d_tiles(
                 cached_datapath,
                 zoom_level,
@@ -998,7 +998,7 @@ def get_cached_datapath(relpath):
         Either the cached filename if we're caching or the original
         filename
     '''
-    print("relpath", relpath)
+    #print("relpath", relpath)
     if hss.CACHE_DIR is None:
         # no caching requested
         return get_datapath(relpath)
@@ -1008,7 +1008,6 @@ def get_cached_datapath(relpath):
 
     if op.exists(cached_path):
         # this file has already been cached
-        print("here", cached_path)
         return cached_path
 
     with tempfile.TemporaryDirectory() as dirpath:
@@ -1017,16 +1016,11 @@ def get_cached_datapath(relpath):
 
         # check to make sure the destination directory exists
         dest_dir = op.dirname(cached_path)
-        print("dest_dir:", dest_dir)
 
         if not op.exists(dest_dir):
             os.makedirs(dest_dir)
 
-        print("moving:", cached_path)
-        print("stat:", os.stat(tmp))
         shutil.move(tmp, cached_path)
-        print("stat:", os.stat(cached_path))
-        print('abspath:', op.abspath(cached_path))
 
     return cached_path
 
