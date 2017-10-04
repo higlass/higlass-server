@@ -1,6 +1,7 @@
 v1.3.0 (2017-10-xx)
 
 - Support arbitrary resolution cooler files
+- Combine tile requests for beddb and bed2ddb files
 
 v1.2.3 (2017-10-03)
 
