@@ -19,12 +19,30 @@ import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
 import fragments.views as fv
+import tilesets.views as tv
 
 
 
 logger = logging.getLogger(__name__)
 
 
+class TileTests(dt.TestCase):
+    def test_partitioning(self):
+        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
+
+        assert(len(result) == 2)
+
+        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11"])
+
+        assert(len(result) == 2)
+
+        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11", "a.7.11"])
+
+        assert(len(result) == 3)
+
+        result = tv.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
+
+        assert(len(result) == 1)
 
 
 class ChromosomeSizes(dt.TestCase):
@@ -637,6 +655,18 @@ class Bed2DDBTest(dt.TestCase):
 
         contents = json.loads(ret.content)
 
+    def test_get_tiles(self):
+        tile_id00="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=0)
+        tile_id01="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=1)
+        tile_id10="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=1, y=0)
+        returned_text = self.client.get('/api/v1/tiles/?d={}&d={}&d={}'.format(tile_id00, tile_id01, tile_id10))
+        returned = json.loads(returned_text.content)
+
+        ret = self.client.get('/api/v1/tiles/?d={}.0.0.0'.format(self.tileset1.uuid))
+        assert(ret.status_code == 200)
+
+        contents = json.loads(ret.content)
+
     def test_get_info(self):
         ret = self.client.get('/api/v1/tileset_info/?d={}'.format(self.tileset1.uuid))
 
@@ -664,6 +694,25 @@ class BedDBTest(dt.TestCase):
         returned = json.loads(returned_text.content)
 
         for x in returned['bdb.0.0']:
+            assert('uid' in x)
+            assert('importance' in x)
+            assert('fields' in x)
+
+    def test_get_tiles(self):
+        tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=1, x=0)
+        tile_id1="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=1, x=1)
+        returned_text = self.client.get('/api/v1/tiles/?d={tile_id}&d={tile_id1}'.format(tile_id=tile_id, tile_id1=tile_id1))
+        returned = json.loads(returned_text.content)
+
+        assert(len(returned[tile_id]) > 0)
+        assert(len(returned[tile_id1]) > 0)
+
+        for x in returned[tile_id]:
+            assert('uid' in x)
+            assert('importance' in x)
+            assert('fields' in x)
+
+        for x in returned[tile_id1]:
             assert('uid' in x)
             assert('importance' in x)
             assert('fields' in x)

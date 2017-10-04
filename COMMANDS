@@ -1,44 +1,19 @@
 #goofys --stat-cache-ttl 0 --type-cache-ttl 0 higlass:higlass.io/hg-data/media media
-umount media; s3fs higlass:/higlass.io/media media/ -o passwd_file=~/.aws/credentials_s3fs   -o createbucket,allow_other,umask=077,uid=502,gid=20 -f -d
 
-python \
-		manage.py ingest_tileset \
-		--filename /tmp/cnvs_hw.hitile \
-		--filetype hitile \
-		--datatype vector
+#umount media; s3fs higlass:/higlass.io/media media/ -o passwd_file=~/.aws/credentials_s3fs   -o createbucket,allow_other,umask=077,uid=502,gid=20 -f -d
+fusermount -u media; s3fs higlass:/higlass.io/media media/ -o passwd_file=~/.aws/credentials_s3fs   -o createbucket,allow_other,umask=077,uid=1000,gid=1000,use_cache=/tmp/media
+#/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.2.0&d=OHJakQICQD6gTD7skx4EWA.2.1&d=OHJakQICQD6gTD7skx4EWA.2.2").read()'
+#
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.3.0&d=OHJakQICQD6gTD7skx4EWA.3.1&d=OHJakQICQD6gTD7skx4EWA.3.2&d=OHJakQICQD6gTD7skx4EWA.3.3&d=OHJakQICQD6gTD7skx4EWA.3.4&d=OHJakQICQD6gTD7skx4EWA.3.5").read()'
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=aRuaqCIVSx2HXD09ctbqSA.8.105.105&d=LiXYclAjS5idr5-k0Oo7QA.8.104.104&d=LiXYclAjS5idr5-k0Oo7QA.8.104.105&d=LiXYclAjS5idr5-k0Oo7QA.8.105.105&d=e5WbCLpTQZep787_P8HCUQ.8.104.104&d=e5WbCLpTQZep787_P8HCUQ.8.104.105&d=e5WbCLpTQZep787_P8HCUQ.8.105.105&d=M43TQHoLQbWpmngpV6KbPg.8.104.104&d=M43TQHoLQbWpmngpV6KbPg.8.104.105&d=M43TQHoLQbWpmngpV6KbPg.8.105.105&d=GHBMPlFmTp6awb0VesvIQQ.8.104.104&d=GHBMPlFmTp6awb0VesvIQQ.8.104.105&d=GHBMPlFmTp6awb0VesvIQQ.8.105.105&d=NxYdetsQQXS8E5HifM4OeA.8.104.104&d=NxYdetsQQXS8E5HifM4OeA.8.104.105&d=NxYdetsQQXS8E5HifM4OeA.8.105.105&d=XKdvOmeGRz6eX3oM2e-eNg.8.104.104&d=XKdvOmeGRz6eX3oM2e-eNg.8.104.105&d=XKdvOmeGRz6eX3oM2e-eNg.8.105.105&d=O356BMVpS9uJemtdc8fasA.8.104.104&s=B9PKqdfJQoeg4I1-C2_aQw").read()'
 
-mkvirtualenv higlass-server
-
-pip install Django uwsgi
-uwsgi --http :8000 --module api.wsgi --pythonpath `python -c "import site; print(' '.join(site.getsitepackages()))"`
-
-
-sudo apt-get install zlib1g-dev
-sudo apt-get install uwsgi-plugin-python
-pip install djangorestframework django-rest-swagger django-cors-headers pygments h5py
-pip install pandas cooler clodius django-guardian slugid
-
-# Delete existing datasets
-# rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate
-python manage.py migrate
-
-
-# Run hg-server tests
-python manage.py test tilesets
-
-sudo apt-get install nginx
-sudo cp hgserver_nginx.conf /etc/nginx/sites-enabled/
-sudo /etc/init.d/nginx restart
-#sudo /etc/init.d/nginx start
-
-
-# Start the WSGI server
-uwsgi --socket :8001 --plugins python --module higlass_server.wsgi --virtualenv /home/ubuntu/.virtualenvs/hg-server/ --workers 2
-
-# 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6
-python scripts/benchmark_server.py http://localhost:8000 4ec6d59e-f7dc-43aa-b12b-ce6b015290a6 --tile-id-file doc/tile_requests_20.txt
+export SITE_URL=test2.higlass.io; /home/ubuntu/miniconda3/envs/cenv3/bin/uwsgi  --socket :8001 --wsgi-file higlass_server/wsgi.py --workers 2
 
 # Create a new instance
+aws s3 cp s3://pkerp/public/arrowhead_domains_short.txt.multires.db data/
+aws s3 cp s3://pkerp/public/Rao_RepH_GM12878_InsulationScore.txt.multires.db data/
+aws s3 cp s3://pkerp/public/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool data/
+
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
 port=8000
@@ -48,86 +23,32 @@ echo "import django.contrib.auth; django.contrib.auth.models.User.objects.create
      | python manage.py shell
 python manage.py runserver localhost:${port} 
 
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.3.0&d=OHJakQICQD6gTD7skx4EWA.3.1&d=OHJakQICQD6gTD7skx4EWA.3.2&d=OHJakQICQD6gTD7skx4EWA.3.3&d=OHJakQICQD6gTD7skx4EWA.3.4&d=OHJakQICQD6gTD7skx4EWA.3.5").read()'
+
+# tilesets
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://test2.higlass.io/api/v1/tilesets/?limit=10000&dt=matrix&dt=matrix&dt=2d-projection&dt=arrowhead-domains&dt=2d-rectangle-domains&dt=bedpe&dt=chromsizes&dt=chromsizes&dt=map-tiles&dt=map-tiles").read()'
+
+# beddb tiles
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.10.117&d=OHJakQICQD6gTD7skx4EWA.10.118&d=OHJakQICQD6gTD7skx4EWA.10.119&s=JNfsIf26QzKTVsb-pK7wSw").read()'
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.6.14&d=OHJakQICQD6gTD7skx4EWA.6.19&d=OHJakQICQD6gTD7skx4EWA.5.7&d=OHJakQICQD6gTD7skx4EWA.5.8&d=OHJakQICQD6gTD7skx4EWA.5.9&d=OHJakQICQD6gTD7skx4EWA.5.6&d=OHJakQICQD6gTD7skx4EWA.5.10&d=OHJakQICQD6gTD7skx4EWA.4.3&d=OHJakQICQD6gTD7skx4EWA.4.4&d=OHJakQICQD6gTD7skx4EWA.4.5&d=OHJakQICQD6gTD7skx4EWA.4.2&d=OHJakQICQD6gTD7skx4EWA.4.6&d=OHJakQICQD6gTD7skx4EWA.3.0&d=OHJakQICQD6gTD7skx4EWA.3.1&d=OHJakQICQD6gTD7skx4EWA.3.2&d=OHJakQICQD6gTD7skx4EWA.3.3&s=R8cyboeMRVeJwgsixl0zUg").read()'
+
+# bed2ddb tiles
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=cs3PLbfDTKO0fso6UewTPQ.9.208.208&d=cs3PLbfDTKO0fso6UewTPQ.9.208.209&d=cs3PLbfDTKO0fso6UewTPQ.9.208.210&d=cs3PLbfDTKO0fso6UewTPQ.9.209.209&d=cs3PLbfDTKO0fso6UewTPQ.9.209.210&d=cs3PLbfDTKO0fso6UewTPQ.9.209.211&d=cs3PLbfDTKO0fso6UewTPQ.9.210.210&d=cs3PLbfDTKO0fso6UewTPQ.9.210.211&d=cs3PLbfDTKO0fso6UewTPQ.9.211.211&d=LOxv7UeDStqa14RG0FOirQ.9.208.208&d=LOxv7UeDStqa14RG0FOirQ.9.208.209&d=LOxv7UeDStqa14RG0FOirQ.9.208.210&d=LOxv7UeDStqa14RG0FOirQ.9.209.209&d=LOxv7UeDStqa14RG0FOirQ.9.209.210&d=LOxv7UeDStqa14RG0FOirQ.9.209.211&d=LOxv7UeDStqa14RG0FOirQ.9.210.210&d=LOxv7UeDStqa14RG0FOirQ.9.210.211&d=LOxv7UeDStqa14RG0FOirQ.9.211.211&s=XVrmkdOfRKCXf7N2Bow1lQ").read()'
+
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=cs3PLbfDTKO0fso6UewTPQ.10.417.417&d=cs3PLbfDTKO0fso6UewTPQ.10.417.418&d=cs3PLbfDTKO0fso6UewTPQ.10.417.419&d=cs3PLbfDTKO0fso6UewTPQ.10.418.418&d=cs3PLbfDTKO0fso6UewTPQ.10.418.419&d=cs3PLbfDTKO0fso6UewTPQ.10.418.420&d=cs3PLbfDTKO0fso6UewTPQ.10.419.419&d=cs3PLbfDTKO0fso6UewTPQ.10.419.420&d=cs3PLbfDTKO0fso6UewTPQ.10.419.421&d=cs3PLbfDTKO0fso6UewTPQ.10.420.420&d=cs3PLbfDTKO0fso6UewTPQ.10.420.421&d=cs3PLbfDTKO0fso6UewTPQ.10.421.421&d=LOxv7UeDStqa14RG0FOirQ.10.416.416&d=LOxv7UeDStqa14RG0FOirQ.10.416.417&d=LOxv7UeDStqa14RG0FOirQ.10.416.418&d=LOxv7UeDStqa14RG0FOirQ.10.417.417&d=LOxv7UeDStqa14RG0FOirQ.10.417.418&d=LOxv7UeDStqa14RG0FOirQ.10.417.419&d=LOxv7UeDStqa14RG0FOirQ.10.418.418&d=LOxv7UeDStqa14RG0FOirQ.10.418.419&s=R8cyboeMRVeJwgsixl0zUg").read()'
+
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=aRuaqCIVSx2HXD09ctbqSA.8.105.105&d=LiXYclAjS5idr5-k0Oo7QA.8.104.104&d=LiXYclAjS5idr5-k0Oo7QA.8.104.105&d=LiXYclAjS5idr5-k0Oo7QA.8.105.105&d=e5WbCLpTQZep787_P8HCUQ.8.104.104&d=e5WbCLpTQZep787_P8HCUQ.8.104.105&d=e5WbCLpTQZep787_P8HCUQ.8.105.105&d=M43TQHoLQbWpmngpV6KbPg.8.104.104&d=M43TQHoLQbWpmngpV6KbPg.8.104.105&d=M43TQHoLQbWpmngpV6KbPg.8.105.105&d=GHBMPlFmTp6awb0VesvIQQ.8.104.104&d=GHBMPlFmTp6awb0VesvIQQ.8.104.105&d=GHBMPlFmTp6awb0VesvIQQ.8.105.105&d=NxYdetsQQXS8E5HifM4OeA.8.104.104&d=NxYdetsQQXS8E5HifM4OeA.8.104.105&d=NxYdetsQQXS8E5HifM4OeA.8.105.105&d=XKdvOmeGRz6eX3oM2e-eNg.8.104.104&d=XKdvOmeGRz6eX3oM2e-eNg.8.104.105&d=XKdvOmeGRz6eX3oM2e-eNg.8.105.105&d=O356BMVpS9uJemtdc8fasA.8.104.104&s=B9PKqdfJQoeg4I1-C2_aQw").read()'
+
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=PZqTe8rWT4ivS8NzGQqP5w.8.104.105&d=PZqTe8rWT4ivS8NzGQqP5w.8.105.105&d=GcbuWEKtTzmqDzY2bxDtOQ.8.104.104&d=GcbuWEKtTzmqDzY2bxDtOQ.8.104.105&d=GcbuWEKtTzmqDzY2bxDtOQ.8.105.105&d=Q3i3iYu6SxGlM6Ycrv0kIg.8.104.104&d=Q3i3iYu6SxGlM6Ycrv0kIg.8.104.105&d=Q3i3iYu6SxGlM6Ycrv0kIg.8.105.105&d=b2x29f5-R-WxJ2-6lUf8oQ.8.104.104&d=b2x29f5-R-WxJ2-6lUf8oQ.8.104.105&d=b2x29f5-R-WxJ2-6lUf8oQ.8.105.105&d=EYnoduFtTl-A8ufikSamEg.8.104.104&d=EYnoduFtTl-A8ufikSamEg.8.104.105&d=EYnoduFtTl-A8ufikSamEg.8.105.105&d=QnRzKNDsSV-NYJHju7Qs0Q.8.104.104&d=QnRzKNDsSV-NYJHju7Qs0Q.8.104.105&d=QnRzKNDsSV-NYJHju7Qs0Q.8.105.105&d=AL9VhZCdSTupoW-WHfJ6dQ.8.104.104&d=AL9VhZCdSTupoW-WHfJ6dQ.8.104.105&d=AL9VhZCdSTupoW-WHfJ6dQ.8.105.105&s=W40aDgqxT9ODXgS30K-YFQ").read()'
+
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=PZqTe8rWT4ivS8NzGQqP5w.8.104.105").read()'
 
 
-port=8000
-curl -F "datafile=@data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:${port}/tilesets/
-curl -F "datafile=@data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:${port}/tilesets/
-curl -F "datafile=@data/gene_annotations.short.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" localhost:${port}/tilesets/
-curl -F "datafile=@data/gene-annotations.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "name=Gene Annotations" -F "uid=ee" localhost:${port}/tilesets/
+# 2D heatmap tiles
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=OHJakQICQD6gTD7skx4EWA.2.0&d=OHJakQICQD6gTD7skx4EWA.2.1&d=OHJakQICQD6gTD7skx4EWA.2.2&d=OHJakQICQD6gTD7skx4EWA.2.3&d=CQMd6V_cRw6iCI_-Unl3PQ.2.0.0&d=CQMd6V_cRw6iCI_-Unl3PQ.2.0.1&d=CQMd6V_cRw6iCI_-Unl3PQ.2.0.2&d=CQMd6V_cRw6iCI_-Unl3PQ.2.0.3&d=CQMd6V_cRw6iCI_-Unl3PQ.2.1.1&d=CQMd6V_cRw6iCI_-Unl3PQ.2.1.2&d=CQMd6V_cRw6iCI_-Unl3PQ.2.1.3&d=CQMd6V_cRw6iCI_-Unl3PQ.2.2.2&d=CQMd6V_cRw6iCI_-Unl3PQ.2.2.3&s=JNfsIf26QzKTVsb-pK7wSw").read()'
 
-curl -X "DELETE" localhost:${port}/tilesets/f/
-curl -F "datafile=@data/arrowhead_domains_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=arrowhead-domains" -F "name=Arrowhead domains" -F "uid=f" localhost:${port}/tilesets/
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.73&s=JNfsIf26QzKTVsb-pK7wSw").read()'
 
-curl -X "DELETE" localhost:${port}/tilesets/i/
-curl -F "datafile=@data/hiccups_loops_short.txt.multires.db" -F "filetype=bed2ddb" -F"datatype=hiccups-loops" -F "name=HiCCUPS loops" -F "uid=i" localhost:${port}/tilesets/
-
-# Test individual classes
-
-python manage.pdy test tilesets.tests.HiBedTest
-
-# Adding a new data type
-
-* Add a new tile getter in `generate_tile` in `tilesets/views.py`
-* Add a new tileset_info in `tileset_info` in `tilesets/views.py`
-* (Search for `cooler` in `views.py` and add the new file type as needed)
-
-# Real data
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
-curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/gene-annotations-hg19.db
-curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Dixon2015-H1_TB-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Dixon2015-H1_NP-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Rao2014-GM12878-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Rao2014-HMEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix"  http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Rao2014-HUVEC-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Rao2014-IMR90-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool
-curl -F "datafile=@/tmp/Rao2014-K562-MboI-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878InputStdSig.hitile
-curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878InputStdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile
-curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Pol2s2IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile
-curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Smc3ab9263IggmusSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile
-curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Rad21IggrabSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
+/usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.42&s=JNfsIf26QzKTVsb-pK7wSw").read()'
 
 
-curl -F "datafile=@/tmp/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile" -F "filetype=hitile" -F "datatype=vector" -F "uid=bb" http://localhost:80/tilesets/
-curl -F "datafile=@/tmp/gene-annotations-hg19.db" -F "filetype=beddb" -F"datatype=gene-annotation" -F "uid=dd" -F "name=Gene Annotations" localhost:80/tilesets/
-curl -F "datafile=@/tmp/Dixon2015-H1_hESC-HindIII-allreps-filtered.10kb.multires.cool" -F "filetype=cooler" -F "datatype=matrix" -F "uid=aa" http://localhost:80/tilesets/
-
-
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/Dixon2015-H1_MS-HindIII-allreps-filtered.10kb.multires.cool
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile
-curl -F "datafile=@/tmp/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:80/tilesets/
-
-wget -P /tmp/ https://s3.amazonaws.com/pkerp/public/hg-server/data/
-
-curl -F "datafile=@/Users/peter/data/encode/hg19/wgEncodeSydhTfbsGm12878Ctcfsc15914c20StdSig.hitile" -F "filetype=hitile" -F "datatype=vector" http://localhost:${port}/tilesets/
