@@ -1,3 +1,6 @@
+v1.2.3 (2017-10-03)
+
+- Same changes as last time. They didn't actually make it into v1.2.2
 v1.2.2 (2017-10-03)
 
 - Fixed a bug with ignore-diags int the fragments API
