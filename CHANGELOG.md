@@ -1,3 +1,7 @@
+v1.2.2 (2017-10-03)
+
+- Fixed a bug with ignore-diags int the fragments API
+
 v1.2.1 (2017-08-30)
 
 - Fixed an out-of-bounds error
