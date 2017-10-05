@@ -2,6 +2,7 @@ v1.3.0 (2017-10-xx)
 
 - Support arbitrary resolution cooler files
 - Combine tile requests for beddb and bed2ddb files
+- Increase width of higlassVersion field in the ViewConfModel to 16
 
 v1.2.3 (2017-10-03)
 
