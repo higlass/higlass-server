@@ -26,6 +26,7 @@ G15509.K-562.2_sampleDown.multires.cool
 chromSizes.tsv
 gene-annotations-mm9.db
 Rao_RepH_GM12878_InsulationScore.txt.multires.db
+hic-resolutions.cool
 END
 )
 

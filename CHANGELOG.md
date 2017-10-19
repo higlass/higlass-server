@@ -1,3 +1,16 @@
+v1.3.0 (2017-10-xx)
+
+- Support arbitrary resolution cooler files
+- Combine tile requests for beddb and bed2ddb files
+- Increase width of higlassVersion field in the ViewConfModel to 16
+
+v1.2.3 (2017-10-03)
+
+- Same changes as last time. They didn't actually make it into v1.2.2
+v1.2.2 (2017-10-03)
+
+- Fixed a bug with ignore-diags int the fragments API
+
 v1.2.1 (2017-08-30)
 
 - Fixed an out-of-bounds error

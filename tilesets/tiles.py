@@ -1,20 +1,21 @@
 from __future__ import print_function
 
+import cooler
 import cooler.contrib.higlass as cch
 import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default', x_width=1, y_width=1):
+def make_tiles(hdf_for_resolution, resolution, x_pos, y_pos, transform_type='default', x_width=1, y_width=1):
     '''
     Generate tiles for a given location. This function retrieves tiles for
     a rectangular region of width x_width and height y_width
 
     Parameters
     ---------
-    zoomLevel: int
-        The zoom level to retrieve tiles for (e.g. 0, 1, 2... )
+    hdf_for_resolution: h5py.File
+        An HDF group containing the cooler for the given resolution
     x_pos: int
         The starting x position
     y_pos: int
@@ -31,16 +32,23 @@ def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default', x_width=
     data_by_tilepos: {(x_pos, y_pos) : np.array}
         A dictionary of tile data indexed by tile positions
     '''
-    info = dset[1]
-    divisor = 2 ** zoomLevel
+    BINS_PER_TILE = 256
 
-    start1 = x_pos * info['max_width'] / divisor
-    end1 = (x_pos + x_width) * info['max_width'] / divisor
-    start2 = y_pos * info['max_width'] / divisor
-    end2 = (y_pos + y_width) * info['max_width'] / divisor
+    tile_size = resolution * BINS_PER_TILE
+
+    start1 = x_pos * tile_size
+    end1 = (x_pos + x_width) * tile_size
+    start2 = y_pos * tile_size
+    end2 = (y_pos + y_width) * tile_size
+
+    '''
+    print("transform_type:", transform_type);
+    print('start1:', start1, end1)
+    print('start2:', start2, end2)
+    '''
 
     data = cch.get_data(
-        dset[0], zoomLevel, start1, end1 - 1, start2, end2 - 1, 
+        hdf_for_resolution, start1, end1 - 1, start2, end2 - 1, 
         transform_type
     )
 
@@ -54,10 +62,18 @@ def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default', x_width=
     for x_offset in range(0, x_width):
         for y_offset in range(0, y_width):
 
-            start1 = (x_pos + x_offset) * info['max_width'] / divisor
-            end1 = (x_pos + x_offset+ 1) * info['max_width'] / divisor
-            start2 = (y_pos + y_offset) * info['max_width'] / divisor
-            end2 = (y_pos + y_offset + 1) * info['max_width'] / divisor
+            start1 = (x_pos + x_offset) * tile_size
+            end1 = (x_pos + x_offset+ 1) * tile_size
+            start2 = (y_pos + y_offset) * tile_size
+            end2 = (y_pos + y_offset + 1) * tile_size
+
+            '''
+            print("resolution:", resolution)
+            print("tile_size", tile_size)
+            print("x_pos:", x_pos, "x_offset", x_offset)
+            print("start1", start1, 'end1', end1)
+            print("start2", start2, 'end2', end2)
+            '''
 
             df = data[data['genome_start1'] >= start1]
             df = df[df['genome_start1'] < end1]
@@ -65,7 +81,8 @@ def make_tiles(zoomLevel, x_pos, y_pos, dset, transform_type='default', x_width=
             df = df[df['genome_start2'] >= start2]
             df = df[df['genome_start2'] < end2]
 
-            binsize = dset[0].attrs[str(zoomLevel)]
+            binsize = resolution
+
             j = (df['genome_start1'].values - start1) // binsize
             i = (df['genome_start2'].values - start2) // binsize
 
