@@ -527,7 +527,6 @@ class CoolerTest(dt.TestCase):
 
         contents = json.loads(ret.content)
         assert('nuhr' in contents)
-        print("contents:", contents)
 
     def test_get_multi_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')
@@ -554,7 +553,6 @@ class CoolerTest(dt.TestCase):
         assert('nuhr.2.0.0' in content)
         assert('dense' in content['nuhr.2.0.0'])
 
-        #print('contents:', content)
         return
 
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
@@ -829,7 +827,6 @@ class TilesetsViewSetTest(dt.TestCase):
         tm.Tileset.objects.all().delete()
 
     def check_tile(self, z, x, y):
-        print("getting original")
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.{z}.{x}.{y}'.format(
@@ -853,11 +850,8 @@ class TilesetsViewSetTest(dt.TestCase):
             hdf_for_resolution = tileset_file[str(zoom_level)]
             resolution = (tileset_info['max_width'] / 2**zoom_level) / BINS_PER_TILE
 
-            print("getting new")
             t = tt.make_tiles(hdf_for_resolution, resolution, x, y)[(x,y)]
 
-            print("q:", q)
-            print("t:", t)
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
 
