@@ -878,6 +878,7 @@ def viewconfs(request):
 
     '''
     if request.method == 'POST':
+        print("1")
         if not hss.UPLOAD_ENABLED:
             return JsonResponse({
                 'error': 'Uploads disabled'

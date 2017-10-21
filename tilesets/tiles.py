@@ -41,8 +41,11 @@ def make_tiles(hdf_for_resolution, resolution, x_pos, y_pos, transform_type='def
     start2 = y_pos * tile_size
     end2 = (y_pos + y_width) * tile_size
 
+    '''
+    print("transform_type:", transform_type);
     print('start1:', start1, end1)
     print('start2:', start2, end2)
+    '''
 
     data = cch.get_data(
         hdf_for_resolution, start1, end1 - 1, start2, end2 - 1, 
