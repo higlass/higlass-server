@@ -1012,13 +1012,13 @@ def tiles(request):
         tile_value = rdb.get(tile_id)
         #tile_value = None
 
+        tileids_by_tileset[tileset_uuid].add(tile_id)
+
         if tile_value is not None:
             # we found the tile in the cache, no need to fetch it again
             tile_value = pickle.loads(tile_value)
             generated_tiles += [(tile_id, tile_value)]
             continue
-            
-        tileids_by_tileset[tileset_uuid].add(tile_id)
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
