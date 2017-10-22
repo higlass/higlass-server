@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import bioframe
 import cooler
 import bbi
 
