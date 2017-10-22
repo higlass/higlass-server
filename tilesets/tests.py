@@ -336,6 +336,7 @@ class PermissionsTest(dt.TestCase):
         ret = json.loads(c1.get('/api/v1/tilesets/?ac=tr2').content)
         assert(ret['count'] == 1)
 
+
 class BigWigTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -352,13 +353,16 @@ class BigWigTest(dt.TestCase):
             coordSystem='hg19',
             coordSystem2='hg19',
             name="x",
-            uuid='md')
+            uuid='bw')
 
     def test_get_tiles(self):
         '''
         Try to retrieve some tiles from this file
         '''
-        pass
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+        ret = json.loads(c1.get('/api/v1/tilesets/?d=bw').content)
+        assert(ret['count'] == 1)
 
 
 class CoolerTest(dt.TestCase):

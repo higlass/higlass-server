@@ -4,12 +4,15 @@ import bioframe
 import cooler
 import bbi
 
+
 TILE_SIZE = 1024
+
 
 def get_quadtree_depth(chromsizes):
     tile_size_bp = TILE_SIZE
     min_tile_cover = np.ceil(sum(chromsizes) / tile_size_bp)
     return int(np.ceil(np.log2(min_tile_cover)))
+
 
 def get_zoom_resolutions(chromsizes):
     return [2**x for x in range(get_quadtree_depth(chromsizes) + 1)][::-1]
@@ -25,6 +28,7 @@ def get_chromsizes(bwpath):
     chromsizes = bbi.chromsizes(bwpath)
     chromosomes = cooler.util.natsorted(chromsizes.keys())
     return pd.Series(chromsizes)[chromosomes]
+
 
 def abs2genomic(chromsizes, start_pos, end_pos):
     abs_chrom_offsets = np.r_[0, np.cumsum(chromsizes.values)]
@@ -55,6 +59,7 @@ def get_bigwig_tile(bwpath, zoom_level, start_pos, end_pos):
         arrays.append(x)
     
     return np.concatenate(arrays)
+
 
 def get_bigwig_tile_by_id(bwpath, zoom_level, tile_pos):
     '''
