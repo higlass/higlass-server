@@ -10,6 +10,7 @@ import contextlib
 import django.db.models as dbm
 import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
+import tilesets.bigwig_tiles as bwt
 import guardian.utils as gu
 import higlass_server.settings as hss
 import itertools as it
@@ -221,15 +222,14 @@ def generate_bigwig_tiles(tileset, tile_ids):
 
     for tile_id in tile_ids:
         tile_id_parts = tile_id.split('.')
+        zoom_level = int(tile_id_parts[0])
         tile_position = list(map(int, tile_id_parts[1:3]))
 
-        dense = hdft.get_data(
-            h5py.File(
-                get_datapath(tileset.datafile.url)
-            ),
+        dense = bwt.get_bigwig_tile(
+            tileset.datafile.url, 
+            zoom_level, 
             tile_position[0],
-            tile_position[1]
-        )
+            tile_position[1])
 
         if len(dense):
             max_dense = max(dense)
