@@ -1,4 +1,8 @@
-v1.3.0 (2017-10-xx)
+v1.3.1 (2017-10-??)
+
+- Fixed a bug with ignore-diags in the fragments API (again)
+
+v1.3.0 (2017-10-21)
 
 - Support arbitrary resolution cooler files
 - Combine tile requests for beddb and bed2ddb files
@@ -9,7 +13,7 @@ v1.2.3 (2017-10-03)
 - Same changes as last time. They didn't actually make it into v1.2.2
 v1.2.2 (2017-10-03)
 
-- Fixed a bug with ignore-diags int the fragments API
+- Fixed a bug with ignore-diags in the fragments API
 
 v1.2.1 (2017-08-30)
 
