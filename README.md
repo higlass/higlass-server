@@ -62,8 +62,8 @@ Genomics data needs to be aggregated across a range of scales before it can be u
 **TODO**: Is this still accurate?
 
 [Cooler](https://github.com/mirnylab/cooler) files store Hi-C data. They need to be decorated with aggregated
-data at multiple resolutions in order to work with `higlass-server`. This is easily accomplished by simply 
-installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has 
+data at multiple resolutions in order to work with `higlass-server`. This is easily accomplished by simply
+installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has
 to come from a clone of the official cooler repository, but this will hopefully be merged into the main branch shortly.
 
 ```
@@ -105,4 +105,10 @@ npm test
 
 ```
 bumpversion patch
+```
+
+**Update** source code:
+
+```
+./update.sh
 ```
