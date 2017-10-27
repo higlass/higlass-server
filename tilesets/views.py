@@ -354,7 +354,6 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        #print("cached_datapath", cached_datapath)
         tile_data_by_position = cdt.get_2d_tiles(
                 cached_datapath,
                 zoom_level,
@@ -577,7 +576,6 @@ def generate_cooler_tiles(tileset, tile_ids):
     generated_tiles = []
 
     for tile_group in partitioned_tile_ids:
-        #print("tile_group:", len(tile_group), tile_group)
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
         transform_type = get_transform_type(tile_group[0])
@@ -586,7 +584,6 @@ def generate_cooler_tiles(tileset, tile_ids):
 
         if 'resolutions' in tileset_info:
             sorted_resolutions = sorted([int(r) for r in tileset_info['resolutions']], reverse=True)
-            print("sorted_resolutions:", sorted_resolutions)
             if zoom_level > len(sorted_resolutions):
                 # this tile has too high of a zoom level specified
                 continue
@@ -1017,7 +1014,7 @@ def tiles(request):
             tile_value = pickle.loads(tile_value)
             generated_tiles += [(tile_id, tile_value)]
             continue
-            
+
         tileids_by_tileset[tileset_uuid].add(tile_id)
 
     # fetch the tiles
@@ -1026,7 +1023,7 @@ def tiles(request):
 
     #pool = mp.Pool(6)
 
-    generated_tiles = list(it.chain(*map(generate_tiles, accessible_tilesets)))
+    generated_tiles += list(it.chain(*map(generate_tiles, accessible_tilesets)))
 
     '''
     for tileset_uuid in tileids_by_tileset:
@@ -1077,7 +1074,6 @@ def get_cached_datapath(relpath):
         Either the cached filename if we're caching or the original
         filename
     '''
-    #print("relpath", relpath)
     if hss.CACHE_DIR is None:
         # no caching requested
         return get_datapath(relpath)
@@ -1186,7 +1182,6 @@ def tileset_info(request):
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
 
-    #print("tileset_infos:", tileset_infos)
     return JsonResponse(tileset_infos)
 
 

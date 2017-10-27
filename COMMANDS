@@ -13,6 +13,7 @@ export SITE_URL=test2.higlass.io; /home/ubuntu/miniconda3/envs/cenv3/bin/uwsgi  
 aws s3 cp s3://pkerp/public/arrowhead_domains_short.txt.multires.db data/
 aws s3 cp s3://pkerp/public/Rao_RepH_GM12878_InsulationScore.txt.multires.db data/
 aws s3 cp s3://pkerp/public/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool data/
+aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
 
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 

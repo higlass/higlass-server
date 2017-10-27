@@ -494,10 +494,21 @@ class CoolerTest(dt.TestCase):
         '''
         import tilesets.views as tsv
 
+        filename = 'data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'
         tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
-        tile = tt.make_tiles(3,5,6,tsv.mats['data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'])
 
-        print("tile.keys()", tile.keys())
+        tileset_info = tsv.mats[filename][1]
+        tileset_file = tsv.mats[filename][0]
+
+        zoom_level = 3
+        BINS_PER_TILE = 256
+
+        hdf_for_resolution = tileset_file[str(zoom_level)]
+        resolution = (tileset_info['max_width'] / 2**zoom_level) / BINS_PER_TILE
+
+        tile = tt.make_tiles(hdf_for_resolution,
+                resolution, 5,6)
+
         # this tile stretches down beyond the end of data and should thus contain no values
         assert(tile[(5,6)][-1] == 0.)
 
@@ -516,7 +527,6 @@ class CoolerTest(dt.TestCase):
 
         contents = json.loads(ret.content)
         assert('nuhr' in contents)
-        print("contents:", contents)
 
     def test_get_multi_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')
@@ -543,7 +553,6 @@ class CoolerTest(dt.TestCase):
         assert('nuhr.2.0.0' in content)
         assert('dense' in content['nuhr.2.0.0'])
 
-        #print('contents:', content)
         return
 
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97')
@@ -830,9 +839,18 @@ class TilesetsViewSetTest(dt.TestCase):
         q = np.frombuffer(r, dtype=np.float16)
 
         with h5py.File(self.cooler.datafile.url) as f:
+            tileset_info = cch.get_info(self.cooler.datafile.url)
+            tileset_file = f
 
-            mat = [f, cch.get_info(self.cooler.datafile.url)]
-            t = tt.make_tiles(z, x, y, mat)[(x,y)]
+            mat = [tileset_file, tileset_info]
+
+            zoom_level = z
+            BINS_PER_TILE = 256
+
+            hdf_for_resolution = tileset_file[str(zoom_level)]
+            resolution = (tileset_info['max_width'] / 2**zoom_level) / BINS_PER_TILE
+
+            t = tt.make_tiles(hdf_for_resolution, resolution, x, y)[(x,y)]
 
             # test the base64 encoding
             self.assertTrue(np.isclose(sum(q), sum(t), rtol=1e-3))
