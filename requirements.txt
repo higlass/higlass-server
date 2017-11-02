@@ -1,4 +1,4 @@
--e git+https://github.com/mirnylab/cooler.git@master#egg=cooler
+-e git+https://github.com/mirnylab/cooler.git@pkerpedjiev/resolution-based-tiles#egg=cooler
 pyBigWig==0.3.2
 Cython==0.25.2
 Django==1.11.3
