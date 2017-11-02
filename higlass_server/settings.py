@@ -275,8 +275,8 @@ PUBLIC_UPLOAD_ENABLED = get_setting('PUBLIC_UPLOAD_ENABLED', True)
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = 'static/'
+STATIC_URL = '/hgs-static/'
+STATIC_ROOT = 'hgs-static/'
 
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
