@@ -6,7 +6,6 @@ import csv
 import clodius.hdf_tiles as hdft
 import clodius.db_tiles as cdt
 import collections as col
-import contextlib
 import django.db.models as dbm
 import django.db.models.functions as dbmf
 import cooler.contrib.higlass as cch
@@ -17,12 +16,10 @@ import h5py
 import json
 import logging
 import math
-import multiprocessing as mp
 import numpy as np
 import os
 import os.path as op
 import rest_framework.exceptions as rfe
-import rest_framework.pagination as rfpa
 import rest_framework.parsers as rfp
 import rest_framework.status as rfs
 import tilesets.models as tm
@@ -55,7 +52,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
-from .tiles import make_tile
+from .tiles import make_tiles
 
 from higlass_server.utils import getRdb
 
