@@ -1,3 +1,7 @@
+v1.3.1 (2017-11-02
+
+- Serve static files from `hgs-static`
+
 v1.3.0 (2017-10-xx)
 
 - Support arbitrary resolution cooler files
