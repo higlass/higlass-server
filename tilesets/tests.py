@@ -77,7 +77,6 @@ class ChromosomeSizes(dt.TestCase):
         assert('chr1' in data)
 
 
-
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
         self.user1 = dcam.User.objects.create_user(
@@ -85,7 +84,8 @@ class TilesetModelTest(dt.TestCase):
         )
         upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, 
+            upload_file.read()),
             filetype='cooler',
             owner=self.user1,
             uuid='x1x'
@@ -312,7 +312,6 @@ class PermissionsTest(dt.TestCase):
         f.close()
         f = open('data/tiny.txt', 'rb')
 
-
         test_tileset = {
             'datafile': f,
             'filetype': 'hitile',
@@ -329,6 +328,7 @@ class PermissionsTest(dt.TestCase):
             format='multipart'
         )
         f.close()
+        assert(response is not None)
 
         ret = json.loads(c1.get('/api/v1/tilesets/').content)
         assert(ret['count'] == 2)
@@ -355,14 +355,30 @@ class BigWigTest(dt.TestCase):
             name="x",
             uuid='bw')
 
+    def test_get_tileset_info(self):
+        c1 = dt.Client()
+        ret = json.loads(c1.get('/api/v1/tileset_info/?d=bw').content)
+        print("ret:", ret)
+
     def test_get_tiles(self):
         '''
         Try to retrieve some tiles from this file
         '''
         c1 = dt.Client()
         c1.login(username='user1', password='pass')
+
+        # make sure that the dataset has been added
         ret = json.loads(c1.get('/api/v1/tilesets/?d=bw').content)
         assert(ret['count'] == 1)
+
+        # try to retrieve the top level tile
+        # ret = json.loads(c1.get('/api/v1/tiles/?d=bw.0.0').content)
+        # print("ret:", ret)
+
+        # retrieve a tile that lies completely beyond the end of
+        # the assembly
+        ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content)
+        print("ret:", ret)
 
 
 class CoolerTest(dt.TestCase):
@@ -371,20 +387,23 @@ class CoolerTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'rb')
-        #x = upload_file.read()
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 
+                           'rb')
+        # x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
-            filetype='cooler',
-            datatype='matrix',
-            owner=self.user1,
-            coordSystem='hg19',
-            coordSystem2='hg19',
-            name="x",
-            uuid='md')
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, 
+                upload_file.read()),
+                filetype='cooler',
+                datatype='matrix',
+                owner=self.user1,
+                coordSystem='hg19',
+                coordSystem2='hg19',
+                name="x",
+                uuid='md')
 
         self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, 
+                upload_file.read()),
             filetype='cooler',
             datatype='matrix',
             owner=self.user1,

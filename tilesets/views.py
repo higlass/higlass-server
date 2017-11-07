@@ -3,33 +3,42 @@ from __future__ import print_function
 
 import base64
 import csv
-import clodius.hdf_tiles as hdft
-import clodius.db_tiles as cdt
-import collections as col
-import contextlib
-import django.db.models as dbm
-import django.db.models.functions as dbmf
-import cooler.contrib.higlass as cch
-import tilesets.bigwig_tiles as bwt
-import guardian.utils as gu
-import higlass_server.settings as hss
-import itertools as it
 import h5py
 import json
 import logging
 import math
-import multiprocessing as mp
-import numpy as np
 import os
-import os.path as op
-import rest_framework.exceptions as rfe
-import rest_framework.pagination as rfpa
-import rest_framework.parsers as rfp
-import rest_framework.status as rfs
+
+import clodius.db_tiles as cdt
+import clodius.hdf_tiles as hdft
+
+import collections as col
+
+import cooler.contrib.higlass as cch
+
+
+import django.db.models as dbm
+import django.db.models.functions as dbmf
+
+import guardian.utils as gu
+
+import higlass_server.settings as hss
+import itertools as it
+
+import tilesets.bigwig_tiles as bwt
 import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
+
+import numpy as np
+
+import os.path as op
+
+import rest_framework.exceptions as rfe
+import rest_framework.parsers as rfp
+import rest_framework.status as rfs
+
 import shutil
 import slugid
 import time
@@ -98,13 +107,14 @@ def get_available_transforms(cooler):
 
     return transforms
 
+
 def make_mats(dset):
     f = h5py.File(dset, 'r')
 
     if 'resolutions' in f:
         # this file contains raw resolutions so it'll return a different
         # sort of tileset info
-        info = {"resolutions": tuple(sorted(map(int,list(f['resolutions'].keys())))) }
+        info = {"resolutions": tuple(sorted(map(int, list(f['resolutions'].keys())))) }
         mats[dset] = [f, info]
 
         # see which transforms are available, a transform has to be
@@ -201,6 +211,38 @@ def extract_tileset_uid(tile_id):
 
     return tileset_uuid
 
+def generate_bigwig_tileset_info(tileset):
+    '''
+    Get the tileset info for a bigWig file
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+
+    Returns
+    -------
+    tileset_info: {'min_pos': [], 
+                    'max_pos': [], 
+                    'tile_size': 1024, 
+                    'max_zoom': 7
+                    }
+    '''
+    chromsizes = bwt.get_chromsizes(tileset.datafile.url)
+    max_zoom = bwt.get_quadtree_depth(chromsizes)
+    tile_size = 1024
+
+    tileset_info = {
+        'min_pos': [0],
+        'max_pos': [tile_size * 2 ** max_zoom],
+        'max_width': tile_size * 2 ** max_zoom,
+        'tile_size': tile_size,
+        'max_zoom': max_zoom
+    }
+
+    return tileset_info
+
+
 def generate_bigwig_tiles(tileset, tile_ids):
     '''
     Generate tiles from a bigwig file.
@@ -222,13 +264,14 @@ def generate_bigwig_tiles(tileset, tile_ids):
 
     for tile_id in tile_ids:
         tile_id_parts = tile_id.split('.')
-        zoom_level = int(tile_id_parts[0])
         tile_position = list(map(int, tile_id_parts[1:3]))
+        zoom_level = tile_position[0]
 
-        dense = bwt.get_bigwig_tile(
+        # this doesn't combine multiple consequetive ids, which
+        # would speed things up
+        dense = bwt.get_bigwig_tile_by_id(
             tileset.datafile.url, 
-            zoom_level, 
-            tile_position[0],
+            zoom_level,
             tile_position[1])
 
         if len(dense):
@@ -722,6 +765,8 @@ def generate_tiles(tileset_tile_ids):
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
         return generate_cooler_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'bigwig':
+        return generate_bigwig_tiles(tileset, tile_ids)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
@@ -1061,6 +1106,8 @@ def tiles(request):
             tilesets[tileset_uuid] = tileset
 
         if tileset.filetype == 'cooler':
+            # cooler tiles can have a transform (e.g. 'ice', 'kr') which
+            # needs to be added if it's not there (e.g. 'default')
             new_tile_id = add_transform_type(tile_id)
             transform_id_to_original_id[new_tile_id] = tile_id
             tile_id = new_tile_id
@@ -1213,6 +1260,8 @@ def tileset_info(request):
                 "tile_size": int(tileset_info['tile_size']),
                 "max_zoom": int(tileset_info['max_zoom'])
             }
+        elif tileset_object.filetype == 'bigwig':
+            tileset_infos[tileset_uuid] = generate_bigwig_tileset_info(tileset_object)
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
