@@ -337,6 +337,34 @@ class PermissionsTest(dt.TestCase):
         assert(ret['count'] == 1)
 
 
+class BigWigTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 'rb')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bigwig',
+            datatype='vector',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
+            name="x",
+            uuid='bw')
+
+    def test_get_tiles(self):
+        '''
+        Try to retrieve some tiles from this file
+        '''
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+        ret = json.loads(c1.get('/api/v1/tilesets/?d=bw').content)
+        assert(ret['count'] == 1)
+
+
 class CoolerTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(

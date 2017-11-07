@@ -52,4 +52,3 @@ python manage.py runserver localhost:${port}
 
 /usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.42&s=JNfsIf26QzKTVsb-pK7wSw").read()'
 
-

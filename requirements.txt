@@ -1,4 +1,5 @@
--e git+https://github.com/mirnylab/cooler.git@pkerpedjiev/resolution-based-tiles#egg=cooler
+-e git+https://github.com/mirnylab/cooler.git@master#egg=cooler
+-e git+https://github.com/nvictus/pybbi.git@master#egg=pybbi
 pyBigWig==0.3.2
 Cython==0.25.2
 django-cors-headers
