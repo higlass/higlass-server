@@ -1,3 +1,7 @@
+v1.4.0 (2017-11-08)
+
+- Added support for bigWig files
+
 v1.3.1 (2017-11-02
 
 - Serve static files from `hgs-static`
