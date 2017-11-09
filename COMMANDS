@@ -16,6 +16,7 @@ aws s3 cp s3://pkerp/public/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool da
 aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
 aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
 aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig data/
+aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
 
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
