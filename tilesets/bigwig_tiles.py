@@ -50,7 +50,6 @@ def get_bigwig_tile(bwpath, zoom_level, start_pos, end_pos):
    
     arrays = []
     for cid, start, end in abs2genomic(chromsizes, start_pos, end_pos):
-        print("cid:", cid, start, end)
         n_bins = int(np.ceil((end - start) / binsize))
         try:
             chrom = chromsizes.index[cid]

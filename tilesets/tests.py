@@ -358,7 +358,6 @@ class BigWigTest(dt.TestCase):
     def test_get_tileset_info(self):
         c1 = dt.Client()
         ret = json.loads(c1.get('/api/v1/tileset_info/?d=bw').content)
-        print("ret:", ret)
 
     def test_get_tiles(self):
         '''
@@ -378,7 +377,6 @@ class BigWigTest(dt.TestCase):
         # retrieve a tile that lies completely beyond the end of
         # the assembly
         ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content)
-        print("ret:", ret)
 
 
 class CoolerTest(dt.TestCase):
