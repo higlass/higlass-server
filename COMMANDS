@@ -1,3 +1,9 @@
+export PYTHONPATH=$PYTHONPATH:.
+python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 0 0
+
+/usr/bin/time python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 10 100 --num-requests 35
+# using s3fs
+/usr/bin/time python scripts/test_aws_bigWig_fetch.py /Users/pete/projects/resgen-server/media/aws//NlXvmcA4QUaZ9B-fiXf_mw/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig 0 0 --num-requests 35
 #goofys --stat-cache-ttl 0 --type-cache-ttl 0 higlass:higlass.io/hg-data/media media
 
 #umount media; s3fs higlass:/higlass.io/media media/ -o passwd_file=~/.aws/credentials_s3fs   -o createbucket,allow_other,umask=077,uid=502,gid=20 -f -d
