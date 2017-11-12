@@ -18,9 +18,7 @@ import rest_framework.status as rfs
 import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
-import fragments.views as fv
-import tilesets.views as tv
-
+import tilesets.generate_tiles as tgt
 
 
 logger = logging.getLogger(__name__)
@@ -28,19 +26,19 @@ logger = logging.getLogger(__name__)
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
 
         assert(len(result) == 2)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11"])
 
         assert(len(result) == 2)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11", "a.7.11"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11", "a.7.11"])
 
         assert(len(result) == 3)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
 
         assert(len(result) == 1)
 
@@ -537,13 +535,11 @@ class CoolerTest(dt.TestCase):
         '''
         Some recent changes made the tile boundaries appear darker than they should
         '''
-        import tilesets.views as tsv
-
         filename = 'data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'
-        tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
+        tgt.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
 
-        tileset_info = tsv.mats[filename][1]
-        tileset_file = tsv.mats[filename][0]
+        tileset_info = tgt.mats[filename][1]
+        tileset_file = tgt.mats[filename][0]
 
         zoom_level = 3
         BINS_PER_TILE = 256
