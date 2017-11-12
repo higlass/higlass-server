@@ -1,3 +1,7 @@
+v1.4.1 (2017-11-11)
+
+- Built a fixed build
+
 v1.4.0 (2017-11-08)
 
 - Added support for bigWig files
