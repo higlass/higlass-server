@@ -15,7 +15,7 @@ from os import path
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
-from tilesets.views import get_datapath
+from tilesets.utils import get_datapath
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,
