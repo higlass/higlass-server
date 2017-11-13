@@ -22,5 +22,6 @@ npm-debug.log
 
 uploads/
 static/
+hgs-static/
 
 config.json

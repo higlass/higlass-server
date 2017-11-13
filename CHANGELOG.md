@@ -1,6 +1,19 @@
+
+v1.4.1 (2017-11-11)
+
+- Built a fixed build
+
+v1.4.0 (2017-11-08)
+
+- Added support for bigWig files
+
 v1.3.1 (2017-10-??)
 
 - Fixed a bug with ignore-diags in the fragments API (again)
+
+v1.3.1 (2017-11-02
+
+- Serve static files from `hgs-static`
 
 v1.3.0 (2017-10-21)
 

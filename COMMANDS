@@ -1,3 +1,9 @@
+export PYTHONPATH=$PYTHONPATH:.
+python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 0 0
+
+/usr/bin/time python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 10 100 --num-requests 35
+# using s3fs
+/usr/bin/time python scripts/test_aws_bigWig_fetch.py /Users/pete/projects/resgen-server/media/aws//NlXvmcA4QUaZ9B-fiXf_mw/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig 0 0 --num-requests 35
 #goofys --stat-cache-ttl 0 --type-cache-ttl 0 higlass:higlass.io/hg-data/media media
 
 #umount media; s3fs higlass:/higlass.io/media media/ -o passwd_file=~/.aws/credentials_s3fs   -o createbucket,allow_other,umask=077,uid=502,gid=20 -f -d
@@ -14,6 +20,9 @@ aws s3 cp s3://pkerp/public/arrowhead_domains_short.txt.multires.db data/
 aws s3 cp s3://pkerp/public/Rao_RepH_GM12878_InsulationScore.txt.multires.db data/
 aws s3 cp s3://pkerp/public/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool data/
 aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
+aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
+aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig data/
+aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
 
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 
@@ -51,5 +60,4 @@ python manage.py runserver localhost:${port}
 /usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.71&d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.72&d=CQMd6V_cRw6iCI_-Unl3PQ.7.19.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.20.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.21.73&d=CQMd6V_cRw6iCI_-Unl3PQ.7.22.73&s=JNfsIf26QzKTVsb-pK7wSw").read()'
 
 /usr/bin/time python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/tiles/?d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.5.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.6.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.7.42&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.38&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.39&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.40&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.41&d=CQMd6V_cRw6iCI_-Unl3PQ.6.8.42&s=JNfsIf26QzKTVsb-pK7wSw").read()'
-
 
