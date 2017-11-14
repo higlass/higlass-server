@@ -263,7 +263,7 @@ def generate_bigwig_tiles(tileset, tile_ids):
         # this doesn't combine multiple consequetive ids, which
         # would speed things up
         dense = bwt.get_bigwig_tile_by_id(
-            tileset.datafile.url, 
+            tut.get_datapath(tileset.datafile.url), 
             zoom_level,
             tile_position[1])
 
