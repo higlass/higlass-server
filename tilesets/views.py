@@ -270,7 +270,7 @@ def generate_bigwig_tiles(tileset, tile_ids):
         # this doesn't combine multiple consequetive ids, which
         # would speed things up
         dense = bwt.get_bigwig_tile_by_id(
-            tileset.datafile.url, 
+            get_datapath(tileset.datafile.url), 
             zoom_level,
             tile_position[1])
 
@@ -330,7 +330,8 @@ def generate_hitile_tiles(tileset, tile_ids):
 
         dense = hdft.get_data(
             h5py.File(
-                get_datapath(tileset.datafile.url)
+                get_datapath(tileset.datafile.url),
+                'r'
             ),
             tile_position[0],
             tile_position[1]
@@ -497,7 +498,8 @@ def generate_hibed_tiles(tileset, tile_ids):
         tile_position = list(map(int, tile_id_parts[1:3]))
         dense = hdft.get_discrete_data(
             h5py.File(
-                get_datapath(tileset.datafile.url)
+                get_datapath(tileset.datafile.url),
+                'r'
             ),
             tile_position[0],
             tile_position[1]
@@ -1248,7 +1250,7 @@ def tileset_info(request):
             tileset_object.filetype == 'hibed'
         ):
             tileset_info = hdft.get_tileset_info(
-                h5py.File(get_datapath(tileset_object.datafile.url)))
+                h5py.File(get_datapath(tileset_object.datafile.url), 'r'))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [int(tileset_info['min_pos'])],
                 "max_pos": [int(tileset_info['max_pos'])],
