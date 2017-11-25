@@ -1,3 +1,6 @@
+v1.4.2 (2017-11-13)
+
+- Fixed issue where bigWig files weren't being found
 
 v1.4.1 (2017-11-11)
 
