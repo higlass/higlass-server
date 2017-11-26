@@ -208,7 +208,7 @@ def sizes(request):
 
     else:
         try:
-            with open(chrom_sizes.datafile, 'r') as f:
+            with open(chrom_sizes.datafile.url, 'r') as f:
                 if res_type == 'json':
                     reader = csv.reader(f, delimiter='\t')
 
