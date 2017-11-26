@@ -1,3 +1,7 @@
+v1.5.0 (2017-11-??)
+
+- Added support for cooler-based chrom-sizes retrieval
+
 v1.4.2 (2017-11-13)
 
 - Fixed issue where bigWig files weren't being found
