@@ -80,6 +80,52 @@ class ChromosomeSizes(dt.TestCase):
         assert(ret.status_code == 200)
         assert('chr1' in data)
 
+        ret = self.client.get(
+            '/api/v1/chrom-sizes/?id=cs-hg19&type=json&cum=1'
+        )
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('offset' in data['chr1'])
+
+    def test_chromsizes_from_cooler(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open(
+            'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
+            'rb'
+        )
+        self.chroms = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='cooler',
+            datatype='matrix',
+            coordSystem='hg19',
+            owner=self.user1,
+            uuid='cooler-dixon'
+        )
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cooler-dixon')
+
+        assert(ret.status_code == 200)
+        assert(len(ret.content) > 300)
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cooler-dixon&type=json')
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('chr1' in data)
+
+        ret = self.client.get(
+            '/api/v1/chrom-sizes/?id=cooler-dixon&type=json&cum=1'
+        )
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('offset' in data['chr1'])
+
 
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
