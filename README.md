@@ -112,3 +112,7 @@ bumpversion patch
 ```
 ./update.sh
 ```
+
+## Troubleshooting
+
+**pybbi installation fails on macOS**: Check out https://github.com/nvictus/pybbi/issues/2
