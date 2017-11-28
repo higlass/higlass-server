@@ -172,7 +172,7 @@ def sizes(request):
         return response(err_msg, status=err_status)
 
     # Try to load the CSV file
-    if chrom_sizes.datatype == 'matrix':
+    if chrom_sizes.filetype == 'cooler':
         with h5py.File(chrom_sizes.datafile.url, 'r') as f:
 
             try:
