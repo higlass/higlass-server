@@ -53,6 +53,7 @@ from rest_framework.authentication import BasicAuthentication
 from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 from higlass_server.utils import getRdb
+from fragments.utils import get_cooler
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ def uids_by_filename(request):
     serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
 
     return JsonResponse({"count": len(queryset), "results": serializer.data})
+
 
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
@@ -111,7 +113,7 @@ def sizes(request):
             queries:
 
             id: id of the stored chromSizes [e.g.: hg19 or mm9]
-            type: return data format [tsv or json]
+            type: return data format [csv, tsv, or json]
             cum: return cumulative size or offset [0 or 1]
 
     Returns:
@@ -161,7 +163,7 @@ def sizes(request):
         chrom_sizes = tm.Tileset.objects.get(uuid=uuid)
     except Exception as e:
         logger.error(e)
-        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % uuid
+        err_msg = 'Oh lord! ChromSizes for %s not found. 😬' % uuid
         err_status = 404
 
         if is_json:
@@ -170,31 +172,63 @@ def sizes(request):
         return response(err_msg, status=err_status)
 
     # Try to load the CSV file
-    try:
-        f = chrom_sizes.datafile
-        f.open('r')
+    if chrom_sizes.datatype == 'matrix':
+        with h5py.File(chrom_sizes.datafile.url, 'r') as f:
 
-        if res_type == 'json':
-            reader = csv.reader(f, delimiter='\t')
+            try:
+                c = get_cooler(f)
+            except Exception as e:
+                logger.error(e)
+                err_msg = 'Yikes... Couldn~\'t init them cooler files 😵'
+                err_status = 500
 
-            data = []
-            for row in reader:
-                data.append(row)
-        else:
-            data = f.readlines()
+                if is_json:
+                    return response({'error': err_msg}, status=err_status)
 
-        f.close()
-    except Exception as e:
-        logger.error(e)
-        err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
-            chrom_sizes.datafile, e
-        )
-        err_status = 500
+                return response(err_msg, status=err_status)
 
-        if is_json:
-            return response({'error': err_msg}, status=err_status)
+            try:
+                if res_type == 'csv':
+                    data = c.chromsizes.to_csv()
+                elif res_type == 'tsv':
+                    data = c.chromsizes.to_csv(sep='\t')
+                else:
+                    data = []
+                    for chrom, size in c.chromsizes.iteritems():
+                        data.append([chrom, size])
+            except Exception as e:
+                logger.error(e)
+                err_msg = 'Them cooler files has no `chromsizes` attribute 🤔'
+                err_status = 500
 
-        return response(err_msg, status=err_status)
+                if is_json:
+                    return response({'error': err_msg}, status=err_status)
+
+                return response(err_msg, status=err_status)
+
+    else:
+        try:
+            with open(chrom_sizes.datafile.url, 'r') as f:
+                if res_type == 'json':
+                    reader = csv.reader(f, delimiter='\t')
+
+                    data = []
+                    for row in reader:
+                        data.append(row)
+                else:
+                    data = f.readlines()
+
+        except Exception as e:
+            logger.error(e)
+            err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
+                chrom_sizes.datafile, e
+            )
+            err_status = 500
+
+            if is_json:
+                return response({'error': err_msg}, status=err_status)
+
+            return response(err_msg, status=err_status)
 
     # Convert the stuff if needed
     try:
@@ -280,7 +314,7 @@ def viewconfs(request):
                 'error': 'Public uploads disabled'
             }, status=403)
 
-        viewconf_wrapper = json.loads(request.body)
+        viewconf_wrapper = json.loads(request.body.decode('utf-8'))
         uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
         try:
@@ -324,7 +358,7 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
-def add_transform_type(tile_id): 
+def add_transform_type(tile_id):
     '''
     Add a transform type to a cooler tile id if it's not already
     present.
