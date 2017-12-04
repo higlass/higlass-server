@@ -1,6 +1,7 @@
 v1.5.0 (2017-11-??)
 
 - Added support for cooler-based chrom-sizes retrieval
+- Added support for beddb headers
 
 v1.4.2 (2017-11-13)
 
