@@ -698,8 +698,9 @@ def generate_cooler_tiles(tileset, tile_ids):
         tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
 
         # filter for tiles that are in bounds for this zoom level
-        tile_positions = list(filter(lambda x: x[0] < tileset_info['max_pos'][0]+1, tile_positions))
-        tile_positions = list(filter(lambda x: x[1] < tileset_info['max_pos'][1]+1, tile_positions))
+        tile_width = resolution * BINS_PER_TILE
+        tile_positions = list(filter(lambda x: x[0] * tile_width  < tileset_info['max_pos'][0]+1, tile_positions))
+        tile_positions = list(filter(lambda x: x[1] * tile_width < tileset_info['max_pos'][1]+1, tile_positions))
 
         if len(tile_positions) == 0:
             # no in bounds tiles

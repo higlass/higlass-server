@@ -309,7 +309,7 @@ def viewconfs(request):
                 'error': 'Uploads disabled'
             }, status=403)
 
-        if request.user.is_anonymous() and not hss.PUBLIC_UPLOAD_ENABLED:
+        if request.user.is_anonymous and not hss.PUBLIC_UPLOAD_ENABLED:
             return JsonResponse({
                 'error': 'Public uploads disabled'
             }, status=403)
@@ -328,6 +328,12 @@ def viewconfs(request):
             higlass_version = viewconf_wrapper['higlassVersion']
         except KeyError:
             higlass_version = ''
+
+        existing_object = tm.ViewConf.objects.filter(uuid=uid)
+        if len(existing_object) > 0:
+            return JsonResponse({
+                'error': 'Object with uid {} already exists'.format(uid)
+            }, status=rfs.HTTP_400_BAD_REQUEST);
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
 

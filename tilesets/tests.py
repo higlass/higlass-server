@@ -243,13 +243,12 @@ class ViewConfTest(dt.TestCase):
         if hss.UPLOAD_ENABLED:
             # TODO: This will bubble up as a 500, when bad user input should
             # really be 4xx.
-            with self.assertRaises(db.IntegrityError):
-                self.client.post(
-                    '/api/v1/viewconfs/',
-                    '{"uid": "dupe", "viewconf":{"try": "second"}}',
-                    content_type="application/json"
-                )
-
+            ret = self.client.post(
+                '/api/v1/viewconfs/',
+                '{"uid": "dupe", "viewconf":{"try": "second"}}',
+                content_type="application/json"
+            )
+            assert(ret.status_code == 400)
 
 class PermissionsTest(dt.TestCase):
     def setUp(self):
@@ -923,7 +922,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.{z}.{x}.{y}'.format(
-                    uuid=self.cooler.uuid.decode('utf-8'), x=x, y=y, z=z
+                    uuid=self.cooler.uuid, x=x, y=y, z=z
                 )
             ).content.decode('utf-8')
         )
@@ -1068,16 +1067,16 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
-                    uuid=self.cooler.uuid.decode('utf-8')
+                    uuid=self.cooler.uuid
                 )
             ).content.decode('utf-8')
         )
 
         self.assertTrue('{uuid}.1.0.0'.format(
-            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
         self.assertTrue('{uuid}.1.0.1'.format(
-            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
 
     def test_get_same_tiles(self):
@@ -1087,7 +1086,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
-                    uuid=self.cooler.uuid.decode('utf-8')
+                    uuid=self.cooler.uuid
                 )
             ).content.decode('utf-8')
         )
@@ -1103,7 +1102,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
@@ -1115,27 +1114,27 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
         self.assertTrue(
             '{uuid}.1.5.5'.format(
-                uuid=self.cooler.uuid.decode('utf-8')
+                uuid=self.cooler.uuid
             ) not in returned.keys()
         )
 
     def test_get_hitile_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid.decode('utf-8'))
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)
             ).content.decode('utf-8')
         )
 
-        uuid = "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8'))
+        uuid = "{uuid}".format(uuid=self.hitile.uuid)
 
         self.assertTrue(
-            "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8')) in returned.keys()
+            "{uuid}".format(uuid=self.hitile.uuid) in returned.keys()
         )
         self.assertEqual(returned[uuid][u'max_zoom'], 22)
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
@@ -1145,22 +1144,22 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_cooler_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
-        uuid = "{uuid}".format(uuid=self.cooler.uuid.decode('utf-8'))
+        uuid = "{uuid}".format(uuid=self.cooler.uuid)
         self.assertTrue(u'name' in returned[uuid])
 
 
     def test_get_hitile_tile(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)
             ).content.decode('utf-8')
         )
 
-        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid.decode('utf-8')) in returned)
+        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid) in returned)
         pass
 
     def test_list_tilesets(self):
