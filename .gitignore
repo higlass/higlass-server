@@ -1,3 +1,4 @@
+tmp
 notebooks/.ipynb_checkpoints
 *.sqllite
 api/coolers/migrations/*
