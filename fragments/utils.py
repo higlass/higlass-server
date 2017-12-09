@@ -542,14 +542,45 @@ def get_frag(
         if width == height:
             scaled_row = int(np.rint(diags_start_row / scale_x))
 
-            for i in range(scaled_row, ignore_diags + scaled_row):
-                idx = np.diag_indices(width)
+            idx = np.diag_indices(width)
+            scaled_idx = (
+                idx
+                if scaled_row == 0
+                else [idx[0][scaled_row:], idx[0][:-scaled_row]]
+            )
+
+            for i in range(ignore_diags):
 
                 if i == 0:
-                    frag[np.diag_indices(width)] = 0
+                    frag[scaled_idx] = 0
                 else:
-                    frag[((idx[0] - i)[i:], (idx[1])[i:])] = 0
-                    frag[((idx[0] + i)[:-i], (idx[1])[:-i])] = 0
+                    dist_to_diag = scaled_row - i
+                    dist_neg = min(0, dist_to_diag)
+                    off = 0 if dist_to_diag >= 0 else i - scaled_row
+
+                    # Above diagonal
+                    frag[
+                        ((scaled_idx[0] - i)[off:], (scaled_idx[1])[off:])
+                    ] = 0
+
+                    # Extra cutoff at the bottom right
+                    frag[
+                        (
+                            range(
+                                scaled_idx[0][-1] - i,
+                                scaled_idx[0][-1] + 1 + dist_neg,
+                            ),
+                            range(
+                                scaled_idx[1][-1],
+                                scaled_idx[1][-1] + i + 1 + dist_neg
+                            )
+                        )
+                    ] = 0
+
+                    # Below diagonal
+                    frag[
+                        ((scaled_idx[0] + i)[:-i], (scaled_idx[1])[:-i])
+                    ] = 0
         else:
             logger.warn(
                 'Ignoring the diagonal only supported for squared features'
