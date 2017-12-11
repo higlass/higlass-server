@@ -204,6 +204,134 @@ def extract_tileset_uid(tile_id):
 
     return tileset_uuid
 
+def generate_multivec_tileset_info(filename):
+    '''
+    Return some information about this tileset that will
+    help render it in on the client.
+
+    Parameters
+    ----------
+    filename: str
+      The filename of the h5py file containing the tileset info.
+
+    Returns
+    -------
+    tileset_info: {}
+      A dictionary containing the information describing
+      this dataset
+    '''
+    f = h5py.File(filename, 'r')
+    # a sorted list of resolutions, lowest to highest
+    # awkward to write because a the numbers representing resolution
+    # are datapoints / pixel so lower resolution is actually a higher
+    # number
+    resolutions = sorted([int(r) for r in f['resolutions'].keys()])[::-1]
+
+    # the "leftmost" datapoint position
+    # an array because higlass can display multi-dimensional
+    # data
+    min_pos = [0]
+
+    # the "rightmost" datapoint position
+    max_pos = [len(f['resolutions'][str(resolutions[-1])])]
+    tile_size = 1024
+
+    f.close()
+
+    return {
+      'resolutions': resolutions,
+      'min_pos': min_pos,
+      'tile_size': tile_size
+    }
+
+def get_single_multivec_tile(filename, tile_pos):
+    '''
+    Retrieve a single multivec tile from a multires file
+
+    Parameters
+    ----------
+    filename: string
+        The multires file containing the multivec data
+    tile_pos: (z, x)
+        The zoom level and position of this tile
+    '''
+    tileset_info = generate_multivec_tileset_info(filename)
+    f = h5py.File(filename, 'r')
+    
+    # which resolution does this zoom level correspond to?
+    resolution = tileset_info['resolutions'][tile_pos[0]]
+    tile_size = tileset_info['tile_size']
+    
+    # where in the data does the tile start and end
+    tile_start = tile_pos[1] * tile_size
+    tile_end = tile_start + tile_size
+
+    dense = f['resolutions'][str(resolution)][tile_start:tile_end]
+    f.close()
+
+    return dense
+
+def generate_1d_tiles(filename, tile_ids, get_data_function):
+    '''
+    Generate a set of tiles for the given tile_ids.
+
+    Parameters
+    ----------
+    filename: str
+        The file containing the multiresolution data
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0) identifying the tiles
+        to be retrieved
+    get_data_function: lambda
+        A function which retrieves the data for this tile
+
+    Returns
+    -------
+    tile_list: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
+        dense = get_data_function(filename, tile_position)
+
+        if len(dense):
+            max_dense = max(dense.reshape(-1,))
+            min_dense = min(dense.reshape(-1,))
+        else:
+            max_dense = 0
+            min_dense = 0
+
+        min_f16 = np.finfo('float16').min
+        max_f16 = np.finfo('float16').max
+
+        has_nan = len([d for d in dense.reshape((-1,)) if np.isnan(d)]) > 0
+
+        if (
+            not has_nan and
+            max_dense > min_f16 and max_dense < max_f16 and
+            min_dense > min_f16 and min_dense < max_f16
+        ):
+            tile_value = {
+                'dense': base64.b64encode(dense.reshape((-1,)).astype('float16')).decode('utf-8'),
+                'dtype': 'float16',
+                'shape': dense.shape
+            }
+        else:
+            tile_value = {
+                'dense': base64.b64encode(dense.reshape((-1,)).astype('float32')).decode('utf-8'),
+                'dtype': 'float32',
+                'shape': dense.shape
+            }
+
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
+
+
 def generate_bigwig_tileset_info(tileset):
     '''
     Get the tileset info for a bigWig file
@@ -761,6 +889,12 @@ def generate_tiles(tileset_tile_ids):
         return generate_cooler_tiles(tileset, tile_ids)
     elif tileset.filetype == 'bigwig':
         return generate_bigwig_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'multivec':
+        return generate_1d_tiles(
+                tut.get_datapath(tileset.datafile.url),
+                tile_ids,
+                get_single_multivec_tile)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
+
 

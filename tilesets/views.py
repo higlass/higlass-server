@@ -542,6 +542,9 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+        elif tileset_object.filetype == 'multivec':
+            tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
