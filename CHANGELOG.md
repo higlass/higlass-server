@@ -1,4 +1,9 @@
-v1.5.0 (2017-11-??)
+v1.5.1 (2017-12-14)
+
+- Decode slugid in ingest command
+- Resolve datapath in chromsizes
+
+v1.5.0 (2017-12-05)
 
 - Added support for cooler-based chrom-sizes retrieval
 - Added support for beddb headers

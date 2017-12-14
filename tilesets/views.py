@@ -173,7 +173,7 @@ def sizes(request):
 
     # Try to load the CSV file
     if chrom_sizes.filetype == 'cooler':
-        with h5py.File(chrom_sizes.datafile.url, 'r') as f:
+        with h5py.File(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
 
             try:
                 c = get_cooler(f)
@@ -208,7 +208,7 @@ def sizes(request):
 
     else:
         try:
-            with open(chrom_sizes.datafile.url, 'r') as f:
+            with open(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
                 if res_type == 'json':
                     reader = csv.reader(f, delimiter='\t')
 
@@ -555,6 +555,9 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+        elif tileset_object.filetype == 'multivec':
+            tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
