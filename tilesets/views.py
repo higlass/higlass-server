@@ -173,7 +173,7 @@ def sizes(request):
 
     # Try to load the CSV file
     if chrom_sizes.filetype == 'cooler':
-        with h5py.File(chrom_sizes.datafile.url, 'r') as f:
+        with h5py.File(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
 
             try:
                 c = get_cooler(f)
@@ -208,7 +208,7 @@ def sizes(request):
 
     else:
         try:
-            with open(chrom_sizes.datafile.url, 'r') as f:
+            with open(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
                 if res_type == 'json':
                     reader = csv.reader(f, delimiter='\t')
 

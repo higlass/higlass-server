@@ -349,7 +349,7 @@ def generate_bigwig_tileset_info(tileset):
                     'max_zoom': 7
                     }
     '''
-    chromsizes = bwt.get_chromsizes(tileset.datafile.url)
+    chromsizes = bwt.get_chromsizes(tut.get_datapath(tileset.datafile.url))
     max_zoom = bwt.get_quadtree_depth(chromsizes)
     tile_size = 1024
 
