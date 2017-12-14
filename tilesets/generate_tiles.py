@@ -236,12 +236,16 @@ def generate_multivec_tileset_info(filename):
     max_pos = [len(f['resolutions'][str(resolutions[-1])])]
     tile_size = 1024
 
+    shape = list(f['resolutions'][str(resolutions[0])].shape)
+    shape[0] = tile_size
+
     f.close()
 
     return {
       'resolutions': resolutions,
       'min_pos': min_pos,
-      'tile_size': tile_size
+      'tile_size': tile_size,
+      'shape': shape
     }
 
 def get_single_multivec_tile(filename, tile_pos):
@@ -267,9 +271,16 @@ def get_single_multivec_tile(filename, tile_pos):
     tile_end = tile_start + tile_size
 
     dense = f['resolutions'][str(resolution)][tile_start:tile_end]
+    #print("dense.shape", dense.shape)
+
+    if len(dense) < tileset_info['tile_size']:
+        # if there aren't enough rows to fill this tile, add some zeros
+        dense = np.vstack([dense, np.zeros((tileset_info['tile_size'] - len(dense), 
+            tileset_info['shape'][1]))])
+
     f.close()
 
-    return dense
+    return dense.T
 
 def generate_1d_tiles(filename, tile_ids, get_data_function):
     '''
