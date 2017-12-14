@@ -1,3 +1,7 @@
+v1.5.2 (2017-12-15)
+
+- Catch error in fetching cached tiles and continue working
+
 v1.5.1 (2017-12-14)
 
 - Decode slugid in ingest command
