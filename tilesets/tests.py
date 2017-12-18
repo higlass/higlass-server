@@ -24,6 +24,29 @@ import tilesets.generate_tiles as tgt
 logger = logging.getLogger(__name__)
 
 
+class BamFileTests(dt.TestCase):
+    def test_bamfile(dt.TestCase):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        # move the file to the media directory
+        # and give it some unique identifier
+        '''
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        self.chroms = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='bam',
+            datatype='chromsizes',
+            coordSystem="hg19",
+            owner=self.user1,
+            uuid='cs-hg19'
+        )
+        '''
+
+
 class TileTests(dt.TestCase):
     def test_partitioning(self):
         result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
