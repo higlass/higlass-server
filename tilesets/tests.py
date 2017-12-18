@@ -25,10 +25,22 @@ logger = logging.getLogger(__name__)
 
 
 class BamFileTests(dt.TestCase):
-    def test_bamfile(dt.TestCase):
+    def test_bamfile(self):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
+
+        filename = 'na12878.ERR091571_chr21.bam'
+        target_dir = op.join(hss.MEDIA_ROOT, 'uploads')
+        target_file = op.join(target_dir, filename)
+
+        if not op.exists(target_file):
+            import shutil
+            shutil.copyfile('data/na12878.ERR091571_chr21.bam', 
+                    target_file)
+
+        
+        django_file = filename
 
         # move the file to the media directory
         # and give it some unique identifier
@@ -45,6 +57,15 @@ class BamFileTests(dt.TestCase):
             uuid='cs-hg19'
         )
         '''
+        tm.Tileset.objects.create(
+            datafile=django_file,
+            filetype=filetype,
+            datatype=datatype,
+            coordSystem=coordSystem,
+            coordSystem2=coordSystem2,
+            owner=None,
+            uuid=uid,
+            name=name)
 
 
 class TileTests(dt.TestCase):
