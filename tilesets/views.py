@@ -440,7 +440,15 @@ def tiles(request):
             transform_id_to_original_id[tile_id] = tile_id
 
         # see if the tile is cached
-        tile_value = rdb.get(tile_id)
+        tile_value = None
+        try:
+            tile_value = rdb.get(tile_id)
+        except Exception as ex:
+            # there was an error accessing the cache server
+            # log the error and carry forward fetching the tile
+            # from the original data
+            logger.error(ex)
+            
         #tile_value = None
 
         if tile_value is not None:
@@ -476,7 +484,12 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
-        rdb.set(tile_id, pickle.dumps(tile_value))
+        try:
+            rdb.set(tile_id, pickle.dumps(tile_value))
+        except Exception as ex:
+            # error caching a tile
+            # log the error and carry forward, this isn't critical
+            logger.error(ex)
 
         if tile_id in transform_id_to_original_id:
             original_tile_id = transform_id_to_original_id[tile_id]
