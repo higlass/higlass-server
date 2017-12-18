@@ -654,12 +654,18 @@ class CoolerTest(dt.TestCase):
         assert('dense' in content['md.7.92.97'])
 
     def test_get_oob_tiles(self):
+        # This test is obsolete
+        # We don't necessarily need to return tiles that
+        # are out of bounds. The client just handle the
+        # fact that they aren't there
         ret = self.client.get('/api/v1/tiles/?d=md.6.63.63')
         content = json.loads(ret.content.decode('utf-8'))
 
+        '''
         print("content:", content)
         assert('md.7.63.63' in content)
         assert('dense' in content['md.7.63.63'])
+        '''
 
     def test_get_empty_tiles(self):
         # this test is here to ensure that the function call doesn't
