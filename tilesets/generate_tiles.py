@@ -1,4 +1,5 @@
 import base64
+import tilesets.bam_files as tbf
 import tilesets.bigwig_tiles as bwt
 import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
@@ -6,8 +7,10 @@ import collections as col
 import cooler.contrib.higlass as cch
 import h5py
 import itertools as it
+import math
 import numpy as np
 import os
+import pysam
 import shutil
 import time
 import tempfile
@@ -342,6 +345,39 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
 
     return generated_tiles
 
+def generate_bam_tileset_info(tileset):
+    '''
+    Get the tileset info for a bam file
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+
+    Returns
+    -------
+    tileset_info: {'min_pos': [], 
+                    'max_pos': [], 
+                    'tile_size': 1024, 
+                    'max_zoom': 7
+                    }
+    '''
+    samfile = pysam.AlignmentFile(tut.get_datapath(tileset.datafile.url))
+    total_length = sum(samfile.lengths)
+
+    tile_size = 256
+    max_zoom = math.ceil(math.log(total_length / tile_size) / math.log(2))
+    print("max_zoom:", max_zoom)
+
+    tileset_info = {
+        'min_pos': [0],
+        'max_pos': [total_length],
+        'max_width': tile_size * 2 ** max_zoom,
+        'tile_size': tile_size,
+        'max_zoom': max_zoom
+    }
+
+    return tileset_info
 
 def generate_bigwig_tileset_info(tileset):
     '''
@@ -373,6 +409,42 @@ def generate_bigwig_tileset_info(tileset):
     }
 
     return tileset_info
+
+def generate_bam_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a bigwig file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    tile_list: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    generated_tiles = []
+    tileset_info = generate_bam_tileset_info(tileset)
+    samfile = pysam.AlignmentFile(tut.get_datapath(tileset.datafile.url))
+
+    for tile_id in tile_ids:
+        tile_id_parts = tile_id.split('.')
+        tile_position = list(map(int, tile_id_parts[1:3]))
+
+        tile_width = tileset_info['max_width'] / 2 ** int(tile_position[0])
+        print("tile_width:", tile_width)
+
+        start_pos = int(tile_position[1]) * tile_width
+        end_pos = tile_position[1] * tile_width
+
+        tile_value = tbf.sample_reads(samfile, start_pos = start_pos, end_pos = end_pos)
+        generated_tiles += [(tile_id, tile_value)]
+
+    return generated_tiles
 
 
 def generate_bigwig_tiles(tileset, tile_ids):
@@ -905,6 +977,8 @@ def generate_tiles(tileset_tile_ids):
                 tut.get_datapath(tileset.datafile.url),
                 tile_ids,
                 get_single_multivec_tile)
+    elif tileset.filetype == 'bam':
+        return generate_bam_tiles(tileset, tile_ids)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 

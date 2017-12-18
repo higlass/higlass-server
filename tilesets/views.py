@@ -542,21 +542,29 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
                     tut.get_datapath(tileset_object.datafile.url))
+
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
+
         elif tileset_object.filetype == 'beddb':
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
+
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
+
+        elif tileset_object.filetype == 'bam':
+            tileset_infos[tileset_uuid] = tgt.generate_bam_tileset_info(tileset_object)
+
         elif tileset_object.filetype == 'cooler':
             dsetname = tut.get_datapath(queryset.filter(
                 uuid=tileset_uuid

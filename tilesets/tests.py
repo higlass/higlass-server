@@ -39,8 +39,13 @@ class BamFileTests(dt.TestCase):
             shutil.copyfile('data/na12878.ERR091571_chr21.bam', 
                     target_file)
 
+        if not op.exists("{}.bai".format(target_file)):
+            import shutil
+            shutil.copyfile('data/na12878.ERR091571_chr21.bam.bai', 
+                    "{}.bai".format(target_file))
+
         
-        django_file = filename
+        django_file = op.join('uploads', filename)
 
         # move the file to the media directory
         # and give it some unique identifier
@@ -59,13 +64,23 @@ class BamFileTests(dt.TestCase):
         '''
         tm.Tileset.objects.create(
             datafile=django_file,
-            filetype=filetype,
-            datatype=datatype,
-            coordSystem=coordSystem,
-            coordSystem2=coordSystem2,
+            filetype="bam",
+            datatype="reads",
+            coordSystem="hg19",
+            coordSystem2="hg19",
             owner=None,
-            uuid=uid,
-            name=name)
+            uuid='b',
+            name="na12878_chr1")
+
+        ret = self.client.get('/api/v1/tileset_info/?d=b')
+        print('ret:', ret)
+        content = json.loads(ret.content)
+
+        print('content:', content)
+
+        ret = self.client.get('/api/v1/tiles/?d=b.0.0')
+        content = json.loads(ret.content)
+        print("content:", content)
 
 
 class TileTests(dt.TestCase):
