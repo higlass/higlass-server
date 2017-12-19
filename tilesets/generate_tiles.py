@@ -435,11 +435,13 @@ def generate_bam_tiles(tileset, tile_ids):
         tile_id_parts = tile_id.split('.')
         tile_position = list(map(int, tile_id_parts[1:3]))
 
+        print('max_width', tileset_info['max_width'])
+        print("tile_position:", tile_position)
         tile_width = tileset_info['max_width'] / 2 ** int(tile_position[0])
         print("tile_width:", tile_width)
 
         start_pos = int(tile_position[1]) * tile_width
-        end_pos = tile_position[1] * tile_width
+        end_pos = start_pos + tile_width
 
         tile_value = tbf.sample_reads(samfile, start_pos = start_pos, end_pos = end_pos)
         generated_tiles += [(tile_id, tile_value)]

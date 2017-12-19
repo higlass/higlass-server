@@ -47,20 +47,43 @@ def sample_reads(samfile, num_entries=256, entry_length=10000,
     # specify the chromosome order for the fetched reads
     
     lengths = []
+    cum_seq_lengths = np.cumsum(np.array(samfile.lengths))
+    results = []
+
     for pos in poss:
-        #print("pos:", pos)
-        seq_num = np.flatnonzero(np.cumsum(np.array(samfile.lengths)) >= pos)[0]
+        print("pos1:", pos)
+        print('cum_seq_lengths', cum_seq_lengths)
+        fnz = np.flatnonzero(cum_seq_lengths >= pos)
+
+        if len(fnz) == 0:
+            continue
+
+        print('fnz:', fnz)
+        seq_num = fnz[0]
         seq_name = samfile.references[seq_num]
+        print("seq_name:", seq_name)
         cname = '{}'.format(seq_name)
         
-        pos = random.randint(0,1000000)
-
+        print('pos:', pos)
+        print('cum_seq_lengths[seq_num]', cum_seq_lengths[seq_num])
+        if seq_num > 0:
+            pos = pos - cum_seq_lengths[seq_num-1]
+        print("seq_name:", seq_name, 'pos:', pos )
         
-        i = samfile.fetch(cname, pos, pos + entry_length)
+        reads = samfile.fetch(cname, pos, pos + entry_length)
 
-        a = list(i)
-        lengths += [len(a)]
+        print('reads:', reads)
+        for read in reads:
+            print('read:', read)
+            print("dir", dir(read))
+            print(read.reference_id)
+            print(read.reference_start)
+            print(read.rlen)
+            print(read.get_tag('MD'))
+            return None
+
+        results += [len(list(reads))]
         
         #samfile.count_coverage(cname, pos, pos + entry_length)
         
-    return lengths
+    return results

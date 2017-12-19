@@ -69,16 +69,16 @@ class BamFileTests(dt.TestCase):
             coordSystem="hg19",
             coordSystem2="hg19",
             owner=None,
-            uuid='b',
+            uuid='x',
             name="na12878_chr1")
 
-        ret = self.client.get('/api/v1/tileset_info/?d=b')
+        ret = self.client.get('/api/v1/tileset_info/?d=x')
         print('ret:', ret)
         content = json.loads(ret.content)
 
         print('content:', content)
 
-        ret = self.client.get('/api/v1/tiles/?d=b.0.0')
+        ret = self.client.get('/api/v1/tiles/?d=x.0.0')
         content = json.loads(ret.content)
         print("content:", content)
 
