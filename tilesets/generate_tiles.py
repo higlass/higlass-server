@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 import tempfile
+import tilesets.multivec_tiles as tmt
 import tilesets.utils as tut
 from .tiles import make_tiles
 
@@ -233,10 +234,11 @@ def generate_multivec_tileset_info(filename):
     min_pos = [0]
 
     # the "rightmost" datapoint position
-    max_pos = [len(f['resolutions'][str(resolutions[-1])])]
-    tile_size = 1024
+    # max_pos = [len(f['resolutions']['values'][str(resolutions[-1])])]
+    tile_size = int(f['info'].attrs['tile-size'])
+    first_chrom = f['chroms']['name'][0]
 
-    shape = list(f['resolutions'][str(resolutions[0])].shape)
+    shape = list(f['resolutions'][str(resolutions[0])]['values'][first_chrom].shape)
     shape[0] = tile_size
 
     f.close()
@@ -262,15 +264,21 @@ def get_single_multivec_tile(filename, tile_pos):
     tileset_info = generate_multivec_tileset_info(filename)
     f = h5py.File(filename, 'r')
     
+    print('tileset_info', tileset_info)
     # which resolution does this zoom level correspond to?
     resolution = tileset_info['resolutions'][tile_pos[0]]
     tile_size = tileset_info['tile_size']
+    print("tile_size:", tile_size)
     
     # where in the data does the tile start and end
-    tile_start = tile_pos[1] * tile_size
-    tile_end = tile_start + tile_size
+    tile_start = tile_pos[1] * tile_size * resolution
+    tile_end = tile_start + tile_size * resolution
 
-    dense = f['resolutions'][str(resolution)][tile_start:tile_end]
+    chromsizes = list(zip(f['chroms']['name'], f['chroms']['length']))
+    print('chromsizes', chromsizes)
+
+    #dense = f['resolutions'][str(resolution)][tile_start:tile_end]
+    dense = tmt.get_tile(f, chromsizes, resolution, tile_start, tile_end, tileset_info['shape'])
     #print("dense.shape", dense.shape)
 
     if len(dense) < tileset_info['tile_size']:

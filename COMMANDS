@@ -1,4 +1,4 @@
-python manage.py   ingest_tileset   --filename tmp/my_file.multires   --datatype multi-vector   --filetype multivec   --coordSystem hg19
+python manage.py   ingest_tileset   --filename uploads/hg38.tiled.multires   --datatype multivec   --filetype multivec   --coordSystem hg19 --no-upload
 
 export PYTHONPATH=$PYTHONPATH:.
 python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 0 0
