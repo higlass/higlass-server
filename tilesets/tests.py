@@ -78,6 +78,10 @@ class BamFileTests(dt.TestCase):
 
         print('content:', content)
 
+        ## Returns a set of reads:
+        # [[21, 34895925, 101, [[80, 'A'],....]
+        # Which contain [[chromosome, reference_start, strand, [[pos, difference]]...]...]
+
         ret = self.client.get('/api/v1/tiles/?d=x.0.0')
         content = json.loads(ret.content)
         print("content:", content)

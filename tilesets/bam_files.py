@@ -97,6 +97,7 @@ def sample_reads(samfile, num_entries=256, entry_length=10000,
             results += [ [
                     read.reference_id,
                     read.reference_start,
+                    '-' if read.is_reverse else '+',
                     read.rlen,
                     differences
                     ]]
@@ -112,8 +113,6 @@ def sample_reads(samfile, num_entries=256, entry_length=10000,
             print(read.query_sequence)
             print(read.get_aligned_pairs(with_seq=True))
             '''
-
-
             # results += [len(list(reads))]
         
         #samfile.count_coverage(cname, pos, pos + entry_length)
