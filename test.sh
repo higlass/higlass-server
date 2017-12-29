@@ -30,6 +30,7 @@ hic-resolutions.cool
 wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
 wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 na12878.ERR091571_chr21.bam
+na12878.ERR091571_chr21.bam.bai
 END
 )
 

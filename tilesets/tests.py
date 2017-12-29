@@ -86,7 +86,6 @@ class BamFileTests(dt.TestCase):
         content = json.loads(ret.content)
         print("content:", content)
 
-
 class TileTests(dt.TestCase):
     def test_partitioning(self):
         result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
