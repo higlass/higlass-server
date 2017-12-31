@@ -1,4 +1,17 @@
-v1.5.0 (2017-11-??)
+v1.5.3 (2018-01-
+
+- Refactored the chromsizes code to be more modular
+
+v1.5.2 (2017-12-15)
+
+- Catch error in fetching cached tiles and continue working
+
+v1.5.1 (2017-12-14)
+
+- Decode slugid in ingest command
+- Resolve datapath in chromsizes
+
+v1.5.0 (2017-12-05)
 
 - Added support for cooler-based chrom-sizes retrieval
 - Added support for beddb headers
