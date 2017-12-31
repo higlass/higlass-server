@@ -20,6 +20,7 @@ import guardian.utils as gu
 import higlass_server.settings as hss
 import itertools as it
 
+import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.models as tm
 import tilesets.permissions as tsp
@@ -53,7 +54,6 @@ from rest_framework.authentication import BasicAuthentication
 from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 from higlass_server.utils import getRdb
-from fragments.utils import get_cooler
 
 logger = logging.getLogger(__name__)
 
@@ -171,67 +171,33 @@ def sizes(request):
 
         return response(err_msg, status=err_status)
 
-    # Try to load the CSV file
-    if chrom_sizes.filetype == 'cooler':
-        with h5py.File(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
+    # Try to load the chromosome sizes and return them as a list of 
+    # (name, size) tuples
+    try:
+        if chrom_sizes.filetype == 'cooler':
+            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+        else:
+            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+    except Exception as ex:
+        err_msg = str(ex)
+        err_status = 500
 
-            try:
-                c = get_cooler(f)
-            except Exception as e:
-                logger.error(e)
-                err_msg = 'Yikes... Couldn~\'t init them cooler files 😵'
-                err_status = 500
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
 
-                if is_json:
-                    return response({'error': err_msg}, status=err_status)
-
-                return response(err_msg, status=err_status)
-
-            try:
-                if res_type == 'csv':
-                    data = c.chromsizes.to_csv()
-                elif res_type == 'tsv':
-                    data = c.chromsizes.to_csv(sep='\t')
-                else:
-                    data = []
-                    for chrom, size in c.chromsizes.iteritems():
-                        data.append([chrom, size])
-            except Exception as e:
-                logger.error(e)
-                err_msg = 'Them cooler files has no `chromsizes` attribute 🤔'
-                err_status = 500
-
-                if is_json:
-                    return response({'error': err_msg}, status=err_status)
-
-                return response(err_msg, status=err_status)
-
-    else:
-        try:
-            with open(tut.get_datapath(chrom_sizes.datafile.url), 'r') as f:
-                if res_type == 'json':
-                    reader = csv.reader(f, delimiter='\t')
-
-                    data = []
-                    for row in reader:
-                        data.append(row)
-                else:
-                    data = f.readlines()
-
-        except Exception as e:
-            logger.error(e)
-            err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
-                chrom_sizes.datafile, e
-            )
-            err_status = 500
-
-            if is_json:
-                return response({'error': err_msg}, status=err_status)
-
-            return response(err_msg, status=err_status)
+        return response(err_msg, status=err_status)
 
     # Convert the stuff if needed
     try:
+        # data should be a list of (name, size) tuples coming
+        # coming and converted to a more appropriate data type
+        # going out
+        if res_type == 'tsv':
+            lines = []
+            for (name, size) in data:
+                lines += ["{}\t{}".format(name, size)]
+                data = lines
+
         if res_type == 'json' and not incl_cum:
             json_out = {}
 

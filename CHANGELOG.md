@@ -1,3 +1,7 @@
+v1.5.3 (2018-01-
+
+- Refactored the chromsizes code to be more modular
+
 v1.5.2 (2017-12-15)
 
 - Catch error in fetching cached tiles and continue working
