@@ -20,6 +20,7 @@ import guardian.utils as gu
 import higlass_server.settings as hss
 import itertools as it
 
+import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.models as tm
 import tilesets.permissions as tsp
@@ -78,6 +79,7 @@ def uids_by_filename(request):
 
     return JsonResponse({"count": len(queryset), "results": serializer.data})
 
+
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def available_chrom_sizes(request):
@@ -111,7 +113,7 @@ def sizes(request):
             queries:
 
             id: id of the stored chromSizes [e.g.: hg19 or mm9]
-            type: return data format [tsv or json]
+            type: return data format [csv, tsv, or json]
             cum: return cumulative size or offset [0 or 1]
 
     Returns:
@@ -161,7 +163,7 @@ def sizes(request):
         chrom_sizes = tm.Tileset.objects.get(uuid=uuid)
     except Exception as e:
         logger.error(e)
-        err_msg = 'Oh lord! ChromSizes for %s not found. ☹️' % uuid
+        err_msg = 'Oh lord! ChromSizes for %s not found. 😬' % uuid
         err_status = 404
 
         if is_json:
@@ -169,26 +171,15 @@ def sizes(request):
 
         return response(err_msg, status=err_status)
 
-    # Try to load the CSV file
+    # Try to load the chromosome sizes and return them as a list of 
+    # (name, size) tuples
     try:
-        f = chrom_sizes.datafile
-        f.open('r')
-
-        if res_type == 'json':
-            reader = csv.reader(f, delimiter='\t')
-
-            data = []
-            for row in reader:
-                data.append(row)
+        if chrom_sizes.filetype == 'cooler':
+            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
         else:
-            data = f.readlines()
-
-        f.close()
-    except Exception as e:
-        logger.error(e)
-        err_msg = 'WHAT?! Could not load file %s. 😤 (%s)' % (
-            chrom_sizes.datafile, e
-        )
+            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+    except Exception as ex:
+        err_msg = str(ex)
         err_status = 500
 
         if is_json:
@@ -198,6 +189,15 @@ def sizes(request):
 
     # Convert the stuff if needed
     try:
+        # data should be a list of (name, size) tuples coming
+        # coming and converted to a more appropriate data type
+        # going out
+        if res_type == 'tsv':
+            lines = []
+            for (name, size) in data:
+                lines += ["{}\t{}".format(name, size)]
+                data = lines
+
         if res_type == 'json' and not incl_cum:
             json_out = {}
 
@@ -275,12 +275,12 @@ def viewconfs(request):
                 'error': 'Uploads disabled'
             }, status=403)
 
-        if request.user.is_anonymous() and not hss.PUBLIC_UPLOAD_ENABLED:
+        if request.user.is_anonymous and not hss.PUBLIC_UPLOAD_ENABLED:
             return JsonResponse({
                 'error': 'Public uploads disabled'
             }, status=403)
 
-        viewconf_wrapper = json.loads(request.body)
+        viewconf_wrapper = json.loads(request.body.decode('utf-8'))
         uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
 
         try:
@@ -294,6 +294,12 @@ def viewconfs(request):
             higlass_version = viewconf_wrapper['higlassVersion']
         except KeyError:
             higlass_version = ''
+
+        existing_object = tm.ViewConf.objects.filter(uuid=uid)
+        if len(existing_object) > 0:
+            return JsonResponse({
+                'error': 'Object with uid {} already exists'.format(uid)
+            }, status=rfs.HTTP_400_BAD_REQUEST);
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
 
@@ -324,7 +330,7 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
-def add_transform_type(tile_id): 
+def add_transform_type(tile_id):
     '''
     Add a transform type to a cooler tile id if it's not already
     present.
@@ -400,7 +406,15 @@ def tiles(request):
             transform_id_to_original_id[tile_id] = tile_id
 
         # see if the tile is cached
-        tile_value = rdb.get(tile_id)
+        tile_value = None
+        try:
+            tile_value = rdb.get(tile_id)
+        except Exception as ex:
+            # there was an error accessing the cache server
+            # log the error and carry forward fetching the tile
+            # from the original data
+            logger.error(ex)
+            
         #tile_value = None
 
         if tile_value is not None:
@@ -436,7 +450,12 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
-        rdb.set(tile_id, pickle.dumps(tile_value))
+        try:
+            rdb.set(tile_id, pickle.dumps(tile_value))
+        except Exception as ex:
+            # error caching a tile
+            # log the error and carry forward, this isn't critical
+            logger.error(ex)
 
         if tile_id in transform_id_to_original_id:
             original_tile_id = transform_id_to_original_id[tile_id]
@@ -502,6 +521,9 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+        elif tileset_object.filetype == 'multivec':
+            tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
