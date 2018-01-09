@@ -50,7 +50,6 @@ def get_cached_datapath(relpath):
 
     if op.exists(cached_path):
         # this file has already been cached
-        print("here", cached_path)
         return cached_path
 
     with tempfile.TemporaryDirectory() as dirpath:
@@ -810,6 +809,7 @@ def generate_cooler_tiles(tileset, tile_ids):
 
     if filename not in mats:
         # check if this tileset is open
+        print('yo')
         make_mats(filename)
 
     tileset_file_and_info = mats[filename]
