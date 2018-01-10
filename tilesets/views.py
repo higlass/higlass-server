@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import csv
 import h5py
 import json
 import logging
@@ -59,13 +58,16 @@ logger = logging.getLogger(__name__)
 
 rdb = getRdb()
 
+
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
+
 
 @api_view(['GET'])
 def uids_by_filename(request):
@@ -171,13 +173,17 @@ def sizes(request):
 
         return response(err_msg, status=err_status)
 
-    # Try to load the chromosome sizes and return them as a list of 
+    # Try to load the chromosome sizes and return them as a list of
     # (name, size) tuples
     try:
         if chrom_sizes.filetype == 'cooler':
-            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_cooler_chromsizes(
+                tut.get_datapath(chrom_sizes.datafile.url)
+            )
         else:
-            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_tsv_chromsizes(
+                tut.get_datapath(chrom_sizes.datafile.url)
+            )
     except Exception as ex:
         err_msg = str(ex)
         err_status = 500
@@ -330,6 +336,7 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
+
 def add_transform_type(tile_id):
     '''
     Add a transform type to a cooler tile id if it's not already
@@ -352,6 +359,7 @@ def add_transform_type(tile_id):
     transform_type = tgt.get_transform_type(tile_id)
     new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
     return new_tile_id
+
 
 @api_view(['GET'])
 def tiles(request):
@@ -414,8 +422,8 @@ def tiles(request):
             # log the error and carry forward fetching the tile
             # from the original data
             logger.error(ex)
-            
-        #tile_value = None
+
+        # tile_value = None
 
         if tile_value is not None:
             # we found the tile in the cache, no need to fetch it again
@@ -427,11 +435,16 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid]) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [
+        (t, tileids_by_tileset[t.uuid])
+        for t in tilesets if ((not t.private) or request.user == t.owner)
+    ]
 
-    #pool = mp.Pool(6)
+    # pool = mp.Pool(6)
 
-    generated_tiles += list(it.chain(*map(tgt.generate_tiles, accessible_tilesets)))
+    generated_tiles += list(
+        it.chain(*map(tgt.generate_tiles, accessible_tilesets))
+    )
 
     '''
     for tileset_uuid in tileids_by_tileset:
@@ -440,9 +453,14 @@ def tiles(request):
 
         # check permissions
         if tileset.private and request.user != tileset.owner:
-            generated_tiles += [(tile_id, {'error': "Forbidden"}) for tile_id in tileids_by_tileset[tileset_uuid]]
+            generated_tiles += [
+                (tile_id, {'error': "Forbidden"})
+                for tile_id in tileids_by_tileset[tileset_uuid]
+            ]
         else:
-            generated_tiles += generate_tiles(tileset, tileids_by_tileset[tileset_uuid])
+            generated_tiles += generate_tiles(
+                tileset, tileids_by_tileset[tileset_uuid]
+            )
     '''
 
     # store the tiles in redis
@@ -468,6 +486,7 @@ def tiles(request):
             tiles_to_return[original_tile_id] = tile_value
 
     return JsonResponse(tiles_to_return, safe=False)
+
 
 @api_view(['GET'])
 def tileset_info(request):
@@ -520,7 +539,9 @@ def tileset_info(request):
                 "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == 'bigwig':
-            tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+            tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(
+                tileset_object
+            )
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
                     tut.get_datapath(tileset_object.datafile.url))
@@ -606,11 +627,15 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
         if 'o' in request.GET:
             if 'r' in request.GET:
-                queryset = queryset.order_by(dbmf.Lower(request.GET['o']).desc())
+                queryset = queryset.order_by(
+                    dbmf.Lower(request.GET['o']).desc()
+                )
             else:
-                queryset = queryset.order_by(dbmf.Lower(request.GET['o']).asc())
+                queryset = queryset.order_by(
+                    dbmf.Lower(request.GET['o']).asc()
+                )
 
-        #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
