@@ -305,7 +305,7 @@ def viewconfs(request):
         if len(existing_object) > 0:
             return JsonResponse({
                 'error': 'Object with uid {} already exists'.format(uid)
-            }, status=rfs.HTTP_400_BAD_REQUEST);
+            }, status=rfs.HTTP_400_BAD_REQUEST)
 
         serializer = tss.ViewConfSerializer(data={'viewconf': viewconf})
 
