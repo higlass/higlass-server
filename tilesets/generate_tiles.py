@@ -611,7 +611,9 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
 
-        tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
+        tile_positions = [
+            [int(x) for x in t.split('.')[2:4]] for t in tile_group
+        ]
 
         # filter for tiles that are in bounds for this zoom level
         tile_positions = list(
@@ -684,7 +686,11 @@ def generate_hibed_tiles(tileset, tile_ids):
             tile_position[1]
         )
 
-        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
+        tile_value = {
+            'discrete': list(
+                [list([x.decode('utf-8') for x in d]) for d in dense]
+            )
+        }
 
         generated_tiles += [(tile_id, tile_value)]
 
@@ -912,12 +918,16 @@ def generate_cooler_tiles(tileset, tile_ids):
         # filter for tiles that are in bounds for this zoom level
         tile_width = resolution * BINS_PER_TILE
         tile_positions = list(
-            filter(lambda x: x[0] * tile_width < tileset_info['max_pos'][0]+1,
-                tile_positions)
+            filter(
+                lambda x: x[0] * tile_width < tileset_info['max_pos'][0]+1,
+                tile_positions
+            )
         )
         tile_positions = list(
-            filter(lambda x: x[1] * tile_width < tileset_info['max_pos'][1]+1,
-                tile_positions)
+            filter(
+                lambda x: x[1] * tile_width < tileset_info['max_pos'][1]+1,
+                tile_positions
+            )
         )
 
         if len(tile_positions) == 0:
@@ -941,8 +951,20 @@ def generate_cooler_tiles(tileset, tile_ids):
         )
 
         tiles = [
-            (".".join(map(str, [tileset_id] + [zoom_level] + list(position) + [transform_type])), format_cooler_tile(tile_data))
-                for (position, tile_data) in tile_data_by_position.items()
+            (
+                ".".join(
+                    map(
+                        str,
+                        (
+                            [tileset_id] +
+                            [zoom_level] +
+                            list(position) +
+                            [transform_type]
+                        )
+                    )
+                ),
+                format_cooler_tile(tile_data)
+            ) for (position, tile_data) in tile_data_by_position.items()
         ]
 
         generated_tiles += tiles
@@ -994,4 +1016,3 @@ def generate_tiles(tileset_tile_ids):
     else:
         err_msg = 'Unknown tileset filetype: {}'.format(tileset.filetype)
         return [(ti, {'error': err_msg}) for ti in tile_ids]
-
