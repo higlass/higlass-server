@@ -10,6 +10,7 @@ import numpy as np
 import os
 import shutil
 import tempfile
+import sqlite3
 import tilesets.utils as tut
 from .tiles import make_tiles
 
@@ -972,6 +973,50 @@ def generate_cooler_tiles(tileset, tile_ids):
     return generated_tiles
 
 
+def generate_image_tiles(tileset, tile_ids):
+    '''
+    Generate tiles from a imtiles file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    filename = tut.get_datapath(tileset.datafile.url)
+
+    # Connect to SQLite db
+    db = sqlite3.connect(filename)
+
+    generate_tiles = []
+
+    for tile_id in tile_ids:
+        id = tile_id[tile_id.find('.') + 1:]
+
+        sql = 'SELECT id, image FROM tiles WHERE id = :id'
+        param = {'id': id}
+        res = db.execute(sql, param).fetchone()
+
+        if res:
+            image_blob = res[1]
+
+            tile_data = {
+                'dense': base64.b64encode(image_blob).decode('latin-1'),
+                'dtype': 'int8'
+            }
+
+            generate_tiles.append((tile_id, tile_data))
+
+    return generate_tiles
+
+
 def generate_tiles(tileset_tile_ids):
     '''
     Generate a tiles for the give tile_ids.
@@ -1013,6 +1058,8 @@ def generate_tiles(tileset_tile_ids):
             tile_ids,
             get_single_multivec_tile
         )
+    elif tileset.filetype == 'imtiles':
+        return generate_image_tiles(tileset, tile_ids)
     else:
         err_msg = 'Unknown tileset filetype: {}'.format(tileset.filetype)
         return [(ti, {'error': err_msg}) for ti in tile_ids]
