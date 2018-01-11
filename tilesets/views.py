@@ -383,6 +383,10 @@ def tiles(request):
     # create a set so that we don't fetch the same tile multiple times
     tileids_to_fetch = set(request.GET.getlist("d"))
 
+    # Return the raw data if only one tile is requested. This currently only
+    # works for `imtiles`
+    raw = request.GET.get('raw', False)
+
     tileids_by_tileset = col.defaultdict(set)
     generated_tiles = []
 
@@ -433,7 +437,7 @@ def tiles(request):
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
     accessible_tilesets = [
-        (t, tileids_by_tileset[t.uuid])
+        (t, tileids_by_tileset[t.uuid], raw)
         for t in tilesets if ((not t.private) or request.user == t.owner)
     ]
 
@@ -479,6 +483,11 @@ def tiles(request):
 
         if original_tile_id in tileids_to_fetch:
             tiles_to_return[original_tile_id] = tile_value
+
+    if len(generated_tiles) == 1 and raw and 'image' in generated_tiles[0][1]:
+        return HttpResponse(
+            generated_tiles[0][1]['image'], content_type='image/jpeg'
+        )
 
     return JsonResponse(tiles_to_return, safe=False)
 

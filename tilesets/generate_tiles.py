@@ -973,7 +973,7 @@ def generate_cooler_tiles(tileset, tile_ids):
     return generated_tiles
 
 
-def generate_image_tiles(tileset, tile_ids):
+def generate_image_tiles(tileset, tile_ids, raw):
     '''
     Generate tiles from a imtiles file.
 
@@ -997,20 +997,26 @@ def generate_image_tiles(tileset, tile_ids):
 
     generate_tiles = []
 
-    for tile_id in tile_ids:
-        id = tile_id[tile_id.find('.') + 1:]
+    generate_image = raw and len(tile_ids)
 
-        sql = 'SELECT id, image FROM tiles WHERE id = :id'
-        param = {'id': id}
+    for tile_id in tile_ids:
+        id = tile_id[tile_id.find('.') + 1:].split('.')
+
+        sql = 'SELECT image FROM tiles WHERE z = :z AND y = :y AND x = :x'
+        param = {'z': id[0], 'y': id[1], 'x': id[2]}
         res = db.execute(sql, param).fetchone()
 
         if res:
-            image_blob = res[1]
+            image_blob = res[0]
 
-            tile_data = {
-                'dense': base64.b64encode(image_blob).decode('latin-1'),
-                'dtype': 'int8'
-            }
+            if generate_image:
+                tile_data = {
+                    'image': image_blob,
+                }
+            else:
+                tile_data = {
+                    'dense': base64.b64encode(image_blob).decode('latin-1'),
+                }
 
             generate_tiles.append((tile_id, tile_data))
 
@@ -1038,7 +1044,7 @@ def generate_tiles(tileset_tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids = tileset_tile_ids
+    tileset, tile_ids, raw = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
@@ -1059,7 +1065,7 @@ def generate_tiles(tileset_tile_ids):
             get_single_multivec_tile
         )
     elif tileset.filetype == 'imtiles':
-        return generate_image_tiles(tileset, tile_ids)
+        return generate_image_tiles(tileset, tile_ids, raw)
     else:
         err_msg = 'Unknown tileset filetype: {}'.format(tileset.filetype)
         return [(ti, {'error': err_msg}) for ti in tile_ids]
