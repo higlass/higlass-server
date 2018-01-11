@@ -1003,7 +1003,7 @@ def generate_image_tiles(tileset, tile_ids, raw):
         id = tile_id[tile_id.find('.') + 1:].split('.')
 
         sql = 'SELECT image FROM tiles WHERE z = :z AND y = :y AND x = :x'
-        param = {'z': id[0], 'y': id[1], 'x': id[2]}
+        param = {'z': int(id[0]), 'y': int(id[1]), 'x': int(id[2])}
         res = db.execute(sql, param).fetchone()
 
         if res:
