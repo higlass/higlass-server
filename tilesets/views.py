@@ -54,6 +54,8 @@ from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 from higlass_server.utils import getRdb
 
+from imtiles import utils as imtu
+
 logger = logging.getLogger(__name__)
 
 rdb = getRdb()
@@ -380,12 +382,6 @@ def tiles(request):
     '''
     # create a set so that we don't fetch the same tile multiple times
     tileids_to_fetch = set(request.GET.getlist("d"))
-    # with ProcessPoolExecutor() as executor:
-    # 	  res = executor.map(parallelize, hargs)
-    '''
-    p = mp.Pool(4)
-    res = p.map(parallelize, hargs)
-    '''
 
     tileids_by_tileset = col.defaultdict(set)
     generated_tiles = []
@@ -399,6 +395,7 @@ def tiles(request):
 
         # get the tileset object first
         if tileset_uuid in tilesets:
+            # Fritz: this condition is dead as `tilesets` haven't been set
             tileset = tilesets[tileset_uuid]
         else:
             tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
@@ -439,8 +436,6 @@ def tiles(request):
         (t, tileids_by_tileset[t.uuid])
         for t in tilesets if ((not t.private) or request.user == t.owner)
     ]
-
-    # pool = mp.Pool(6)
 
     generated_tiles += list(
         it.chain(*map(tgt.generate_tiles, accessible_tilesets))
@@ -565,6 +560,10 @@ def tileset_info(request):
             if dsetname not in tgt.mats:
                 tgt.make_mats(dsetname)
             tileset_infos[tileset_uuid] = tgt.mats[dsetname][1]
+        elif tileset_object.filetype == 'imtiles':
+            tileset_infos[tileset_uuid] = imtu.get_tileset_info(
+                tut.get_datapath(tileset_object.datafile.url)
+            )
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {
