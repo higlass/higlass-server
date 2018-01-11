@@ -1,5 +1,6 @@
 v1.5.3 (2018-01-
 
+- Added support for image tiles
 - Refactored the chromsizes code to be more modular
 
 v1.5.2 (2017-12-15)
