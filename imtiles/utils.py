@@ -12,7 +12,7 @@ def get_tileset_info(tileset):
 
     (
         _, _, _, _, _,
-        tile_size, max_zoom, max_height, max_width, dtype
+        tile_size, max_zoom, max_width, max_height, dtype
     ) = db.execute('SELECT * FROM tileset_info').fetchone()
 
     return {
