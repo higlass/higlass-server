@@ -59,13 +59,16 @@ logger = logging.getLogger(__name__)
 
 rdb = getRdb()
 
+
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
+
 
 @api_view(['GET'])
 def uids_by_filename(request):
@@ -330,6 +333,7 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
+
 def add_transform_type(tile_id):
     '''
     Add a transform type to a cooler tile id if it's not already
@@ -352,6 +356,7 @@ def add_transform_type(tile_id):
     transform_type = tgt.get_transform_type(tile_id)
     new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
     return new_tile_id
+
 
 @api_view(['GET'])
 def tiles(request):
@@ -469,6 +474,7 @@ def tiles(request):
 
     return JsonResponse(tiles_to_return, safe=False)
 
+
 @api_view(['GET'])
 def tileset_info(request):
     ''' Get information about a tileset
@@ -556,6 +562,49 @@ def tileset_info(request):
             tileset_object.coordSystem2
 
     return JsonResponse(tileset_infos)
+
+
+@api_view(['POST'])
+@authentication_classes((BasicAuthentication,))
+def link_file(request):
+    '''
+    A file has been uploaded to S3. Finish the upload here by adding the file
+    to the database.
+
+    The request should contain the location that file was uploaded to.
+
+    Parameters:
+        request: The HTTP request associated with this POST action
+
+    Returns:
+        JsonResponse: A response containing the uuid of the newly added tileset
+    '''
+    body = json.loads(request.body.decode('utf8'))
+    print("request:", request)
+
+    media_base_path = op.realpath(hss.MEDIA_ROOT)
+    aws_base_path = op.join(hss.MEDIA_ROOT, hss.AWS_BUCKET_MOUNT_POINT)
+
+    data_root = op.realpath(aws_base_path)
+    abs_filepath = op.realpath(op.join(aws_base_path, body['filepath']))
+
+    if abs_filepath.find(data_root) != 0:
+        # check ot make sure that the filename is contained in the AWS_BUCKET_MOUNT
+        # e.g. that somebody isn't surreptitiously trying to pass in ('../../file')
+        return JsonResponse({'error': "Provided path ({}) not in the data path".format(body['filepath'])}, status=500)
+    else:
+        if not op.exists(abs_filepath):
+            return JsonResponse({'error': "Specified file ({}) does not exist".format(body['filepath'])}, status=500)
+
+    diff_path = abs_filepath[len(media_base_path)+1:]    # +1 for the slash
+
+    print("user:", request.user)
+    obj = tm.Tileset.objects.create(
+            datafile=diff_path,
+            name=op.basename(body['filepath']),
+            owner=request.user)
+
+    return JsonResponse({'uuid': obj.uuid.decode('utf8')})
 
 
 @method_decorator(gzip_page, name='dispatch')

@@ -94,6 +94,7 @@ if 'SITE_URL' in os.environ:
 # (e.g. BASE_DIR/media/uplaods/file.x)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
 
 LOGGING = {
     'version': 1,
