@@ -561,6 +561,10 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
+        elif tileset_object.filetype == '2dannodb':
+            tileset_infos[tileset_uuid] = imtu.get_tileset_info(
+                tut.get_datapath(tileset_object.datafile.url)
+            )
         elif tileset_object.filetype == 'cooler':
             dsetname = tut.get_datapath(queryset.filter(
                 uuid=tileset_uuid
