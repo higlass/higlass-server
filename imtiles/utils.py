@@ -10,14 +10,19 @@ def get_tileset_info(tileset):
 
     db = sqlite3.connect(tileset)
 
-    (
-        _, _, _, _, _,
-        tile_size, max_zoom, max_width, max_height, dtype
-    ) = db.execute('SELECT * FROM tileset_info').fetchone()
+    res = db.execute('SELECT * FROM tileset_info').fetchone()
 
-    return {
-        'tile_size': tile_size,
-        'max_width': max_width,
-        'max_height': max_height,
-        'max_zoom': max_zoom
+    o = {
+        'tile_size': res[5],
+        'max_zoom': res[6],
+        'max_size': res[7],
+        'width': res[8],
+        'height': res[9]
     }
+
+    try:
+        o['dtype'] = res[10]
+    except IndexError:
+        pass
+
+    return o

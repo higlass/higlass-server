@@ -638,7 +638,8 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         tile_data_by_position = cdt.get_2d_tiles(
             cached_datapath,
             zoom_level,
-            minx, miny,
+            minx,
+            miny,
             maxx - minx + 1,
             maxy - miny + 1
         )
@@ -1050,7 +1051,7 @@ def generate_tiles(tileset_tile_ids):
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2ddb':
+    elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
         return generate_bed2ddb_tiles(tileset, tile_ids)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
