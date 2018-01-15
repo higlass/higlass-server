@@ -21,7 +21,7 @@ from rest_framework.decorators import (
 from rest_framework.permissions import AllowAny
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from tilesets.models import Tileset
-from tilesets.views import get_datapath
+from tilesets.utils import get_datapath
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,

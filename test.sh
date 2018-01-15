@@ -27,6 +27,8 @@ chromSizes.tsv
 gene-annotations-mm9.db
 Rao_RepH_GM12878_InsulationScore.txt.multires.db
 hic-resolutions.cool
+wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
+wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 END
 )
 

@@ -39,7 +39,7 @@ class Command(BaseCommand):
         coordSystem = options['coordSystem']
         coordSystem2 = options['coordSystem2']
         # coord = options['coord']
-        uid = options.get('uid') or slugid.nice()
+        uid = options.get('uid') or slugid.nice().decode('utf-8')
         name = options.get('name') or op.split(filename)[1]
 
         if options['no_upload']:

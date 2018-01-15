@@ -1,11 +1,12 @@
--e git+https://github.com/mirnylab/cooler.git@pkerpedjiev/resolution-based-tiles#egg=cooler
+-e git+https://github.com/mirnylab/cooler.git@master#egg=cooler
+-e git+https://github.com/nvictus/pybbi.git@master#egg=pybbi
 pyBigWig==0.3.2
 Cython==0.25.2
 Django==1.11.3
 django-cors-headers==2.1.0
 django-guardian==1.4.9
 django-rest-swagger==2.1.2
-djangorestframework==3.6.3
+djangorestframework==3.7.3
 djangorestframework-jwt==1.11.0
 h5py==2.6.0
 numpy==1.12.0

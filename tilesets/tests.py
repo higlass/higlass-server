@@ -18,28 +18,26 @@ import rest_framework.status as rfs
 import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
-import fragments.views as fv
-import tilesets.views as tv
-
+import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
 
         assert(len(result) == 2)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11"])
 
         assert(len(result) == 2)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11", "a.7.11"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10", "a.5.0.11", "a.7.11"])
 
         assert(len(result) == 3)
 
-        result = tv.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
+        result = tgt.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
 
         assert(len(result) == 1)
 
@@ -51,7 +49,9 @@ class ChromosomeSizes(dt.TestCase):
         )
         upload_file = open('data/chromSizes.tsv', 'rb')
         self.chroms = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
             filetype='chromsizes-csv',
             datatype='chromsizes',
             coordSystem="hg19",
@@ -59,7 +59,11 @@ class ChromosomeSizes(dt.TestCase):
             uuid='cs-hg19'
         )
 
-        ret = json.loads(self.client.get('/api/v1/available-chrom-sizes/').content.decode('utf-8'))
+        ret = json.loads(
+            self.client.get(
+                '/api/v1/available-chrom-sizes/'
+            ).content.decode('utf-8')
+        )
 
         assert(ret["count"] == 1)
         assert(len(ret["results"]) == 1)
@@ -75,6 +79,51 @@ class ChromosomeSizes(dt.TestCase):
         assert(ret.status_code == 200)
         assert('chr1' in data)
 
+        ret = self.client.get(
+            '/api/v1/chrom-sizes/?id=cs-hg19&type=json&cum=1'
+        )
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('offset' in data['chr1'])
+
+    def test_chromsizes_from_cooler(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open(
+            'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool',
+            'rb'
+        )
+        self.chroms = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='cooler',
+            datatype='matrix',
+            coordSystem='hg19',
+            owner=self.user1,
+            uuid='cooler-dixon'
+        )
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cooler-dixon')
+
+        assert(ret.status_code == 200)
+        assert(len(ret.content) > 300)
+
+        ret = self.client.get('/api/v1/chrom-sizes/?id=cooler-dixon&type=json')
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('chr1' in data)
+
+        ret = self.client.get(
+            '/api/v1/chrom-sizes/?id=cooler-dixon&type=json&cum=1'
+        )
+
+        data = json.loads(ret.content.decode('utf-8'))
+        assert(ret.status_code == 200)
+        assert('offset' in data['chr1'])
 
 class TilesetModelTest(dt.TestCase):
     def test_to_string(self):
@@ -83,7 +132,8 @@ class TilesetModelTest(dt.TestCase):
         )
         upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(upload_file.name,
+            upload_file.read()),
             filetype='cooler',
             owner=self.user1,
             uuid='x1x'
@@ -111,7 +161,7 @@ class UnknownTilesetTypeTest(dt.TestCase):
     def test_file_size(self):
         # make sure that the returned tiles are not overly large
         ret = self.client.get('/api/v1/tiles/?d=cli-huge-test.0.0.0')
-        val = json.loads(ret.content)
+        val = json.loads(ret.content.decode('utf-8'))
 
         # 32 bit:  349528
         # 16 bit:  174764
@@ -191,13 +241,12 @@ class ViewConfTest(dt.TestCase):
         if hss.UPLOAD_ENABLED:
             # TODO: This will bubble up as a 500, when bad user input should
             # really be 4xx.
-            with self.assertRaises(db.IntegrityError):
-                self.client.post(
-                    '/api/v1/viewconfs/',
-                    '{"uid": "dupe", "viewconf":{"try": "second"}}',
-                    content_type="application/json"
-                )
-
+            ret = self.client.post(
+                '/api/v1/viewconfs/',
+                '{"uid": "dupe", "viewconf":{"try": "second"}}',
+                content_type="application/json"
+            )
+            assert(ret.status_code == 400)
 
 class PermissionsTest(dt.TestCase):
     def setUp(self):
@@ -274,7 +323,7 @@ class PermissionsTest(dt.TestCase):
             # creating datasets is allowed if we're logged in
             assert(response.status_code == 201)
 
-            ret = response.data
+            ret = json.loads(response.content.decode('utf-8'))
 
             c2 = dt.Client()
             c2.login(username='user2', password='pass')
@@ -285,14 +334,14 @@ class PermissionsTest(dt.TestCase):
 
             # tileset should still be there
             resp = c1.get("/api/v1/tilesets/")
-            assert(json.loads(resp.content.decode('utf8'))['count'] == 1)
+            assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
 
             # user1 should be able to delete his/her own tileset
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             resp = c1.get("/api/v1/tilesets/")
             assert(resp.status_code == 200)
 
-            assert(json.loads(resp.content.decode('utf8'))['count'] == 0)
+            assert(json.loads(resp.content.decode('utf-8'))['count'] == 0)
 
             c3 = dt.Client()
             resp = c3.get('/api/v1/tilesets/')
@@ -343,14 +392,57 @@ class PermissionsTest(dt.TestCase):
             format='multipart'
         )
         f.close()
+        assert(response is not None)
 
-        ret = json.loads(c1.get('/api/v1/tilesets/').content.decode('utf8'))
+        ret = json.loads(c1.get('/api/v1/tilesets/').content.decode('utf-8'))
         assert(ret['count'] == 2)
 
         ret = json.loads(
-            c1.get('/api/v1/tilesets/?ac=tr2').content.decode('utf8')
+            c1.get('/api/v1/tilesets/?ac=tr2').content.decode('utf-8')
         )
         assert(ret['count'] == 1)
+
+
+class BigWigTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 'rb')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bigwig',
+            datatype='vector',
+            owner=self.user1,
+            coordSystem='hg19',
+            coordSystem2='hg19',
+            name="x",
+            uuid='bw')
+
+    def test_get_tileset_info(self):
+        c1 = dt.Client()
+        ret = json.loads(c1.get('/api/v1/tileset_info/?d=bw').content.decode('utf-8'))
+
+    def test_get_tiles(self):
+        '''
+        Try to retrieve some tiles from this file
+        '''
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+
+        # make sure that the dataset has been added
+        ret = json.loads(c1.get('/api/v1/tilesets/?d=bw').content.decode('utf-8'))
+        assert(ret['count'] == 1)
+
+        # try to retrieve the top level tile
+        # ret = json.loads(c1.get('/api/v1/tiles/?d=bw.0.0').content.decode('utf-8'))
+        # print("ret:", ret)
+
+        # retrieve a tile that lies completely beyond the end of
+        # the assembly
+        ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content.decode('utf-8'))
 
 
 class CoolerTest(dt.TestCase):
@@ -359,20 +451,23 @@ class CoolerTest(dt.TestCase):
             username='user1', password='pass'
         )
 
-        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', 'rb')
-        #x = upload_file.read()
+        upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
+                           'rb')
+        # x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
-            filetype='cooler',
-            datatype='matrix',
-            owner=self.user1,
-            coordSystem='hg19',
-            coordSystem2='hg19',
-            name="x",
-            uuid='md')
+            datafile=dcfu.SimpleUploadedFile(upload_file.name,
+                upload_file.read()),
+                filetype='cooler',
+                datatype='matrix',
+                owner=self.user1,
+                coordSystem='hg19',
+                coordSystem2='hg19',
+                name="x",
+                uuid='md')
 
         self.tileset = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(upload_file.name,
+                upload_file.read()),
             filetype='cooler',
             datatype='matrix',
             owner=self.user1,
@@ -508,13 +603,11 @@ class CoolerTest(dt.TestCase):
         '''
         Some recent changes made the tile boundaries appear darker than they should
         '''
-        import tilesets.views as tsv
-
         filename = 'data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'
-        tsv.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
+        tgt.make_mats('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool')
 
-        tileset_info = tsv.mats[filename][1]
-        tileset_file = tsv.mats[filename][0]
+        tileset_info = tgt.mats[filename][1]
+        tileset_file = tgt.mats[filename][0]
 
         zoom_level = 3
         BINS_PER_TILE = 256
@@ -541,12 +634,12 @@ class CoolerTest(dt.TestCase):
         ### test getting tileset info from files with non-powers of two resolutions
         ret = self.client.get('/api/v1/tileset_info/?d=nuhr')
 
-        contents = json.loads(ret.content)
+        contents = json.loads(ret.content.decode('utf-8'))
         assert('nuhr' in contents)
 
     def test_get_multi_tiles(self):
         ret = self.client.get('/api/v1/tiles/?d=md.7.92.97&d=md.7.92.98&d=md.7.93.97&d=md.7.93.98&d=md.7.93.21')
-        content = json.loads(ret.content)
+        content = json.loads(ret.content.decode('utf-8'))
 
         assert('md.7.92.97' in content)
         assert('dense' in content['md.7.92.97'])
@@ -556,7 +649,7 @@ class CoolerTest(dt.TestCase):
         # bounds of the dataset
 
         ret = self.client.get('/api/v1/tiles/?d=nuhr.2.0.0')
-        content = json.loads(ret.content)
+        content = json.loads(ret.content.decode('utf-8'))
 
         assert('nuhr.2.0.0' in content)
         assert('dense' in content['nuhr.2.0.0'])
@@ -564,7 +657,7 @@ class CoolerTest(dt.TestCase):
 
         # this is to ensure that no exception is thrown
         ret = self.client.get('/api/v1/tiles/?d=nuhr.2.12.13')
-        content = json.loads(ret.content)
+        content = json.loads(ret.content.decode('utf-8'))
 
         assert('nuhr.2.0.0' in content)
         assert('dense' in content['nuhr.2.0.0'])
@@ -576,6 +669,20 @@ class CoolerTest(dt.TestCase):
 
         assert('md.7.92.97' in content)
         assert('dense' in content['md.7.92.97'])
+
+    def test_get_oob_tiles(self):
+        # This test is obsolete
+        # We don't necessarily need to return tiles that
+        # are out of bounds. The client just handle the
+        # fact that they aren't there
+        ret = self.client.get('/api/v1/tiles/?d=md.6.63.63')
+        content = json.loads(ret.content.decode('utf-8'))
+
+        '''
+        print("content:", content)
+        assert('md.7.63.63' in content)
+        assert('dense' in content['md.7.63.63'])
+        '''
 
     def test_get_empty_tiles(self):
         # this test is here to ensure that the function call doesn't
@@ -723,12 +830,12 @@ class Bed2DDBTest(dt.TestCase):
         tile_id01="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=0, y=1)
         tile_id10="{uuid}.{z}.{x}.{y}".format(uuid=self.tileset.uuid, z=0, x=1, y=0)
         returned_text = self.client.get('/api/v1/tiles/?d={}&d={}&d={}'.format(tile_id00, tile_id01, tile_id10))
-        returned = json.loads(returned_text.content)
+        returned = json.loads(returned_text.content.decode('utf-8'))
 
         ret = self.client.get('/api/v1/tiles/?d={}.0.0.0'.format(self.tileset1.uuid))
         assert(ret.status_code == 200)
 
-        contents = json.loads(ret.content)
+        contents = json.loads(ret.content.decode('utf-8'))
 
     def test_get_info(self):
         ret = self.client.get('/api/v1/tileset_info/?d={}'.format(self.tileset1.uuid))
@@ -765,7 +872,7 @@ class BedDBTest(dt.TestCase):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=1, x=0)
         tile_id1="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=1, x=1)
         returned_text = self.client.get('/api/v1/tiles/?d={tile_id}&d={tile_id1}'.format(tile_id=tile_id, tile_id1=tile_id1))
-        returned = json.loads(returned_text.content)
+        returned = json.loads(returned_text.content.decode('utf-8'))
 
         assert(len(returned[tile_id]) > 0)
         assert(len(returned[tile_id1]) > 0)
@@ -846,7 +953,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.{z}.{x}.{y}'.format(
-                    uuid=self.cooler.uuid.decode('utf-8'), x=x, y=y, z=z
+                    uuid=self.cooler.uuid, x=x, y=y, z=z
                 )
             ).content.decode('utf-8')
         )
@@ -970,12 +1077,9 @@ class TilesetsViewSetTest(dt.TestCase):
         c = dt.Client()
         c.login(username='user1', password='pass')
         returned = json.loads(
-            self.client
-                .get(
-                    '/api/v1/tileset_info/?d={uuid}'.format(
-                        uuid=private_obj.uuid
-                    )
-                ).content.decode('utf-8')
+            self.client.get(
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=private_obj.uuid)
+            ).content.decode('utf-8')
         )
 
     def test_get_top_tile(self):
@@ -994,16 +1098,16 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.1'.format(
-                    uuid=self.cooler.uuid.decode('utf-8')
+                    uuid=self.cooler.uuid
                 )
             ).content.decode('utf-8')
         )
 
         self.assertTrue('{uuid}.1.0.0'.format(
-            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
         self.assertTrue('{uuid}.1.0.1'.format(
-            uuid=self.cooler.uuid.decode('utf-8')) in returned.keys()
+            uuid=self.cooler.uuid) in returned.keys()
         )
 
     def test_get_same_tiles(self):
@@ -1013,7 +1117,7 @@ class TilesetsViewSetTest(dt.TestCase):
         returned = json.loads(
             self.client.get(
                 '/api/v1/tiles/?d={uuid}.1.0.0&d={uuid}.1.0.0'.format(
-                    uuid=self.cooler.uuid.decode('utf-8')
+                    uuid=self.cooler.uuid
                 )
             ).content.decode('utf-8')
         )
@@ -1047,7 +1151,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         self.assertTrue(
             '{uuid}.1.5.5'.format(
-                uuid=self.cooler.uuid.decode('utf-8')
+                uuid=self.cooler.uuid
             ) not in returned.keys()
         )
 
@@ -1058,10 +1162,10 @@ class TilesetsViewSetTest(dt.TestCase):
             ).content.decode('utf-8')
         )
 
-        uuid = "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8'))
+        uuid = "{uuid}".format(uuid=self.hitile.uuid)
 
         self.assertTrue(
-            "{uuid}".format(uuid=self.hitile.uuid.decode('utf-8')) in returned.keys()
+            "{uuid}".format(uuid=self.hitile.uuid) in returned.keys()
         )
         self.assertEqual(returned[uuid][u'max_zoom'], 22)
         self.assertEqual(returned[uuid][u'max_width'], 2 ** 32)
@@ -1075,7 +1179,7 @@ class TilesetsViewSetTest(dt.TestCase):
             ).content.decode('utf-8')
         )
 
-        uuid = "{uuid}".format(uuid=self.cooler.uuid.decode('utf-8'))
+        uuid = "{uuid}".format(uuid=self.cooler.uuid)
         self.assertTrue(u'name' in returned[uuid])
 
 
@@ -1086,7 +1190,7 @@ class TilesetsViewSetTest(dt.TestCase):
             ).content.decode('utf-8')
         )
 
-        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid.decode('utf-8')) in returned)
+        self.assertTrue("{uuid}.0.0".format(uuid=self.hitile.uuid) in returned)
         pass
 
     def test_list_tilesets(self):
