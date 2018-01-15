@@ -1133,7 +1133,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.1.5.5'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
@@ -1145,7 +1145,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.20.5.5'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
@@ -1158,7 +1158,7 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_hitile_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid.decode('utf-8'))
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.hitile.uuid)
             ).content.decode('utf-8')
         )
 
@@ -1175,18 +1175,17 @@ class TilesetsViewSetTest(dt.TestCase):
     def test_get_cooler_tileset_info(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid.decode('utf-8'))
+                '/api/v1/tileset_info/?d={uuid}'.format(uuid=self.cooler.uuid)
             ).content.decode('utf-8')
         )
 
         uuid = "{uuid}".format(uuid=self.cooler.uuid)
         self.assertTrue(u'name' in returned[uuid])
 
-
     def test_get_hitile_tile(self):
         returned = json.loads(
             self.client.get(
-                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid.decode('utf-8'))
+                '/api/v1/tiles/?d={uuid}.0.0'.format(uuid=self.hitile.uuid)
             ).content.decode('utf-8')
         )
 
