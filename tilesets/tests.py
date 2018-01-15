@@ -386,7 +386,7 @@ class PermissionsTest(dt.TestCase):
             'name': "tr2"
         }
 
-        c1.post(
+        response = c1.post(
             '/api/v1/tilesets/',
             test_tileset,
             format='multipart'
