@@ -7,7 +7,11 @@ import h5py
 import logging
 import numpy as np
 import pandas as pd
+import sqlite3
+import base64
 
+from io import BytesIO
+from PIL import Image
 from scipy.ndimage.interpolation import zoom
 
 logger = logging.getLogger(__name__)
@@ -119,7 +123,7 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
-def get_frag_by_loc(
+def get_frag_by_loc_from_cool(
     cooler_file,
     loci,
     dim,
@@ -152,6 +156,103 @@ def get_frag_by_loc(
         )
 
     return fragments
+
+
+def get_frag_by_loc_from_imtiles(
+    imtiles_file,
+    loci,
+    dims,
+    zoom_level=0,
+    padding=0,
+    base_tile_size=256
+):
+    db = sqlite3.connect(imtiles_file)
+    info = db.execute('SELECT * FROM tileset_info').fetchone()
+    max_zoom = info[6]
+    max_width = info[8]
+    max_height = info[9]
+    im_type = 'JPEG' if info[10].lower() == 'jpg' else info[10]
+
+    div = 2 ** (max_zoom - zoom_level)
+    width = max_width / div
+    height = max_height / div
+
+    ims = []
+
+    for locus in loci:
+        start1 = round(locus[0] / div)
+        end1 = round(locus[1] / div)
+        start2 = round(locus[2] / div)
+        end2 = round(locus[3] / div)
+
+        if not is_within(start1, end1, start2, end2, width, height):
+            ims.append(None)
+            continue
+
+        tile_size = base_tile_size * div
+
+        # Get tile ids
+        tile_x_ids = set()
+        tile_y_ids = set()
+        tile_start1_id = start1 // tile_size
+        tile_x_ids.add(tile_start1_id)
+        tile_end1_id = end1 // tile_size
+        tile_y_ids.add(tile_end1_id)
+        tile_start2_id = start2 // tile_size
+        tile_x_ids.add(tile_start2_id)
+        tile_end2_id = end2 // tile_size
+        tile_y_ids.add(tile_end2_id)
+
+        # Extract image tiles
+        tiles = []
+        for y in tile_y_ids:
+            for x in tile_x_ids:
+                tiles.append(Image.open(BytesIO(db.execute(
+                    'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
+                    (zoom_level, y, x)
+                ).fetchone()[0])))
+
+        im = (
+            tiles[0]
+            if len(tiles) == 1
+            else Image.new(
+                'RGB',
+                (
+                    base_tile_size * len(tile_x_ids),
+                    base_tile_size * len(tile_y_ids)
+                )
+            )
+        )
+
+        # Stitch them tiles together
+        if len(tiles) > 1:
+            i = 0
+            for y in len(tile_y_ids):
+                for x in len(tile_x_ids):
+                    im.paste(
+                        tiles[i], (x * base_tile_size, y * base_tile_size)
+                    )
+
+        # Convert starts and ends to local tile ids
+        start1 -= tile_start1_id * tile_size
+        end1 -= tile_end1_id * tile_size
+        start2 -= tile_start2_id * tile_size
+        end2 -= tile_end2_id * tile_size
+
+        # Cut out the corresponding snippet
+        im_out = im.crop((start1, start2, end1, end2))
+
+        im_buffer = BytesIO()
+        im_out.save(im_buffer, format=im_type)
+        ims.append((im_buffer.getvalue(), 'image/{}'.format(im_type.lower())))
+
+    db.close()
+
+    return ims
+
+
+def is_within(start1, end1, start2, end2, width, height):
+    return start1 < width and end1 > 0 and start2 < height and end2 > 0
 
 
 def calc_measure_dtd(matrix, locus):

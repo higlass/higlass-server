@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import base64
 import hashlib
 import json
 import logging
@@ -21,7 +22,8 @@ from fragments.utils import (
     calc_measure_size,
     calc_measure_noise,
     calc_measure_sharpness,
-    get_frag_by_loc,
+    get_frag_by_loc_from_cool,
+    get_frag_by_loc_from_imtiles,
     get_intra_chr_loops_from_looplist,
     rel_loci_2_obj
 )
@@ -107,48 +109,56 @@ def fragments_by_loci(request):
 
     '''
     Loci list must be of type:
-    0: chrom1
-    1: start1
-    2: end1
-    3: chrom2
-    4: start2
-    5: end2
+    [cooler]          [imtiles]
+    0: chrom1         start1
+    1: start1         end1
+    2: end1           start2
+    3: chrom2         end2
+    4: start2         dataset
+    5: end2           zoomLevel
     6: dataset
-    7: zoomOutLevel [0]
+    7: zoomOutLevel
     '''
+
+    tileset_idx = 6 if len(loci) and len(loci[0]) > 6 else 4
+    zoom_level_idx = tileset_idx + 1
 
     i = 0
     loci_lists = {}
     try:
         for locus in loci:
-            cooler_file = ''
+            tileset_file = ''
 
-            if locus[6]:
-                if locus[6].endswith('.cool'):
-                    cooler_file = path.join('data', locus[6])
+            if locus[tileset_idx]:
+                if locus[tileset_idx].endswith('.cool'):
+                    tileset_file = path.join('data', locus[tileset_idx])
                 else:
                     try:
-                        cooler_file = get_datapath(
-                            Tileset.objects.get(
-                                uuid=locus[6]
-                            ).datafile.url
+                        tileset = Tileset.objects.get(
+                            uuid=locus[tileset_idx]
                         )
+                        tileset_file = get_datapath(
+                            tileset.datafile.url
+                        )
+
                     except AttributeError:
                         return JsonResponse({
-                            'error': 'Dataset (cooler file) not in database',
+                            'error': 'Tileset not in database',
                         }, status=500)
             else:
                 return JsonResponse({
-                    'error': 'Dataset (cooler file) not specified',
+                    'error': 'Tileset not specified',
                 }, status=500)
 
-            if cooler_file not in loci_lists:
-                loci_lists[cooler_file] = {}
+            if tileset_file not in loci_lists:
+                loci_lists[tileset_file] = {}
 
-            if locus[7] not in loci_lists[cooler_file]:
-                loci_lists[cooler_file][locus[7]] = []
+            if locus[zoom_level_idx] not in loci_lists[tileset_file]:
+                loci_lists[tileset_file][locus[zoom_level_idx]] = []
 
-            loci_lists[cooler_file][locus[7]].append(locus[0:6] + [i])
+            loci_lists[tileset_file][locus[zoom_level_idx]].append(
+                locus[0:tileset_idx] + [i]
+            )
 
             i += 1
 
@@ -157,6 +167,12 @@ def fragments_by_loci(request):
             'error': 'Could not convert loci.',
             'error_message': str(e)
         }, status=500)
+
+    filetype = (
+        tileset.filetype
+        if tileset
+        else tileset_file[tileset_file.rfind('.') + 1:]
+    )
 
     # Get a unique string for caching
     dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
@@ -176,26 +192,54 @@ def fragments_by_loci(request):
     try:
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
-                raw_matrices = get_frag_by_loc(
-                    dataset,
-                    loci_lists[dataset][zoomout_level],
-                    dims,
-                    zoomout_level=zoomout_level,
-                    balanced=not no_balance,
-                    padding=padding,
-                    percentile=percentile,
-                    ignore_diags=ignore_diags,
-                    no_normalize=no_normalize
-                )
+                if filetype == 'cooler' or filetype == 'cool':
+                    raw_matrices = get_frag_by_loc_from_cool(
+                        dataset,
+                        loci_lists[dataset][zoomout_level],
+                        dims,
+                        zoomout_level=zoomout_level,
+                        balanced=not no_balance,
+                        padding=padding,
+                        percentile=percentile,
+                        ignore_diags=ignore_diags,
+                        no_normalize=no_normalize
+                    )
 
-                if precision > 0:
-                    raw_matrices = np.around(raw_matrices, decimals=precision)
+                    if precision > 0:
+                        raw_matrices = np.around(
+                            raw_matrices, decimals=precision
+                        )
 
-                i = 0
-                for raw_matrix in raw_matrices:
-                    matrices[loci_lists[dataset][zoomout_level][i][6]] =\
-                        raw_matrix.tolist()
-                    i += 1
+                    i = 0
+                    for raw_matrix in raw_matrices:
+                        matrices[loci_lists[dataset][zoomout_level][i][6]] =\
+                            raw_matrix.tolist()
+                        i += 1
+
+                if filetype == 'imtiles':
+                    sub_ims = get_frag_by_loc_from_imtiles(
+                        imtiles_file=dataset,
+                        loci=loci_lists[dataset][zoomout_level],
+                        dims=dims,
+                        zoom_level=zoomout_level,
+                        padding=padding,
+                    )
+
+                    i = 0
+                    for im in sub_ims:
+                        idx = loci_lists[dataset][zoomout_level][i][4]
+
+                        try:
+                            # Store images as data URI
+                            matrices[idx] = 'data:{};base64,{}'.format(
+                                im[1],
+                                base64.b64encode(im[0]).decode('utf-8')
+                            )
+                        except TypeError:
+                            matrices[idx] = None
+
+                        i += 1
+
     except Exception as ex:
         raise
         return JsonResponse({
