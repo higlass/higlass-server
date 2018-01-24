@@ -189,6 +189,7 @@ def fragments_by_loci(request):
             pass
 
     matrices = [None] * i
+    data_types = [None] * i
     try:
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
@@ -212,8 +213,9 @@ def fragments_by_loci(request):
 
                     i = 0
                     for raw_matrix in raw_matrices:
-                        matrices[loci_lists[dataset][zoomout_level][i][6]] =\
-                            raw_matrix.tolist()
+                        idx = loci_lists[dataset][zoomout_level][i][6]
+                        matrices[idx] = raw_matrix.tolist()
+                        data_types[idx] = 'matrix'
                         i += 1
 
                 if filetype == 'imtiles':
@@ -235,6 +237,8 @@ def fragments_by_loci(request):
                         except TypeError:
                             matrices[idx] = None
 
+                        data_types[idx] = 'dataUrl'
+
                         i += 1
 
     except Exception as ex:
@@ -247,7 +251,7 @@ def fragments_by_loci(request):
     # Create results
     results = {
         'fragments': matrices,
-        'dataType': 'dataUrl'
+        'dataTypes': data_types
     }
 
     # Cache results for 30 minutes
