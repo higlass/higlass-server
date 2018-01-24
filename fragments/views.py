@@ -220,7 +220,6 @@ def fragments_by_loci(request):
                     sub_ims = get_frag_by_loc_from_imtiles(
                         imtiles_file=dataset,
                         loci=loci_lists[dataset][zoomout_level],
-                        dims=dims,
                         zoom_level=zoomout_level,
                         padding=padding,
                     )
@@ -231,10 +230,8 @@ def fragments_by_loci(request):
 
                         try:
                             # Store images as data URI
-                            matrices[idx] = 'data:{};base64,{}'.format(
-                                im[1],
+                            matrices[idx] = \
                                 base64.b64encode(im[0]).decode('utf-8')
-                            )
                         except TypeError:
                             matrices[idx] = None
 
@@ -249,7 +246,8 @@ def fragments_by_loci(request):
 
     # Create results
     results = {
-        'fragments': matrices
+        'fragments': matrices,
+        'dataType': 'dataUrl'
     }
 
     # Cache results for 30 minutes

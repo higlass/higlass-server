@@ -8,7 +8,6 @@ import logging
 import numpy as np
 import pandas as pd
 import sqlite3
-import base64
 
 from io import BytesIO
 from PIL import Image
@@ -161,10 +160,9 @@ def get_frag_by_loc_from_cool(
 def get_frag_by_loc_from_imtiles(
     imtiles_file,
     loci,
-    dims,
     zoom_level=0,
     padding=0,
-    base_tile_size=256
+    tile_size=256
 ):
     db = sqlite3.connect(imtiles_file)
     info = db.execute('SELECT * FROM tileset_info').fetchone()
@@ -189,24 +187,19 @@ def get_frag_by_loc_from_imtiles(
             ims.append(None)
             continue
 
-        tile_size = base_tile_size * div
-
         # Get tile ids
-        tile_x_ids = set()
-        tile_y_ids = set()
         tile_start1_id = start1 // tile_size
-        tile_x_ids.add(tile_start1_id)
         tile_end1_id = end1 // tile_size
-        tile_y_ids.add(tile_end1_id)
         tile_start2_id = start2 // tile_size
-        tile_x_ids.add(tile_start2_id)
         tile_end2_id = end2 // tile_size
-        tile_y_ids.add(tile_end2_id)
+
+        tiles_x_range = range(tile_start2_id, tile_end2_id + 1)
+        tiles_y_range = range(tile_start1_id, tile_end1_id + 1)
 
         # Extract image tiles
         tiles = []
-        for y in tile_y_ids:
-            for x in tile_x_ids:
+        for y in tiles_x_range:
+            for x in tiles_y_range:
                 tiles.append(Image.open(BytesIO(db.execute(
                     'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
                     (zoom_level, y, x)
@@ -218,8 +211,8 @@ def get_frag_by_loc_from_imtiles(
             else Image.new(
                 'RGB',
                 (
-                    base_tile_size * len(tile_x_ids),
-                    base_tile_size * len(tile_y_ids)
+                    tile_size * len(tiles_x_range),
+                    tile_size * len(tiles_y_range)
                 )
             )
         )
@@ -227,20 +220,20 @@ def get_frag_by_loc_from_imtiles(
         # Stitch them tiles together
         if len(tiles) > 1:
             i = 0
-            for y in len(tile_y_ids):
-                for x in len(tile_x_ids):
+            for y in range(len(tiles_x_range)):
+                for x in range(len(tiles_y_range)):
                     im.paste(
-                        tiles[i], (x * base_tile_size, y * base_tile_size)
+                        tiles[i], (x * tile_size, y * tile_size)
                     )
 
         # Convert starts and ends to local tile ids
-        start1 -= tile_start1_id * tile_size
-        end1 -= tile_end1_id * tile_size
-        start2 -= tile_start2_id * tile_size
-        end2 -= tile_end2_id * tile_size
+        start1_rel = start1 - tile_start1_id * tile_size
+        end1_rel = end1 - tile_start1_id * tile_size
+        start2_rel = start2 - tile_start2_id * tile_size
+        end2_rel = end2 - tile_start2_id * tile_size
 
         # Cut out the corresponding snippet
-        im_out = im.crop((start1, start2, end1, end2))
+        im_out = im.crop((start1_rel, start2_rel, end1_rel, end2_rel))
 
         im_buffer = BytesIO()
         im_out.save(im_buffer, format=im_type)
