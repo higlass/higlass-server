@@ -193,13 +193,13 @@ def get_frag_by_loc_from_imtiles(
         tile_start2_id = start2 // tile_size
         tile_end2_id = end2 // tile_size
 
-        tiles_x_range = range(tile_start2_id, tile_end2_id + 1)
-        tiles_y_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
 
         # Extract image tiles
         tiles = []
-        for y in tiles_x_range:
-            for x in tiles_y_range:
+        for y in tiles_y_range:
+            for x in tiles_x_range:
                 tiles.append(Image.open(BytesIO(db.execute(
                     'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
                     (zoom_level, y, x)
@@ -220,11 +220,12 @@ def get_frag_by_loc_from_imtiles(
         # Stitch them tiles together
         if len(tiles) > 1:
             i = 0
-            for y in range(len(tiles_x_range)):
-                for x in range(len(tiles_y_range)):
+            for y in range(len(tiles_y_range)):
+                for x in range(len(tiles_x_range)):
                     im.paste(
                         tiles[i], (x * tile_size, y * tile_size)
                     )
+                    i += 1
 
         # Convert starts and ends to local tile ids
         start1_rel = start1 - tile_start1_id * tile_size
