@@ -110,16 +110,16 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
 
     query = '''
     SELECT
-        fromLng, toLng, fromLat, toLat, uid, importance, geometry, properties
+        minLng, maxLng, maxLat, minLat, uid, importance, geometry, properties
     FROM
         intervals,position_index
     WHERE
         intervals.id=position_index.id AND
         zoomLevel <= ? AND
-        rToLng >= ? AND
-        rFromLng <= ? AND
-        rToLat <= ? AND
-        rFromLat >= ?
+        rMaxLng >= ? AND
+        rMinLng <= ? AND
+        rMaxLat <= ? AND
+        rMinLat >= ?
     '''.format(zoom, lng_from, lng_to, lat_from, lat_to)
 
     rows = c.execute(
@@ -149,8 +149,6 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
         except Exception as e:
             properties = None
             pass
-
-        print('x y anno', x_start, x_end, y_start, y_end)
 
         for i in range(x, x + width):
             for j in range(y, y + height):
