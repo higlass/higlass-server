@@ -9,13 +9,13 @@ def get_tile_box(zoom, x, y):
     """convert Google-style Mercator tile coordinate to
     (minlat, maxlat, minlng, maxlng) bounding box"""
 
-    minlng, minlat = get_tile_lng_lat(zoom, x, y)
-    maxlng, maxlat = get_tile_lng_lat(zoom, x + 1, y + 1)
+    minlng, minlat = get_lng_lat_from_tile_pos(zoom, x, y)
+    maxlng, maxlat = get_lng_lat_from_tile_pos(zoom, x + 1, y + 1)
 
     return (minlng, maxlng, minlat, maxlat)
 
 
-def get_tile_lng_lat(zoom, x, y):
+def get_lng_lat_from_tile_pos(zoom, x, y):
     """convert Google-style Mercator tile coordinate to
     (lng, lat) of top-left corner of tile"""
 
@@ -31,7 +31,7 @@ def get_tile_lng_lat(zoom, x, y):
     return (lng, lat)
 
 
-def get_lng_lat_tile(lng, lat, zoom):
+def get_tile_pos_from_lng_lat(lng, lat, zoom):
     """convert lng/lat to Google-style Mercator tile coordinate (x, y)
     at the given zoom level"""
 
@@ -135,8 +135,8 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
         except AttributeError:
             uid = r[4]
 
-        x_start, y_start = get_lng_lat_tile(r[0], r[2], zoom)
-        x_end, y_end = get_lng_lat_tile(r[1], r[3], zoom)
+        x_start, y_start = get_tile_pos_from_lng_lat(r[0], r[2], zoom)
+        x_end, y_end = get_tile_pos_from_lng_lat(r[1], r[3], zoom)
 
         try:
             geometry = json.loads(r[6])
