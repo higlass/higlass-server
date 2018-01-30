@@ -108,6 +108,12 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
     lng_from, _, lat_from, _ = get_tile_box(zoom, x, y)
     _, lng_to, _, lat_to = get_tile_box(zoom, x + width - 1, y + height - 1)
 
+    # Note the range query is being done in lng-lat. Since the coords go from:
+    # - Longitude: -180 to 180
+    # - Latidue: 90 to -90 (NOTE THE SWAP HERE!!!)
+    # we are indexing min and max longitude and latitude but for querying we
+    # are using from and to longitude and latitude. Hence, the comparator and
+    # min/max for latitude are flipped (max == from lat; min == to lat)
     query = '''
     SELECT
         minLng, maxLng, maxLat, minLat, uid, importance, geometry, properties
@@ -118,9 +124,9 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
         zoomLevel <= ? AND
         rMaxLng >= ? AND
         rMinLng <= ? AND
-        rMaxLat <= ? AND
-        rMinLat >= ?
-    '''.format(zoom, lng_from, lng_to, lat_from, lat_to)
+        rMinLat <= ? AND
+        rMaxLat >= ?
+    '''
 
     rows = c.execute(
         query,
