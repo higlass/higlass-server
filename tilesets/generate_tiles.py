@@ -15,6 +15,7 @@ import tilesets.utils as tut
 from .tiles import make_tiles
 
 import higlass_server.settings as hss
+from geotiles import utils as geotu
 
 global mats
 mats = {}
@@ -582,7 +583,7 @@ def generate_beddb_tiles(tileset, tile_ids):
     return generated_tiles
 
 
-def generate_bed2ddb_tiles(tileset, tile_ids):
+def generate_bed2ddb_tiles(tileset, tile_ids, retriever=cdt.get_2d_tiles):
     '''
     Generate tiles from a bed2db file.
 
@@ -635,7 +636,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        tile_data_by_position = cdt.get_2d_tiles(
+        tile_data_by_position = retriever(
             cached_datapath,
             zoom_level,
             minx,
@@ -1051,8 +1052,13 @@ def generate_tiles(tileset_tile_ids):
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
+    elif (
+        tileset.filetype == 'bed2ddb' or
+        tileset.filetype == '2dannodb'
+    ):
         return generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'geodb':
+        return generate_bed2ddb_tiles(tileset, tile_ids, geotu.get_tiles)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':

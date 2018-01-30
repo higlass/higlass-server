@@ -55,6 +55,7 @@ from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 from higlass_server.utils import getRdb
 
 from imtiles import utils as imtu
+from geotiles import utils as geotu
 
 logger = logging.getLogger(__name__)
 
@@ -561,8 +562,15 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
-        elif tileset_object.filetype == '2dannodb':
+        elif (
+            tileset_object.filetype == '2dannodb' or
+            tileset_object.filetype == 'imtiles'
+        ):
             tileset_infos[tileset_uuid] = imtu.get_tileset_info(
+                tut.get_datapath(tileset_object.datafile.url)
+            )
+        elif tileset_object.filetype == 'geodb':
+            tileset_infos[tileset_uuid] = geotu.get_tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
         elif tileset_object.filetype == 'cooler':
@@ -573,10 +581,6 @@ def tileset_info(request):
             if dsetname not in tgt.mats:
                 tgt.make_mats(dsetname)
             tileset_infos[tileset_uuid] = tgt.mats[dsetname][1]
-        elif tileset_object.filetype == 'imtiles':
-            tileset_infos[tileset_uuid] = imtu.get_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
-            )
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {
