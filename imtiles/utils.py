@@ -16,9 +16,13 @@ def get_tileset_info(tileset):
         'tile_size': res[5],
         'max_zoom': res[6],
         'max_size': res[7],
-        'width': res[8],
-        'height': res[9]
     }
+
+    try:
+        o['width'] = res[8]
+        o['height'] = res[9]
+    except IndexError:
+        pass
 
     try:
         o['dtype'] = res[10]
