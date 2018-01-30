@@ -9,8 +9,8 @@ def get_tile_box(zoom, x, y):
     """convert Google-style Mercator tile coordinate to
     (minlat, maxlat, minlng, maxlng) bounding box"""
 
-    minlng, minlat = get_tile_lng_lat(zoom, x, y + 1)
-    maxlng, maxlat = get_tile_lng_lat(zoom, x + 1, y)
+    minlng, minlat = get_tile_lng_lat(zoom, x, y)
+    maxlng, maxlat = get_tile_lng_lat(zoom, x + 1, y + 1)
 
     return (minlng, maxlng, minlat, maxlat)
 
@@ -105,7 +105,8 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
 
     c = conn.cursor()
 
-    lng_from, lng_to, lat_from, lat_to = get_tile_box(zoom, x, y)
+    lng_from, _, lat_from, _ = get_tile_box(zoom, x, y)
+    _, lng_to, _, lat_to = get_tile_box(zoom, x + width - 1, y + height - 1)
 
     query = '''
     SELECT
@@ -114,18 +115,19 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
         intervals,position_index
     WHERE
         intervals.id=position_index.id AND
-        zoomLevel <= {} AND
-        rToLng >= {} AND
-        rFromLng <= {} AND
-        rToLat >= {} AND
-        rFromLat <= {}
+        zoomLevel <= ? AND
+        rToLng >= ? AND
+        rFromLng <= ? AND
+        rToLat <= ? AND
+        rFromLat >= ?
     '''.format(zoom, lng_from, lng_to, lat_from, lat_to)
 
-    rows = c.execute(query).fetchall()
+    rows = c.execute(
+        query,
+        (zoom, lng_from, lng_to, lat_from, lat_to)
+    ).fetchall()
 
     new_rows = col.defaultdict(list)
-
-    print('num res', len(rows))
 
     for r in rows:
         try:
