@@ -515,6 +515,17 @@ def tileset_info(request):
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
+        if tileset_uuid == 'osm':
+            tileset_infos[tileset_uuid] = {
+                'min_x': -180,
+                'max_height': 180,
+                'min_y': -90,
+                'max_y': 90,
+                'max_zoom': 19,
+                'tile_size': 256
+            }
+            continue
+
         if tileset_object is None:
             tileset_infos[tileset_uuid] = {
                 'error': 'No such tileset with uid: {}'.format(tileset_uuid)
