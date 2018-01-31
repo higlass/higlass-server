@@ -515,7 +515,7 @@ def tileset_info(request):
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
-        if tileset_uuid == 'osm':
+        if tileset_uuid == 'osm-image':
             tileset_infos[tileset_uuid] = {
                 'min_x': -180,
                 'max_height': 180,

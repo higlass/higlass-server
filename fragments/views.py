@@ -24,6 +24,7 @@ from fragments.utils import (
     calc_measure_sharpness,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
+    get_frag_by_loc_from_osm,
     get_intra_chr_loops_from_looplist,
     rel_loci_2_obj
 )
@@ -141,15 +142,21 @@ def fragments_by_loci(request):
                             tileset.datafile.url
                         )
 
-                    except (
-                        AttributeError,
-                        Tileset.DoesNotExist
-                    ):
+                    except AttributeError:
                         return JsonResponse({
                             'error': 'Tileset ({}) does not exist'.format(
                                 locus[tileset_idx]
                             ),
                         }, status=400)
+                    except Tileset.DoesNotExist:
+                        if locus[tileset_idx].startswith('osm'):
+                            filetype = locus[tileset_idx]
+                        else:
+                            return JsonResponse({
+                                'error': 'Tileset ({}) does not exist'.format(
+                                    locus[tileset_idx]
+                                ),
+                            }, status=400)
             else:
                 return JsonResponse({
                     'error': 'Tileset not specified',
@@ -173,7 +180,7 @@ def fragments_by_loci(request):
             'error_message': str(e)
         }, status=500)
 
-    filetype = (
+    filetype = filetype if filetype else (
         tileset.filetype
         if tileset
         else tileset_file[tileset_file.rfind('.') + 1:]
@@ -223,8 +230,14 @@ def fragments_by_loci(request):
                         data_types[idx] = 'matrix'
                         i += 1
 
-                if filetype == 'imtiles':
-                    sub_ims = get_frag_by_loc_from_imtiles(
+                if filetype == 'imtiles' or filetype == 'osm-image':
+                    extractor = (
+                        get_frag_by_loc_from_imtiles
+                        if filetype == 'imtiles'
+                        else get_frag_by_loc_from_osm
+                    )
+
+                    sub_ims = extractor(
                         imtiles_file=dataset,
                         loci=loci_lists[dataset][zoomout_level],
                         zoom_level=zoomout_level,

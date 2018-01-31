@@ -8,10 +8,14 @@ import logging
 import numpy as np
 import pandas as pd
 import sqlite3
+import requests
+import math
 
-from io import BytesIO
+from random import random
+from io import BytesIO, StringIO
 from PIL import Image
 from scipy.ndimage.interpolation import zoom
+from geotiles.utils import get_tile_pos_from_lng_lat
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +245,112 @@ def get_frag_by_loc_from_imtiles(
         ims.append((im_buffer.getvalue(), 'image/{}'.format(im_type.lower())))
 
     db.close()
+
+    return ims
+
+
+def get_frag_by_loc_from_osm(
+    imtiles_file,
+    loci,
+    zoom_level=0,
+    padding=0,
+    tile_size=256
+):
+    width = 360
+    height = 180
+    im_type = 'PNG'
+
+    ims = []
+
+    for locus in loci:
+        start_lng = locus[0]
+        end_lng = locus[1]
+        start_lat = locus[2]
+        end_lat = locus[3]
+
+        if not is_within(
+            start_lng + 180,
+            end_lng + 180,
+            end_lat + 90,
+            start_lat + 90,
+            width,
+            height
+        ):
+            ims.append(None)
+            continue
+
+        # Get tile ids
+        start1, start2 = get_tile_pos_from_lng_lat(
+            start_lng, start_lat, zoom_level
+        )
+        end1, end2 = get_tile_pos_from_lng_lat(
+            end_lng, end_lat, zoom_level
+        )
+
+        tile_start1_id = math.floor(start1)
+        tile_start2_id = math.floor(start2)
+        tile_end1_id = math.floor(end1)
+        tile_end2_id = math.floor(end2)
+
+        start1 = math.floor(start1 * tile_size)
+        start2 = math.floor(start2 * tile_size)
+        end1 = math.ceil(end1 * tile_size)
+        end2 = math.ceil(end2 * tile_size)
+
+        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+
+        # Extract image tiles
+        tiles = []
+        for y in tiles_y_range:
+            for x in tiles_x_range:
+                prefixes = ['a', 'b', 'c']
+                prefix_idx = math.floor(random() * len(prefixes))
+                src = (
+                    'http://{}.tile.openstreetmap.org/{}/{}/{}.png'
+                    .format(prefixes[prefix_idx], zoom_level, x, y)
+                )
+
+                r = requests.get(src)
+                if r.status_code == 200:
+                    tiles.append(Image.open(BytesIO(r.content)))
+                else:
+                    tiles.append(None)
+
+        im = (
+            tiles[0]
+            if len(tiles) == 1
+            else Image.new(
+                'RGB',
+                (
+                    tile_size * len(tiles_x_range),
+                    tile_size * len(tiles_y_range)
+                )
+            )
+        )
+
+        # Stitch them tiles together
+        if len(tiles) > 1:
+            i = 0
+            for y in range(len(tiles_y_range)):
+                for x in range(len(tiles_x_range)):
+                    im.paste(
+                        tiles[i], (x * tile_size, y * tile_size)
+                    )
+                    i += 1
+
+        # Convert starts and ends to local tile ids
+        start1_rel = start1 - tile_start1_id * tile_size
+        end1_rel = end1 - tile_start1_id * tile_size
+        start2_rel = start2 - tile_start2_id * tile_size
+        end2_rel = end2 - tile_start2_id * tile_size
+
+        # Cut out the corresponding snippet
+        im_out = im.crop((start1_rel, start2_rel, end1_rel, end2_rel))
+
+        im_buffer = BytesIO()
+        im_out.save(im_buffer, format=im_type)
+        ims.append((im_buffer.getvalue(), 'image/{}'.format(im_type.lower())))
 
     return ims
 
