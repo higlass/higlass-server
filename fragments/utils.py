@@ -287,6 +287,14 @@ def get_frag_by_loc_from_osm(
             end_lng, end_lat, zoom_level
         )
 
+        xPad = padding * (end1 - start1)
+        yPad = padding * (start2 - end2)
+
+        start1 -= xPad
+        end1 += xPad
+        start2 += yPad
+        end2 -= yPad
+
         tile_start1_id = math.floor(start1)
         tile_start2_id = math.floor(start2)
         tile_end1_id = math.floor(end1)

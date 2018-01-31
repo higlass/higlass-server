@@ -84,7 +84,7 @@ def fragments_by_loci(request):
         dims = 22
 
     try:
-        padding = int(request.GET.get('padding', 0))
+        padding = request.GET.get('padding', 0)
     except ValueError:
         padding = 0
 
@@ -212,7 +212,7 @@ def fragments_by_loci(request):
                         dims,
                         zoomout_level=zoomout_level,
                         balanced=not no_balance,
-                        padding=padding,
+                        padding=int(padding),
                         percentile=percentile,
                         ignore_diags=ignore_diags,
                         no_normalize=no_normalize
@@ -241,7 +241,7 @@ def fragments_by_loci(request):
                         imtiles_file=dataset,
                         loci=loci_lists[dataset][zoomout_level],
                         zoom_level=zoomout_level,
-                        padding=padding,
+                        padding=float(padding),
                     )
 
                     i = 0
