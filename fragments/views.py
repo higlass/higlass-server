@@ -141,14 +141,19 @@ def fragments_by_loci(request):
                             tileset.datafile.url
                         )
 
-                    except AttributeError:
+                    except (
+                        AttributeError,
+                        Tileset.DoesNotExist
+                    ):
                         return JsonResponse({
-                            'error': 'Tileset not in database',
-                        }, status=500)
+                            'error': 'Tileset ({}) does not exist'.format(
+                                locus[tileset_idx]
+                            ),
+                        }, status=400)
             else:
                 return JsonResponse({
                     'error': 'Tileset not specified',
-                }, status=500)
+                }, status=400)
 
             if tileset_file not in loci_lists:
                 loci_lists[tileset_file] = {}
