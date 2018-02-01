@@ -204,90 +204,8 @@ def extract_tileset_uid(tile_id):
 
     return tileset_uuid
 
-def generate_multivec_tileset_info(filename):
-    '''
-    Return some information about this tileset that will
-    help render it in on the client.
 
-    Parameters
-    ----------
-    filename: str
-      The filename of the h5py file containing the tileset info.
 
-    Returns
-    -------
-    tileset_info: {}
-      A dictionary containing the information describing
-      this dataset
-    '''
-    f = h5py.File(filename, 'r')
-    # a sorted list of resolutions, lowest to highest
-    # awkward to write because a the numbers representing resolution
-    # are datapoints / pixel so lower resolution is actually a higher
-    # number
-    resolutions = sorted([int(r) for r in f['resolutions'].keys()])[::-1]
-
-    # the "leftmost" datapoint position
-    # an array because higlass can display multi-dimensional
-    # data
-    min_pos = [0]
-
-    # the "rightmost" datapoint position
-    # max_pos = [len(f['resolutions']['values'][str(resolutions[-1])])]
-    tile_size = int(f['info'].attrs['tile-size'])
-    first_chrom = f['chroms']['name'][0]
-
-    shape = list(f['resolutions'][str(resolutions[0])]['values'][first_chrom].shape)
-    shape[0] = tile_size
-
-    f.close()
-
-    return {
-      'resolutions': resolutions,
-      'min_pos': min_pos,
-      'tile_size': tile_size,
-      'shape': shape
-    }
-
-def get_single_multivec_tile(filename, tile_pos):
-    '''
-    Retrieve a single multivec tile from a multires file
-
-    Parameters
-    ----------
-    filename: string
-        The multires file containing the multivec data
-    tile_pos: (z, x)
-        The zoom level and position of this tile
-    '''
-    tileset_info = generate_multivec_tileset_info(filename)
-    f = h5py.File(filename, 'r')
-    
-    print('tileset_info', tileset_info)
-    # which resolution does this zoom level correspond to?
-    resolution = tileset_info['resolutions'][tile_pos[0]]
-    tile_size = tileset_info['tile_size']
-    print("tile_size:", tile_size)
-    
-    # where in the data does the tile start and end
-    tile_start = tile_pos[1] * tile_size * resolution
-    tile_end = tile_start + tile_size * resolution
-
-    chromsizes = list(zip(f['chroms']['name'], f['chroms']['length']))
-    print('chromsizes', chromsizes)
-
-    #dense = f['resolutions'][str(resolution)][tile_start:tile_end]
-    dense = tmt.get_tile(f, chromsizes, resolution, tile_start, tile_end, tileset_info['shape'])
-    #print("dense.shape", dense.shape)
-
-    if len(dense) < tileset_info['tile_size']:
-        # if there aren't enough rows to fill this tile, add some zeros
-        dense = np.vstack([dense, np.zeros((tileset_info['tile_size'] - len(dense), 
-            tileset_info['shape'][1]))])
-
-    f.close()
-
-    return dense.T
 
 def generate_1d_tiles(filename, tile_ids, get_data_function):
     '''
@@ -912,7 +830,7 @@ def generate_tiles(tileset_tile_ids):
         return generate_1d_tiles(
                 tut.get_datapath(tileset.datafile.url),
                 tile_ids,
-                get_single_multivec_tile)
+                tmt.get_single_tile)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 

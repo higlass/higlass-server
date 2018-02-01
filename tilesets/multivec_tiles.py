@@ -26,6 +26,101 @@ def abs2genomic(chromsizes, start_pos, end_pos):
       start = 0
     yield cid_hi, start, rel_pos_hi
 
+def get_tileset_info(filename):
+    '''
+    Return some information about this tileset that will
+    help render it in on the client.
+    Parameters
+    ----------
+    filename: str
+      The filename of the h5py file containing the tileset info.
+    Returns
+    -------
+    tileset_info: {}
+      A dictionary containing the information describing
+      this dataset
+    '''
+    t1 = time.time()
+    f = h5py.File(filename, 'r')
+    t2 = time.time()
+    # a sorted list of resolutions, lowest to highest
+    # awkward to write because a the numbers representing resolution
+    # are datapoints / pixel so lower resolution is actually a higher
+    # number
+    resolutions = sorted([int(r) for r in f['resolutions'].keys()])[::-1]
+
+    # the "leftmost" datapoint position
+    # an array because higlass can display multi-dimensional
+    # data
+    min_pos = [0]
+    max_pos = [int(sum(f['chroms']['length'][:]))]
+
+    # the "rightmost" datapoint position
+    # max_pos = [len(f['resolutions']['values'][str(resolutions[-1])])]
+    tile_size = int(f['info'].attrs['tile-size'])
+    first_chrom = f['chroms']['name'][0]
+
+    shape = list(f['resolutions'][str(resolutions[0])]['values'][first_chrom].shape)
+    shape[0] = tile_size
+
+    f.close()
+    t3 = time.time()
+    # print("tileset info time:", t3 - t2)
+
+    return {
+      'resolutions': resolutions,
+      'min_pos': min_pos,
+      'max_pos': max_pos,
+      'tile_size': tile_size,
+      'shape': shape
+    }
+
+
+def get_single_tile(filename, tile_pos):
+    '''
+    Retrieve a single multivec tile from a multires file
+    Parameters
+    ----------
+    filename: string
+        The multires file containing the multivec data
+    tile_pos: (z, x)
+        The zoom level and position of this tile
+    '''
+    t1 = time.time()
+    tileset_info = generate_multivec_tileset_info(filename)
+
+    t15 = time.time()
+
+    f = h5py.File(filename, 'r')
+    
+    # print('tileset_info', tileset_info)
+    t2 = time.time()
+    # which resolution does this zoom level correspond to?
+    resolution = tileset_info['resolutions'][tile_pos[0]]
+    tile_size = tileset_info['tile_size']
+    
+    # where in the data does the tile start and end
+    tile_start = tile_pos[1] * tile_size * resolution
+    tile_end = tile_start + tile_size * resolution
+
+    chromsizes = list(zip(f['chroms']['name'], f['chroms']['length']))
+
+    #dense = f['resolutions'][str(resolution)][tile_start:tile_end]
+    dense = tmt.get_tile(f, chromsizes, resolution, tile_start, tile_end, tileset_info['shape'])
+    #print("dense.shape", dense.shape)
+
+    if len(dense) < tileset_info['tile_size']:
+        # if there aren't enough rows to fill this tile, add some zeros
+        dense = np.vstack([dense, np.zeros((tileset_info['tile_size'] - len(dense), 
+            tileset_info['shape'][1]))])
+
+    f.close()
+    t3 = time.time()
+
+    print("single time time: {:.2f} (tileset info: {:.2f}, open time: {:.2f})".format(t3 - t1, t15 - t1, t2 - t15))
+
+    return dense.T
+
 def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
     '''
     Get the tile value given the start and end positions and
