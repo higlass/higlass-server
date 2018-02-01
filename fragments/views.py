@@ -124,6 +124,8 @@ def fragments_by_loci(request):
     tileset_idx = 6 if len(loci) and len(loci[0]) > 6 else 4
     zoom_level_idx = tileset_idx + 1
 
+    filetype = None
+
     i = 0
     loci_lists = {}
     try:
