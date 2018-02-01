@@ -1,3 +1,4 @@
+import h5py
 import numpy as np
 import time
 
@@ -63,17 +64,25 @@ def get_tileset_info(filename):
     shape = list(f['resolutions'][str(resolutions[0])]['values'][first_chrom].shape)
     shape[0] = tile_size
 
-    f.close()
-    t3 = time.time()
     # print("tileset info time:", t3 - t2)
 
-    return {
+    tileset_info = {
       'resolutions': resolutions,
       'min_pos': min_pos,
       'max_pos': max_pos,
       'tile_size': tile_size,
       'shape': shape
     }
+
+    print("hi:", list(f['resolutions'][str(resolutions[0])].attrs.keys()))
+    if 'row_infos' in f['resolutions'][str(resolutions[0])].attrs:
+        row_infos = f['resolutions'][str(resolutions[0])].attrs['row_infos']
+        tileset_info['row_infos'] = [r.decode('utf8') for r in row_infos]
+
+    f.close()
+    t3 = time.time()
+
+    return tileset_info
 
 
 def get_single_tile(filename, tile_pos):
@@ -87,7 +96,7 @@ def get_single_tile(filename, tile_pos):
         The zoom level and position of this tile
     '''
     t1 = time.time()
-    tileset_info = generate_multivec_tileset_info(filename)
+    tileset_info = get_tileset_info(filename)
 
     t15 = time.time()
 
@@ -106,7 +115,7 @@ def get_single_tile(filename, tile_pos):
     chromsizes = list(zip(f['chroms']['name'], f['chroms']['length']))
 
     #dense = f['resolutions'][str(resolution)][tile_start:tile_end]
-    dense = tmt.get_tile(f, chromsizes, resolution, tile_start, tile_end, tileset_info['shape'])
+    dense = get_tile(f, chromsizes, resolution, tile_start, tile_end, tileset_info['shape'])
     #print("dense.shape", dense.shape)
 
     if len(dense) < tileset_info['tile_size']:
@@ -196,6 +205,9 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
                 else:
                     #print('data smaller than the bin size', start, end, binsize)
                     continue
+            
+            if chrom not in f['resolutions'][str(resolution)]['values']:
+                continue
             
             x = f['resolutions'][str(resolution)]['values'][chrom][start_pos:end_pos]
             current_binned_data_position += binsize * (end_pos - start_pos)
