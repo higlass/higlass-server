@@ -77,36 +77,33 @@ def get_tileset_info(tileset):
     return o
 
 
-def get_tiles(db_file, zoom, x, y, width=1, height=1):
+def get_features(db_file_path, zoom, lng_from, lng_to, lat_from, lat_to):
     '''
-    Retrieve a contiguous set of tiles from a 2D db tile file.
+    Retrieve them features from the database.
 
     Parameters
     ----------
-    db_file: str
+    db_file_path: str
         The filename of the sqlite db file
     zoom: int
         The zoom level
-    x: int
-        The x position of the first tile
-    y: int
-        The y position of the first tile
-    width: int
-        The width of the block of tiles to retrieve
-    height: int
-        The height of the block of tiles to retrieve
+    lng_from: foat
+        The start of the longitude
+    lng_to: foat
+        The end of the longitude
+    lat_from: foat
+        The start of the latitude
+    lat_to: foat
+        The end of the latitude
 
     Returns
     -------
-    tiles: {pos: tile_value}
-        A set of tiles, indexed by position
+    rows: list
+        Rows of the database matching the query
     '''
-    conn = sqlite3.connect(db_file)
 
+    conn = sqlite3.connect(db_file_path)
     c = conn.cursor()
-
-    lng_from, _, lat_from, _ = get_tile_box(zoom, x, y)
-    _, lng_to, _, lat_to = get_tile_box(zoom, x + width - 1, y + height - 1)
 
     # Note the range query is being done in lng-lat. Since the coords go from:
     # - Longitude: -180 to 180
@@ -128,10 +125,41 @@ def get_tiles(db_file, zoom, x, y, width=1, height=1):
         rMaxLat >= ?
     '''
 
-    rows = c.execute(
+    return c.execute(
         query,
         (zoom, lng_from, lng_to, lat_from, lat_to)
     ).fetchall()
+
+
+def get_tiles(db_file_path, zoom, x, y, width=1, height=1):
+    '''
+    Retrieve a contiguous set of tiles from a 2D db tile file.
+
+    Parameters
+    ----------
+    db_file_path: str
+        The filename of the sqlite db file
+    zoom: int
+        The zoom level
+    x: int
+        The x position of the first tile
+    y: int
+        The y position of the first tile
+    width: int
+        The width of the block of tiles to retrieve
+    height: int
+        The height of the block of tiles to retrieve
+
+    Returns
+    -------
+    tiles: {pos: tile_value}
+        A set of tiles, indexed by position
+    '''
+
+    lng_from, _, lat_from, _ = get_tile_box(zoom, x, y)
+    _, lng_to, _, lat_to = get_tile_box(zoom, x + width - 1, y + height - 1)
+
+    rows = get_features(db_file_path, zoom, lng_from, lng_to, lat_from, lat_to)
 
     new_rows = col.defaultdict(list)
 
