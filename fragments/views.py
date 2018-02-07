@@ -18,10 +18,7 @@ from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
 from tilesets.utils import get_datapath
 from fragments.utils import (
-    calc_measure_dtd,
-    calc_measure_size,
-    calc_measure_noise,
-    calc_measure_sharpness,
+    get_features,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
@@ -29,6 +26,8 @@ from fragments.utils import (
     rel_loci_2_obj
 )
 from higlass_server.utils import getRdb
+
+from hdbscan import HDBSCAN
 
 rdb = getRdb()
 
@@ -282,198 +281,167 @@ def fragments_by_loci(request):
 
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def fragments_by_chr(request):
-    chrom = request.GET.get('chrom', False)
-    cooler_file = request.GET.get('cooler', False)
-    loop_list = request.GET.get('loop-list', False)
+def cluster_fragments(request):
+    '''Cluster small regions within a larger region
+    '''
 
-    if cooler_file:
-        if cooler_file.endswith('.cool'):
-            cooler_file = path.join('data', cooler_file)
-        else:
-            try:
-                cooler_file = get_datapath(
-                    Tileset.objects.get(uuid=cooler_file).datafile.url
-                )
-            except AttributeError:
-                return JsonResponse({
-                    'error': 'Cooler file not in database',
-                }, status=500)
-    else:
+    try:
+        zoom_level = int(request.GET.get('z', 0))
+    except ValueError:
         return JsonResponse({
-            'error': 'Cooler file not specified',
-        }, status=500)
+            'error': 'z (zoom level) needs to be a number',
+        }, status=400)
 
     try:
-        measures = request.GET.getlist('measures', [])
+        x_from = float(request.GET.get('x-from', 0))
     except ValueError:
-        measures = []
+        return JsonResponse({
+            'error': 'x-from needs to be a number',
+        }, status=400)
 
     try:
-        zoomout_level = int(request.GET.get('zoomout-level', -1))
+        x_to = float(request.GET.get('x-to', 0))
     except ValueError:
-        zoomout_level = -1
+        return JsonResponse({
+            'error': 'x-to needs to be a number',
+        }, status=400)
 
     try:
-        limit = int(request.GET.get('limit', -1))
+        y_from = float(request.GET.get('y-from', 0))
     except ValueError:
-        limit = -1
+        return JsonResponse({
+            'error': 'y-from needs to be a number',
+        }, status=400)
 
     try:
-        precision = int(request.GET.get('precision', False))
+        y_to = float(request.GET.get('y-to', 0))
     except ValueError:
-        precision = False
+        return JsonResponse({
+            'error': 'y-to needs to be a number',
+        }, status=400)
+
+    try:
+        width = float(request.GET.get('w', 0))
+    except ValueError:
+        return JsonResponse({
+            'error': 'w (width) needs to be a number',
+        }, status=400)
+
+    try:
+        height = float(request.GET.get('h', 0))
+    except ValueError:
+        return JsonResponse({
+            'error': 'h (height) needs to be a number',
+        }, status=400)
+
+    try:
+        threshold = float(request.GET.get('t', 0))
+    except ValueError:
+        return JsonResponse({
+            'error': 't (threshold) needs to be a number',
+        }, status=400)
+
+    try:
+        num_cluster = float(request.GET.get('n', 0))
+    except ValueError:
+        return JsonResponse({
+            'error': 'n (num clusters) needs to be a number',
+        }, status=400)
+
+    try:
+        tile_set_uuids = str(request.GET.get('d', ''))
+    except ValueError:
+        return JsonResponse({
+            'error': 'd (data set uuids) need to be specified',
+        }, status=400)
 
     try:
         no_cache = bool(request.GET.get('no-cache', False))
     except ValueError:
         no_cache = False
 
-    try:
-        for_config = bool(request.GET.get('for-config', False))
-    except ValueError:
-        for_config = False
+    if tile_set_uuids:
+        tile_set_uuids = tile_set_uuids.split(',')
+    else:
+        return JsonResponse({
+            'error': 'No tile set uuids specified',
+        }, status=400)
 
-    # Get a unique string for the URL query string
-    uuid = hashlib.md5(
+    try:
+        # Map UUIDs to tile set objects
+        tile_sets = list(map(
+            lambda uuid: Tileset.objects.get(uuid=uuid),
+            tile_set_uuids
+        ))
+    except Tileset.DoesNotExist:
+        return JsonResponse({
+            'error': 'one or more tile sets were not found',
+        }, status=404)
+
+    supported_filetypes = ['bed2ddb', '2dannodb', 'geodb']
+
+    if not all(
+        tile_set.filetype in supported_filetypes for tile_set in tile_sets
+    ):
+        return JsonResponse({
+            'error': (
+                'One or more tile sets are not supported. Only bed2ddb, '
+                '2dannodb, and geodb are supported.'
+            ),
+        }, status=400)
+
+    # Get a unique fingerprint for the URL query string
+    fingerprint = hashlib.md5(
         '-'.join([
-            cooler_file,
-            chrom,
-            loop_list,
-            str(limit),
-            str(precision),
-            str(zoomout_level)
-        ])
+            str(x_from),
+            str(x_to),
+            str(y_from),
+            str(y_to),
+            str(width),
+            str(height),
+            str(threshold),
+            str(num_cluster),
+            '&'.join(tile_set_uuids),
+        ]).encode('utf-8')
     ).hexdigest()
 
     # Check if something is cached
     if not no_cache:
         try:
-            results = rdb.get('frag_by_chrom_%s' % uuid)
+            results = rdb.get('clust_frag_%s' % fingerprint)
 
             if results:
                 return JsonResponse(pickle.loads(results))
         except:
             pass
 
-    # Get relative loci
-    try:
-        (loci_rel, chroms) = get_intra_chr_loops_from_looplist(
-            path.join('data', loop_list), chrom
+    # Assemble features
+    all_features = []
+    for tile_set in tile_sets:
+        features = get_features(
+            tile_set, zoom_level, x_from, x_to, y_from, y_to
         )
-    except Exception as e:
-        return JsonResponse({
-            'error': 'Could not retrieve loci.',
-            'error_message': str(e)
-        }, status=500)
-
-    # Convert to chromosome-relative loci list
-    loci_rel_chroms = np.column_stack(
-        (chroms[:, 0], loci_rel[:, 0:2], chroms[:, 1], loci_rel[:, 2:4])
-    )
-
-    if limit > 0:
-        loci_rel_chroms = loci_rel_chroms[:limit]
-
-    # Get fragments
-    try:
-        matrices = get_frag_by_loc(
-            cooler_file,
-            loci_rel_chroms,
-            zoomout_level=zoomout_level
+        all_features += map(
+            lambda x: np.mean([x[0:2], x[2:4]], axis=1), features
         )
-    except Exception as e:
-        return JsonResponse({
-            'error': 'Could not retrieve fragments.',
-            'error_message': str(e)
-        }, status=500)
 
-    if precision > 0:
-        matrices = np.around(matrices, decimals=precision)
+    num_clust = 0
 
-    fragments = []
+    if len(all_features) > 0:
+        db = HDBSCAN(min_cluster_size=5).fit(all_features)
 
-    loci_struct = rel_loci_2_obj(loci_rel_chroms)
+        # Get labels
+        labels = db.labels_
 
-    # Check supported measures
-    measures_applied = []
-    for measure in measures:
-        if measure in SUPPORTED_MEASURES:
-            measures_applied.append(measure)
-
-    i = 0
-    for matrix in matrices:
-        measures_values = []
-
-        for measure in measures:
-            if measure == 'distance-to-diagonal':
-                measures_values.append(
-                    calc_measure_dtd(matrix, loci_struct[i])
-                )
-
-            if measure == 'size':
-                measures_values.append(
-                    calc_measure_size(matrix, loci_struct[i])
-                )
-
-            if measure == 'noise':
-                measures_values.append(calc_measure_noise(matrix))
-
-            if measure == 'sharpness':
-                measures_values.append(calc_measure_sharpness(matrix))
-
-        frag_obj = {
-            # 'matrix': matrix.tolist()
-        }
-
-        frag_obj.update(loci_struct[i])
-        frag_obj.update({
-            "measures": measures_values
-        })
-        fragments.append(frag_obj)
-        i += 1
-
-    # Create results
-    results = {
-        'count': matrices.shape[0],
-        'dims': matrices.shape[1],
-        'fragments': fragments,
-        'measures': measures_applied,
-        'relativeLoci': True,
-        'zoomoutLevel': zoomout_level
-    }
-
-    if for_config:
-        results['fragmentsHeader'] = [
-            'chrom1',
-            'start1',
-            'end1',
-            'strand1',
-            'chrom2',
-            'start2',
-            'end2',
-            'strand2'
-        ] + measures_applied
-
-        fragments_arr = []
-        for fragment in fragments:
-            tmp = [
-                fragment['chrom1'],
-                fragment['start1'],
-                fragment['end1'],
-                fragment['strand1'],
-                fragment['chrom2'],
-                fragment['start2'],
-                fragment['end2'],
-                fragment['strand2'],
-            ] + fragment['measures']
-
-            fragments_arr.append(tmp)
-
-        results['fragments'] = fragments_arr
+        # "-1" is the cluster of noise
+        num_clust = int(labels.max() + 1)
 
     # Cache results for 30 mins
-    rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
+    rdb.set('clust_frag_%s' % fingerprint, pickle.dumps(results), 60 * 30)
+
+    results = {
+        'num_clust': num_clust
+    }
 
     return JsonResponse(results)
 

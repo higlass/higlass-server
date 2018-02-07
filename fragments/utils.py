@@ -15,12 +15,31 @@ from random import random
 from io import BytesIO, StringIO
 from PIL import Image
 from scipy.ndimage.interpolation import zoom
-from geotiles.utils import get_tile_pos_from_lng_lat
+
+from imtiles import utils as imtu
+from geotiles import utils as geotu
 
 logger = logging.getLogger(__name__)
 
 
 # Methods
+
+def get_features(tile_set, zoom, x_from, x_to, y_fom, y_to):
+    if (
+        tile_set.filetype == 'bed2ddb' or
+        tile_set.filetype == '2dannodb' or
+        tile_set.filetype == 'imtiles'
+    ):
+        return imtu.get_features(
+            tile_set.datafile.url, zoom, x_from, x_to, y_fom, y_to
+        )
+    elif tile_set.filetype == 'geodb':
+        return geotu.get_features(
+            tile_set.datafile.url, zoom, x_from, x_to, y_fom, y_to
+        )
+
+    return []
+
 
 def get_chrom_names_cumul_len(c):
     '''
@@ -280,10 +299,10 @@ def get_frag_by_loc_from_osm(
             continue
 
         # Get tile ids
-        start1, start2 = get_tile_pos_from_lng_lat(
+        start1, start2 = geotu.get_tile_pos_from_lng_lat(
             start_lng, start_lat, zoom_level
         )
-        end1, end2 = get_tile_pos_from_lng_lat(
+        end1, end2 = geotu.get_tile_pos_from_lng_lat(
             end_lng, end_lat, zoom_level
         )
 
