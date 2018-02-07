@@ -164,6 +164,16 @@ def sizes(request):
         )
 
     # Try to find the db entry
+    if not uuid:
+        err_msg = 'Gimme some tileset UUID (id) buddy 😘'
+        err_status = 400
+
+        if is_json:
+            return response({'error': err_msg}, status=err_status)
+
+        return response(err_msg, status=err_status)
+
+    # Try to find the db entry
     try:
         chrom_sizes = tm.Tileset.objects.get(uuid=uuid)
     except Exception as e:
