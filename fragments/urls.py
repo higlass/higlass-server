@@ -7,5 +7,4 @@ from fragments import views
 urlpatterns = [
     url(r'^fragments_by_loci/$', views.fragments_by_loci),
     url(r'^cluster_fragments/$', views.cluster_fragments),
-    url(r'^loci/$', views.loci),
 ]

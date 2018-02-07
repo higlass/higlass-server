@@ -444,26 +444,3 @@ def cluster_fragments(request):
     }
 
     return JsonResponse(results)
-
-
-@api_view(['GET'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def loci(request):
-    chrom = request.GET.get('chrom', False)
-    loop_list = request.GET.get('loop-list', False)
-
-    # Get relative loci
-    (loci_rel, chroms) = get_intra_chr_loops_from_looplist(
-        path.join('data', loop_list), chrom
-    )
-
-    loci_rel_chroms = np.column_stack(
-        (chroms[:, 0], loci_rel[:, 0:2], chroms[:, 1], loci_rel[:, 2:4])
-    )
-
-    # Create results
-    results = {
-        'loci': rel_loci_2_obj(loci_rel_chroms)
-    }
-
-    return JsonResponse(results)
