@@ -2,11 +2,13 @@
 -e git+https://github.com/nvictus/pybbi.git@master#egg=pybbi
 pyBigWig==0.3.2
 Cython==0.27.3
-django-cors-headers
-django-guardian
-django-rest-swagger
 Django==2.0
+django-cors-headers==2.1.0
+django-extensions==1.9.9
+django-guardian==1.4.9
+django-rest-swagger==2.1.2
 djangorestframework==3.7.3
+djangorestframework-jwt==1.11.0
 h5py==2.6.0
 hdbscan==0.8.12
 numpy==1.14.0
