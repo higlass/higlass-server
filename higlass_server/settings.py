@@ -166,8 +166,10 @@ INSTALLED_APPS = [
     'fragments.app.FragmentsConfig',
     'rest_framework_swagger',
     'corsheaders',
-    'guardian'
+    'guardian',
 ]
+
+INSTALLED_APPS += get_setting('INSTALLED_APPS', [])
 
 # We want to avoid loading into memory
 FILE_UPLOAD_HANDLERS = [
