@@ -10,6 +10,7 @@ djangorestframework==3.7.3
 h5py==2.6.0
 numpy==1.12.0
 pandas==0.19.1
+Pillow==5.0.0
 requests==2.12.3
 slugid==1.0.7
 bumpversion==0.5.3

@@ -9,12 +9,13 @@ import itertools as it
 import numpy as np
 import os
 import shutil
-import time
 import tempfile
+import sqlite3
 import tilesets.utils as tut
 from .tiles import make_tiles
 
 import higlass_server.settings as hss
+from geotiles import utils as geotu
 
 global mats
 mats = {}
@@ -24,6 +25,7 @@ transform_descriptions['weight'] = {'name': 'ICE', 'value': 'weight'}
 transform_descriptions['KR'] = {'name': 'KR', 'value': 'KR'}
 transform_descriptions['VC'] = {'name': 'VC', 'value': 'VC'}
 transform_descriptions['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
+
 
 def get_cached_datapath(relpath):
     '''
@@ -45,31 +47,32 @@ def get_cached_datapath(relpath):
         return tut.get_datapath(relpath)
 
     orig_path = tut.get_datapath(relpath)
-    cached_path = op.join(hss.CACHE_DIR, relpath)
+    cached_path = os.path.join(hss.CACHE_DIR, relpath)
 
-    if op.exists(cached_path):
+    if os.path.exists(cached_path):
         # this file has already been cached
         print("here", cached_path)
         return cached_path
 
     with tempfile.TemporaryDirectory() as dirpath:
-        tmp = op.join(dirpath, 'cached_file')
+        tmp = os.path.join(dirpath, 'cached_file')
         shutil.copyfile(orig_path, tmp)
 
         # check to make sure the destination directory exists
-        dest_dir = op.dirname(cached_path)
+        dest_dir = os.path.dirname(cached_path)
         print("dest_dir:", dest_dir)
 
-        if not op.exists(dest_dir):
+        if not os.path.exists(dest_dir):
             os.makedirs(dest_dir)
 
         print("moving:", cached_path)
         print("stat:", os.stat(tmp))
         shutil.move(tmp, cached_path)
         print("stat:", os.stat(cached_path))
-        print('abspath:', op.abspath(cached_path))
+        print('abspath:', os.path.abspath(cached_path))
 
     return cached_path
+
 
 def get_available_transforms(cooler):
     '''
@@ -107,7 +110,11 @@ def make_mats(dset):
     if 'resolutions' in f:
         # this file contains raw resolutions so it'll return a different
         # sort of tileset info
-        info = {"resolutions": tuple(sorted(map(int, list(f['resolutions'].keys())))) }
+        info = {
+            "resolutions": tuple(
+                sorted(map(int, list(f['resolutions'].keys())))
+            )
+        }
         mats[dset] = [f, info]
 
         # see which transforms are available, a transform has to be
@@ -116,18 +123,25 @@ def make_mats(dset):
         available_transforms_per_resolution = {}
 
         for resolution in info['resolutions']:
-            available_transforms_per_resolution[resolution] = get_available_transforms(f['resolutions'][str(resolution)])
+            available_transforms_per_resolution[resolution] =\
+                get_available_transforms(f['resolutions'][str(resolution)])
 
-        all_available_transforms = set.intersection(*available_transforms_per_resolution.values())
+        all_available_transforms = set.intersection(
+            *available_transforms_per_resolution.values()
+        )
 
-        info['transforms'] = [transform_descriptions[t] for t in all_available_transforms]
+        info['transforms'] = [
+            transform_descriptions[t] for t in all_available_transforms
+        ]
 
         # get the genome size
         resolution = list(f['resolutions'].keys())[0]
-        genome_length = int(sum(f['resolutions'][resolution]['chroms']['length']))
-        
+        genome_length = int(
+            sum(f['resolutions'][resolution]['chroms']['length'])
+        )
+
         info['max_pos'] = [genome_length, genome_length]
-        info['min_pos'] = [1,1]
+        info['min_pos'] = [1, 1]
         return
 
     info = cch.get_info(dset)
@@ -146,7 +160,7 @@ def make_mats(dset):
 def format_cooler_tile(tile_data_array):
     '''
     Format raw cooler cooler data into a more structured tile
-    containing either float16 or float32 data along with a 
+    containing either float16 or float32 data along with a
     dtype to differentiate between the two.
 
     Parameters
@@ -176,10 +190,14 @@ def format_cooler_tile(tile_data_array):
         max_dense > min_f16 and max_dense < max_f16 and
         min_dense > min_f16 and min_dense < max_f16
     ):
-        tile_data['dense'] = base64.b64encode(tile_data_array.astype('float16')).decode('latin-1')
+        tile_data['dense'] = base64.b64encode(
+            tile_data_array.astype('float16')
+        ).decode('latin-1')
         tile_data['dtype'] = 'float16'
     else:
-        tile_data['dense'] = base64.b64encode(tile_data_array.astype('float32')).decode('latin-1')
+        tile_data['dense'] = base64.b64encode(
+            tile_data_array.astype('float32')
+        ).decode('latin-1')
         tile_data['dtype'] = 'float32'
 
     return tile_data
@@ -203,6 +221,7 @@ def extract_tileset_uid(tile_id):
     tileset_uuid = tile_id_parts[0]
 
     return tileset_uuid
+
 
 def generate_multivec_tileset_info(filename):
     '''
@@ -233,7 +252,7 @@ def generate_multivec_tileset_info(filename):
     min_pos = [0]
 
     # the "rightmost" datapoint position
-    max_pos = [len(f['resolutions'][str(resolutions[-1])])]
+    # max_pos = [len(f['resolutions'][str(resolutions[-1])])]
     tile_size = 1024
 
     f.close()
@@ -243,6 +262,7 @@ def generate_multivec_tileset_info(filename):
       'min_pos': min_pos,
       'tile_size': tile_size
     }
+
 
 def get_single_multivec_tile(filename, tile_pos):
     '''
@@ -257,11 +277,11 @@ def get_single_multivec_tile(filename, tile_pos):
     '''
     tileset_info = generate_multivec_tileset_info(filename)
     f = h5py.File(filename, 'r')
-    
+
     # which resolution does this zoom level correspond to?
     resolution = tileset_info['resolutions'][tile_pos[0]]
     tile_size = tileset_info['tile_size']
-    
+
     # where in the data does the tile start and end
     tile_start = tile_pos[1] * tile_size
     tile_end = tile_start + tile_size
@@ -270,6 +290,7 @@ def get_single_multivec_tile(filename, tile_pos):
     f.close()
 
     return dense
+
 
 def generate_1d_tiles(filename, tile_ids, get_data_function):
     '''
@@ -316,13 +337,17 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
             min_dense > min_f16 and min_dense < max_f16
         ):
             tile_value = {
-                'dense': base64.b64encode(dense.reshape((-1,)).astype('float16')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.reshape((-1,)).astype('float16')
+                ).decode('utf-8'),
                 'dtype': 'float16',
                 'shape': dense.shape
             }
         else:
             tile_value = {
-                'dense': base64.b64encode(dense.reshape((-1,)).astype('float32')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.reshape((-1,)).astype('float32')
+                ).decode('utf-8'),
                 'dtype': 'float32',
                 'shape': dense.shape
             }
@@ -343,9 +368,9 @@ def generate_bigwig_tileset_info(tileset):
 
     Returns
     -------
-    tileset_info: {'min_pos': [], 
-                    'max_pos': [], 
-                    'tile_size': 1024, 
+    tileset_info: {'min_pos': [],
+                    'max_pos': [],
+                    'tile_size': 1024,
                     'max_zoom': 7
                     }
     '''
@@ -391,7 +416,7 @@ def generate_bigwig_tiles(tileset, tile_ids):
         # this doesn't combine multiple consequetive ids, which
         # would speed things up
         dense = bwt.get_bigwig_tile_by_id(
-            tut.get_datapath(tileset.datafile.url), 
+            tut.get_datapath(tileset.datafile.url),
             zoom_level,
             tile_position[1])
 
@@ -413,18 +438,23 @@ def generate_bigwig_tiles(tileset, tile_ids):
             min_dense > min_f16 and min_dense < max_f16
         ):
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.astype('float16')
+                ).decode('utf-8'),
                 'dtype': 'float16'
             }
         else:
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.astype('float32')
+                ).decode('utf-8'),
                 'dtype': 'float32'
             }
 
         generated_tiles += [(tile_id, tile_value)]
 
     return generated_tiles
+
 
 def generate_hitile_tiles(tileset, tile_ids):
     '''
@@ -475,19 +505,22 @@ def generate_hitile_tiles(tileset, tile_ids):
             min_dense > min_f16 and min_dense < max_f16
         ):
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.astype('float16')
+                ).decode('utf-8'),
                 'dtype': 'float16'
             }
         else:
             tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
+                'dense': base64.b64encode(
+                    dense.astype('float32')
+                ).decode('utf-8'),
                 'dtype': 'float32'
             }
 
         generated_tiles += [(tile_id, tile_value)]
 
     return generated_tiles
-
 
 
 def generate_beddb_tiles(tileset, tile_ids):
@@ -508,15 +541,23 @@ def generate_beddb_tiles(tileset, tile_ids):
         A list of tile_id, tile_data tuples
     '''
     tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t, dimension=1) 
-        for t in tile_ids_by_zoom]))
+    partitioned_tile_ids = list(
+        it.chain(
+            *[
+                partition_by_adjacent_tiles(t, dimension=1)
+                for t in tile_ids_by_zoom
+            ]
+        )
+    )
 
     generated_tiles = []
 
     for tile_group in partitioned_tile_ids:
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
-        tile_positions = [[int(x) for x in t.split('.')[2:3]] for t in tile_group]
+        tile_positions = [
+            [int(x) for x in t.split('.')[2:3]] for t in tile_group
+        ]
 
         if len(tile_positions) == 0:
             continue
@@ -524,19 +565,25 @@ def generate_beddb_tiles(tileset, tile_ids):
         minx = min([t[0] for t in tile_positions])
         maxx = max([t[0] for t in tile_positions])
 
-        t1 = time.time()
         tile_data_by_position = cdt.get_tiles(
             get_cached_datapath(tileset.datafile.url),
             zoom_level,
             minx,
             maxx - minx + 1
         )
-        generated_tiles += [(".".join(map(str, [tileset_id] + [zoom_level] + [position])), tile_data)
-            for (position, tile_data) in tile_data_by_position.items()]
+        generated_tiles += [
+            (
+                ".".join(
+                    map(str, [tileset_id] + [zoom_level] + [position])
+                ),
+                tile_data
+            ) for (position, tile_data) in tile_data_by_position.items()
+        ]
 
     return generated_tiles
 
-def generate_bed2ddb_tiles(tileset, tile_ids):
+
+def generate_bed2ddb_tiles(tileset, tile_ids, retriever=cdt.get_2d_tiles):
     '''
     Generate tiles from a bed2db file.
 
@@ -556,18 +603,27 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
     generated_tiles = []
 
     tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
-        for t in tile_ids_by_zoom]))
+    partitioned_tile_ids = list(
+        it.chain(
+            *[partition_by_adjacent_tiles(t) for t in tile_ids_by_zoom]
+        )
+    )
 
     for tile_group in partitioned_tile_ids:
         zoom_level = int(tile_group[0].split('.')[1])
         tileset_id = tile_group[0].split('.')[0]
 
-        tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
+        tile_positions = [
+            [int(x) for x in t.split('.')[2:4]] for t in tile_group
+        ]
 
         # filter for tiles that are in bounds for this zoom level
-        tile_positions = list(filter(lambda x: x[0] < 2 ** zoom_level, tile_positions))
-        tile_positions = list(filter(lambda x: x[1] < 2 ** zoom_level, tile_positions))
+        tile_positions = list(
+            filter(lambda x: x[0] < 2 ** zoom_level, tile_positions)
+        )
+        tile_positions = list(
+            filter(lambda x: x[1] < 2 ** zoom_level, tile_positions)
+        )
 
         if len(tile_positions) == 0:
             # no in bounds tiles
@@ -580,20 +636,29 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        tile_data_by_position = cdt.get_2d_tiles(
-                cached_datapath,
-                zoom_level,
-                minx, miny,
-                maxx - minx + 1,
-                maxy - miny + 1
-            )
+        tile_data_by_position = retriever(
+            cached_datapath,
+            zoom_level,
+            minx,
+            miny,
+            maxx - minx + 1,
+            maxy - miny + 1
+        )
 
-        tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position))), tile_data)
-                for (position, tile_data) in tile_data_by_position.items()]
+        tiles = [
+            (
+                ".".join(
+                    map(str, [tileset_id] + [zoom_level] + list(position))
+                ),
+                tile_data
+            )
+            for (position, tile_data) in tile_data_by_position.items()
+        ]
 
         generated_tiles += tiles
 
     return generated_tiles
+
 
 def generate_hibed_tiles(tileset, tile_ids):
     '''
@@ -624,11 +689,16 @@ def generate_hibed_tiles(tileset, tile_ids):
             tile_position[1]
         )
 
-        tile_value = {'discrete': list([list([x.decode('utf-8') for x in d]) for d in dense])}
+        tile_value = {
+            'discrete': list(
+                [list([x.decode('utf-8') for x in d]) for d in dense]
+            )
+        }
 
         generated_tiles += [(tile_id, tile_value)]
 
     return generated_tiles
+
 
 def get_transform_type(tile_id):
     '''
@@ -652,6 +722,7 @@ def get_transform_type(tile_id):
         transform_method = 'default'
 
     return transform_method
+
 
 def bin_tiles_by_zoom(tile_ids):
     '''
@@ -706,10 +777,10 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
 
         transform_method = get_transform_type(tile_id)
 
-
         tile_id_lists[(zoom_level, transform_method)].add(tile_id)
 
     return tile_id_lists
+
 
 def partition_by_adjacent_tiles(tile_ids, dimension=2):
     '''
@@ -731,7 +802,11 @@ def partition_by_adjacent_tiles(tile_ids, dimension=2):
     '''
     tile_id_lists = []
 
-    for tile_id in sorted(tile_ids, key=lambda x: [int(p) for p in x.split('.')[2:2+dimension]]):
+    sorted_tile_ids = sorted(
+        tile_ids,
+        key=lambda x: [int(p) for p in x.split('.')[2:2+dimension]]
+    )
+    for tile_id in sorted_tile_ids:
         tile_id_parts = tile_id.split('.')
 
         # exclude the zoom level in the position
@@ -743,15 +818,17 @@ def partition_by_adjacent_tiles(tile_ids, dimension=2):
 
         for tile_id_list in tile_id_lists:
             # iterate over each group of adjacent tiles
-            has_close_tile = False
+            # has_close_tile = False
 
             for ct_tile_id in tile_id_list:
                 ct_tile_id_parts = ct_tile_id.split('.')
-                ct_tile_position = list(map(int, ct_tile_id_parts[2:2+dimension]))
+                ct_tile_position = list(
+                    map(int, ct_tile_id_parts[2:2+dimension])
+                )
                 far_apart = False
 
                 # iterate over each dimension and see if this tile is close
-                for p1,p2 in zip(tile_position, ct_tile_position):
+                for p1, p2 in zip(tile_position, ct_tile_position):
                     if abs(int(p1) - int(p2)) > 1:
                         # too far apart can't be part of the same group
                         far_apart = True
@@ -761,13 +838,14 @@ def partition_by_adjacent_tiles(tile_ids, dimension=2):
                     tile_id_list += [tile_id]
                     added = True
                     break
-                
+
             if added:
                 break
         if not added:
             tile_id_lists += [[tile_id]]
 
     return tile_id_lists
+
 
 def generate_cooler_tiles(tileset, tile_ids):
     '''
@@ -795,9 +873,17 @@ def generate_cooler_tiles(tileset, tile_ids):
 
     tileset_file_and_info = mats[filename]
 
-    tile_ids_by_zoom_and_transform = bin_tiles_by_zoom_level_and_transform(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
-        for t in tile_ids_by_zoom_and_transform]))
+    tile_ids_by_zoom_and_transform = bin_tiles_by_zoom_level_and_transform(
+        tile_ids
+    ).values()
+    partitioned_tile_ids = list(
+        it.chain(
+            *[
+                partition_by_adjacent_tiles(t)
+                for t in tile_ids_by_zoom_and_transform
+            ]
+        )
+    )
 
     generated_tiles = []
 
@@ -809,7 +895,10 @@ def generate_cooler_tiles(tileset, tile_ids):
         tileset_file = tileset_file_and_info[0]
 
         if 'resolutions' in tileset_info:
-            sorted_resolutions = sorted([int(r) for r in tileset_info['resolutions']], reverse=True)
+            sorted_resolutions = sorted(
+                [int(r) for r in tileset_info['resolutions']],
+                reverse=True
+            )
             if zoom_level > len(sorted_resolutions):
                 # this tile has too high of a zoom level specified
                 continue
@@ -821,14 +910,28 @@ def generate_cooler_tiles(tileset, tile_ids):
                 # this tile has too high of a zoom level specified
                 continue
             hdf_for_resolution = tileset_file[str(zoom_level)]
-            resolution = (tileset_info['max_width'] / 2**zoom_level) / BINS_PER_TILE
+            resolution = (
+                tileset_info['max_width'] / 2**zoom_level
+            ) / BINS_PER_TILE
 
-        tile_positions = [[int(x) for x in t.split('.')[2:4]] for t in tile_group]
+        tile_positions = [
+            [int(x) for x in t.split('.')[2:4]] for t in tile_group
+        ]
 
         # filter for tiles that are in bounds for this zoom level
         tile_width = resolution * BINS_PER_TILE
-        tile_positions = list(filter(lambda x: x[0] * tile_width  < tileset_info['max_pos'][0]+1, tile_positions))
-        tile_positions = list(filter(lambda x: x[1] * tile_width < tileset_info['max_pos'][1]+1, tile_positions))
+        tile_positions = list(
+            filter(
+                lambda x: x[0] * tile_width < tileset_info['max_pos'][0]+1,
+                tile_positions
+            )
+        )
+        tile_positions = list(
+            filter(
+                lambda x: x[1] * tile_width < tileset_info['max_pos'][1]+1,
+                tile_positions
+            )
+        )
 
         if len(tile_positions) == 0:
             # no in bounds tiles
@@ -840,19 +943,87 @@ def generate_cooler_tiles(tileset, tile_ids):
         miny = min([t[1] for t in tile_positions])
         maxy = max([t[1] for t in tile_positions])
 
-        tile_data_by_position = make_tiles(hdf_for_resolution, 
-                resolution,
-                minx, miny, 
-                transform_type,
-                maxx-minx+1, maxy-miny+1)
+        tile_data_by_position = make_tiles(
+            hdf_for_resolution,
+            resolution,
+            minx,
+            miny,
+            transform_type,
+            maxx-minx + 1,
+            maxy-miny + 1
+        )
 
-        tiles = [(".".join(map(str, [tileset_id] + [zoom_level] + list(position) + [transform_type])), format_cooler_tile(tile_data))
-                for (position, tile_data) in tile_data_by_position.items()]
-
+        tiles = [
+            (
+                ".".join(
+                    map(
+                        str,
+                        (
+                            [tileset_id] +
+                            [zoom_level] +
+                            list(position) +
+                            [transform_type]
+                        )
+                    )
+                ),
+                format_cooler_tile(tile_data)
+            ) for (position, tile_data) in tile_data_by_position.items()
+        ]
 
         generated_tiles += tiles
 
     return generated_tiles
+
+
+def generate_image_tiles(tileset, tile_ids, raw):
+    '''
+    Generate tiles from a imtiles file.
+
+    Parameters
+    ----------
+    tileset: tilesets.models.Tileset object
+        The tileset that the tile ids should be retrieved from
+    tile_ids: [str,...]
+        A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
+        to be retrieved
+
+    Returns
+    -------
+    generated_tiles: [(tile_id, tile_data),...]
+        A list of tile_id, tile_data tuples
+    '''
+    filename = tut.get_datapath(tileset.datafile.url)
+
+    # Connect to SQLite db
+    db = sqlite3.connect(filename)
+
+    generate_tiles = []
+
+    generate_image = raw and len(tile_ids)
+
+    for tile_id in tile_ids:
+        id = tile_id[tile_id.find('.') + 1:].split('.')
+
+        sql = 'SELECT image FROM tiles WHERE z = :z AND y = :y AND x = :x'
+        param = {'z': int(id[0]), 'y': int(id[1]), 'x': int(id[2])}
+        res = db.execute(sql, param).fetchone()
+
+        if res:
+            image_blob = res[0]
+
+            if generate_image:
+                tile_data = {
+                    'image': image_blob,
+                }
+            else:
+                tile_data = {
+                    'dense': base64.b64encode(image_blob).decode('latin-1'),
+                }
+
+            generate_tiles.append((tile_id, tile_data))
+
+    return generate_tiles
+
 
 def generate_tiles(tileset_tile_ids):
     '''
@@ -875,14 +1046,19 @@ def generate_tiles(tileset_tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids = tileset_tile_ids
+    tileset, tile_ids, raw = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2ddb':
+    elif (
+        tileset.filetype == 'bed2ddb' or
+        tileset.filetype == '2dannodb'
+    ):
         return generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'geodb':
+        return generate_bed2ddb_tiles(tileset, tile_ids, geotu.get_tiles)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
@@ -891,10 +1067,12 @@ def generate_tiles(tileset_tile_ids):
         return generate_bigwig_tiles(tileset, tile_ids)
     elif tileset.filetype == 'multivec':
         return generate_1d_tiles(
-                tut.get_datapath(tileset.datafile.url),
-                tile_ids,
-                get_single_multivec_tile)
+            tut.get_datapath(tileset.datafile.url),
+            tile_ids,
+            get_single_multivec_tile
+        )
+    elif tileset.filetype == 'imtiles':
+        return generate_image_tiles(tileset, tile_ids, raw)
     else:
-        return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
-
-
+        err_msg = 'Unknown tileset filetype: {}'.format(tileset.filetype)
+        return [(ti, {'error': err_msg}) for ti in tile_ids]
