@@ -1,5 +1,4 @@
 tmp
-notebooks/.ipynb_checkpoints
 *.sqllite
 api/coolers/migrations/*
 *.pyc
@@ -26,3 +25,7 @@ static/
 hgs-static/
 
 config.json
+
+notebooks/
+media
+*.ipynb*
