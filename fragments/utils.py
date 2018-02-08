@@ -11,10 +11,15 @@ import sqlite3
 import requests
 import math
 
+from hdbscan import HDBSCAN
 from random import random
 from io import BytesIO, StringIO
 from PIL import Image
+from sklearn.cluster import MiniBatchKMeans
+from sklearn.utils.extmath import cartesian
 from scipy.ndimage.interpolation import zoom
+
+from tilesets.models import Tileset
 
 from imtiles import utils as imtu
 from geotiles import utils as geotu
@@ -39,6 +44,179 @@ def get_features(tile_set, zoom, x_from, x_to, y_fom, y_to):
         )
 
     return []
+
+
+def cluster_fragments(
+    tile_sets,
+    zoom_level,
+    x_from,
+    x_to,
+    y_from,
+    y_to,
+    width=1072,
+    height=768,
+    inset_disp_size_min=16,
+    inset_disp_size_max=64,
+    inset_thres=16,
+    clust_rel_pad=0.0,
+    clust_meth='grid'
+):
+    '''Cluster small regions within a larger region
+    '''
+
+    suported_cluster_methods = ['grid', 'density']
+
+    if clust_meth not in suported_cluster_methods:
+        raise ValueError(
+            'Cluster method not supported. Choose between grid or density.'
+        )
+
+    supported_filetypes = ['bed2ddb', '2dannodb', 'geodb']
+
+    if not all(
+        tile_set.filetype in supported_filetypes for tile_set in tile_sets
+    ):
+        raise ValueError(
+            'One or more tile sets are not supported. Only bed2ddb, '
+            '2dannodb, and geodb are supported.'
+        )
+
+    # Assemble features
+    inset_dims = []
+    inset_aspect_ratio = []
+    inset_size_min = math.inf
+    inset_size_max = -math.inf
+    inset_centroids = []
+
+    data_to_view_scale = (x_to - x_from) / width
+
+    feature_area_total = np.zeros([height, width])
+
+    for tile_set in tile_sets:
+        features = get_features(
+            tile_set, zoom_level, x_from, x_to, y_from, y_to
+        )
+
+        for f in features:
+            f_width = f[1] - f[0]
+            f_height = f[3] - f[2]
+            size = max(f_width, f_height) / data_to_view_scale
+
+            d_x_1 = round(f[0] / data_to_view_scale)
+            d_x_2 = round(f[1] / data_to_view_scale)
+            d_y_1 = round(f[2] / data_to_view_scale)
+            d_y_2 = round(f[3] / data_to_view_scale)
+
+            feature_area_total[d_y_1:d_y_2, d_x_1:d_x_2] = 1
+
+            if size <= inset_thres:
+                inset_centroids.append(np.mean([f[0:2], f[2:4]], axis=1))
+                inset_size_min = min(size, inset_size_min)
+                inset_size_max = max(size, inset_size_max)
+                inset_dims.append([f_width, f_height])
+                inset_aspect_ratio.append(f_width / f_height)
+
+    def lin_scl(v, d_from, d_to, r_from, r_to, is_clapped):
+        return np.minimum(
+            r_to if is_clapped else np.inf,
+            np.maximum(
+                r_from if is_clapped else -np.inf,
+                (((v - d_from) / (d_to - d_from)) * (r_to - r_from)) + r_from
+            )
+        )
+
+    inset_dims = np.array(inset_dims)
+
+    try:
+        inset_dim_max = np.maximum(inset_dims[:, 0], inset_dims[:, 1])
+    except Exception as e:
+        inset_dim_max = np.array([])
+
+    inset_size_to_disp_scale = lin_scl(
+        inset_dim_max,
+        inset_size_min,
+        inset_size_max,
+        inset_disp_size_min,
+        inset_disp_size_max,
+        True
+    ) / inset_dim_max
+    inset_disp_size = (inset_dims.T * inset_size_to_disp_scale).T
+
+    # View area
+    view_area = width * height
+    inset_area_total = np.sum(inset_disp_size[:, 0] * inset_disp_size[:, 1])
+
+    num_clust = 0
+
+    if len(inset_centroids) > 0:
+        config = {}
+
+        if clust_meth == 'density':
+            config['min_cluster_size'] = 5
+
+        else:
+            max_dim = max(width, height)
+            config['width'] = width
+            config['height'] = height
+            config['clust_per_max'] = np.floor(
+                max_dim / inset_disp_size_max / 4
+            )
+
+        labels, num_clust = cluster_points(inset_centroids, clust_meth, config)
+
+    return {
+        'num_clust': int(num_clust),
+        'num_insets': len(inset_centroids),
+        'view_area': int(view_area),
+        'feature_area_total': int(np.sum(feature_area_total)),
+        'feature_stress': np.sum(feature_area_total) / view_area,
+        'inset_area_total': int(inset_area_total),
+        'inset_stress': inset_area_total / view_area,
+        'feature_area': feature_area_total
+    }
+
+
+def cluster_points(points, method, config):
+    if method == 'density':
+        db = HDBSCAN(min_cluster_size=config['min_cluster_size']).fit(points)
+
+    else:
+        width = config['width']
+        height = config['height']
+        clust_per_max = config['clust_per_max']
+        part = max(width, height) * (1 / clust_per_max)
+
+        landscape = width > height
+
+        num_clust_x = int(
+            clust_per_max
+            if landscape
+            else clust_per_max - np.floor((height - width) / part)
+        )
+        init_x = np.linspace(0, width, num=num_clust_x + 2)[1:num_clust_x + 1]
+
+        num_clust_y = int(
+            clust_per_max
+            if not landscape
+            else clust_per_max - np.floor((width - height) / part)
+        )
+        init_y = np.linspace(0, height, num=num_clust_y + 2)[1:num_clust_y + 1]
+
+        print(cartesian([init_x, init_y]))
+
+        db = MiniBatchKMeans(
+            n_clusters=num_clust_x * num_clust_y,
+            init=cartesian([init_x, init_y]),
+            n_init=1
+        ).fit(points)
+
+    # Get labels
+    labels = db.labels_
+
+    # "-1" is the cluster of noise
+    num_clust = labels.max() + 1
+
+    return (labels, num_clust)
 
 
 def get_chrom_names_cumul_len(c):

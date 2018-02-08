@@ -19,6 +19,7 @@ from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
 from tilesets.utils import get_datapath
 from fragments.utils import (
+    cluster_fragments,
     get_features,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
@@ -27,8 +28,6 @@ from fragments.utils import (
     # rel_loci_2_obj
 )
 from higlass_server.utils import getRdb
-
-from hdbscan import HDBSCAN
 
 rdb = getRdb()
 
@@ -282,7 +281,7 @@ def fragments_by_loci(request):
 
 @api_view(['GET'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def cluster_fragments(request):
+def get_cluster_fragments(request):
     '''Cluster small regions within a larger region
     '''
 
@@ -336,13 +335,6 @@ def cluster_fragments(request):
         }, status=400)
 
     try:
-        min_cluster_size = int(request.GET.get('n', 5))
-    except ValueError:
-        return JsonResponse({
-            'error': 'n (min cluster size) needs to be an integer',
-        }, status=400)
-
-    try:
         tile_set_uuids = str(request.GET.get('d', ''))
     except ValueError:
         return JsonResponse({
@@ -385,6 +377,14 @@ def cluster_fragments(request):
         }, status=400)
 
     try:
+        clust_meth = request.GET.get('m', 'grid')
+    except ValueError:
+        return JsonResponse({
+            'error':
+                'm (cluster method) need to be a string',
+        }, status=400)
+
+    try:
         no_cache = bool(request.GET.get('no-cache', False))
     except ValueError:
         no_cache = False
@@ -403,22 +403,9 @@ def cluster_fragments(request):
             tile_set_uuids
         ))
     except Tileset.DoesNotExist as e:
-        print(e)
         return JsonResponse({
             'error': 'one or more tile sets were not found',
         }, status=404)
-
-    supported_filetypes = ['bed2ddb', '2dannodb', 'geodb']
-
-    if not all(
-        tile_set.filetype in supported_filetypes for tile_set in tile_sets
-    ):
-        return JsonResponse({
-            'error': (
-                'One or more tile sets are not supported. Only bed2ddb, '
-                '2dannodb, and geodb are supported.'
-            ),
-        }, status=400)
 
     # Get a unique fingerprint for the URL query string
     fingerprint = hashlib.md5(
@@ -429,7 +416,6 @@ def cluster_fragments(request):
             str(y_to),
             str(width),
             str(height),
-            str(min_cluster_size),
             '&'.join(tile_set_uuids),
         ]).encode('utf-8')
     ).hexdigest()
@@ -444,90 +430,37 @@ def cluster_fragments(request):
         except:
             pass
 
-    # Assemble features
-    inset_dims = []
-    inset_aspect_ratio = []
-    inset_size_min = math.inf
-    inset_size_max = -math.inf
-    inset_centroids = []
-
-    data_to_view_scale = (x_to - x_from) / width
-
-    feature_area_total = np.zeros([height, width])
-
-    for tile_set in tile_sets:
-        features = get_features(
-            tile_set, zoom_level, x_from, x_to, y_from, y_to
-        )
-
-        for f in features:
-            f_width = f[1] - f[0]
-            f_height = f[3] - f[2]
-            size = max(f_width, f_height) / data_to_view_scale
-
-            d_x_1 = round(f[0] / data_to_view_scale)
-            d_x_2 = round(f[1] / data_to_view_scale)
-            d_y_1 = round(f[2] / data_to_view_scale)
-            d_y_2 = round(f[3] / data_to_view_scale)
-
-            feature_area_total[d_x_1:d_x_2, d_y_1:d_y_2] = 1
-
-            if size <= inset_thres:
-                inset_centroids.append(np.mean([f[0:2], f[2:4]], axis=1))
-                inset_size_min = min(size, inset_size_min)
-                inset_size_max = max(size, inset_size_max)
-                inset_dims.append([f_width, f_height])
-                inset_aspect_ratio.append(f_width / f_height)
-
-    def lin_scl(v, d_from, d_to, r_from, r_to, is_clapped):
-        return np.minimum(
-            r_to if is_clapped else np.inf,
-            np.maximum(
-                r_from if is_clapped else -np.inf,
-                (((v - d_from) / (d_to - d_from)) * (r_to - r_from)) + r_from
-            )
-        )
-
-    inset_dims = np.array(inset_dims)
-
     try:
-        inset_dim_max = np.maximum(inset_dims[:, 0], inset_dims[:, 1])
-    except Exception as e:
-        inset_dim_max = np.array([])
+        res = cluster_fragments(
+            tile_sets,
+            zoom_level,
+            x_from,
+            x_to,
+            y_from,
+            y_to,
+            width=width,
+            height=height,
+            inset_disp_size_min=inset_disp_size_min,
+            inset_disp_size_max=inset_disp_size_max,
+            inset_thres=inset_thres,
+            clust_rel_pad=clust_rel_pad,
+            clust_meth=clust_meth
+        )
+    except ValueError as e:
+        return JsonResponse({
+            'error': e,
+        }, status=400)
 
-    inset_size_to_disp_scale = lin_scl(
-        inset_dim_max,
-        inset_size_min,
-        inset_size_max,
-        inset_disp_size_min,
-        inset_disp_size_max,
-        True
-    ) / inset_dim_max
-    inset_disp_size = (inset_dims.T * inset_size_to_disp_scale).T
-
-    # View area
-    view_area = width * height
-    inset_area_total = np.sum(inset_disp_size)
-
-    num_clust = 0
-
-    if len(inset_centroids) > 0:
-        db = HDBSCAN(min_cluster_size=min_cluster_size).fit(inset_centroids)
-
-        # Get labels
-        labels = db.labels_
-
-        # "-1" is the cluster of noise
-        num_clust = labels.max() + 1
+    results = {}
+    results['num_clust'] = res['num_clust']
+    results['num_insets'] = res['num_insets']
+    results['view_area'] = res['view_area']
+    results['feature_area_total'] = res['feature_area_total']
+    results['feature_stress'] = res['feature_stress']
+    results['inset_area_total'] = res['inset_area_total']
+    results['inset_stress'] = res['inset_stress']
 
     # Cache results for 30 mins
     rdb.set('clust_frag_%s' % fingerprint, pickle.dumps(results), 60 * 30)
-
-    results = {
-        'num_clust': int(num_clust),
-        'view_area': int(view_area),
-        'feature_area_total': int(np.sum(feature_area_total)),
-        'inset_area_total': int(inset_area_total),
-    }
 
     return JsonResponse(results)

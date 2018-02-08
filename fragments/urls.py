@@ -6,5 +6,5 @@ from fragments import views
 # Additionally, we include the login URLs for the browsable API.
 urlpatterns = [
     url(r'^fragments_by_loci/$', views.fragments_by_loci),
-    url(r'^cluster_fragments/$', views.cluster_fragments),
+    url(r'^cluster_fragments/$', views.get_cluster_fragments),
 ]
