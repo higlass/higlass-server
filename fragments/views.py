@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import logging
+import math
 import numpy as np
 try:
     import cPickle as pickle
@@ -22,8 +23,8 @@ from fragments.utils import (
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
-    get_intra_chr_loops_from_looplist,
-    rel_loci_2_obj
+    # get_intra_chr_loops_from_looplist,
+    # rel_loci_2_obj
 )
 from higlass_server.utils import getRdb
 
@@ -321,31 +322,24 @@ def cluster_fragments(request):
         }, status=400)
 
     try:
-        width = float(request.GET.get('w', 0))
+        width = int(request.GET.get('w', 0))
     except ValueError:
         return JsonResponse({
-            'error': 'w (width) needs to be a number',
+            'error': 'w (width) needs to be an integer',
         }, status=400)
 
     try:
-        height = float(request.GET.get('h', 0))
+        height = int(request.GET.get('h', 0))
     except ValueError:
         return JsonResponse({
-            'error': 'h (height) needs to be a number',
+            'error': 'h (height) needs to be an integer',
         }, status=400)
 
     try:
-        threshold = float(request.GET.get('t', 0))
+        min_cluster_size = int(request.GET.get('n', 5))
     except ValueError:
         return JsonResponse({
-            'error': 't (threshold) needs to be a number',
-        }, status=400)
-
-    try:
-        num_cluster = float(request.GET.get('n', 0))
-    except ValueError:
-        return JsonResponse({
-            'error': 'n (num clusters) needs to be a number',
+            'error': 'n (min cluster size) needs to be an integer',
         }, status=400)
 
     try:
@@ -353,6 +347,41 @@ def cluster_fragments(request):
     except ValueError:
         return JsonResponse({
             'error': 'd (data set uuids) need to be specified',
+        }, status=400)
+
+    try:
+        inset_disp_size_min = int(request.GET.get('i-min', 1))
+    except ValueError:
+        return JsonResponse({
+            'error': 'i-min (minimal inset size) needs to be an integer',
+        }, status=400)
+
+    try:
+        inset_disp_size_max = int(request.GET.get('i-max', 1))
+    except ValueError:
+        return JsonResponse({
+            'error': 'i-max (maximal inset size) needs to be an integer',
+        }, status=400)
+
+    try:
+        inset_thres = float(request.GET.get('t', 16))
+    except ValueError:
+        return JsonResponse({
+            'error': 't (inset size threshold) needs to be a number',
+        }, status=400)
+
+    try:
+        clust_rel_pad = max(
+            0.0,
+            min(
+                1.0,
+                float(request.GET.get('cp', 0.0))
+            )
+        )
+    except ValueError:
+        return JsonResponse({
+            'error':
+                'cp (relative cluster padding) need to be a float in [0,1]',
         }, status=400)
 
     try:
@@ -373,7 +402,8 @@ def cluster_fragments(request):
             lambda uuid: Tileset.objects.get(uuid=uuid),
             tile_set_uuids
         ))
-    except Tileset.DoesNotExist:
+    except Tileset.DoesNotExist as e:
+        print(e)
         return JsonResponse({
             'error': 'one or more tile sets were not found',
         }, status=404)
@@ -399,8 +429,7 @@ def cluster_fragments(request):
             str(y_to),
             str(width),
             str(height),
-            str(threshold),
-            str(num_cluster),
+            str(min_cluster_size),
             '&'.join(tile_set_uuids),
         ]).encode('utf-8')
     ).hexdigest()
@@ -416,31 +445,89 @@ def cluster_fragments(request):
             pass
 
     # Assemble features
-    all_features = []
+    inset_dims = []
+    inset_aspect_ratio = []
+    inset_size_min = math.inf
+    inset_size_max = -math.inf
+    inset_centroids = []
+
+    data_to_view_scale = (x_to - x_from) / width
+
+    feature_area_total = np.zeros([height, width])
+
     for tile_set in tile_sets:
         features = get_features(
             tile_set, zoom_level, x_from, x_to, y_from, y_to
         )
-        all_features += map(
-            lambda x: np.mean([x[0:2], x[2:4]], axis=1), features
+
+        for f in features:
+            f_width = f[1] - f[0]
+            f_height = f[3] - f[2]
+            size = max(f_width, f_height) / data_to_view_scale
+
+            d_x_1 = round(f[0] / data_to_view_scale)
+            d_x_2 = round(f[1] / data_to_view_scale)
+            d_y_1 = round(f[2] / data_to_view_scale)
+            d_y_2 = round(f[3] / data_to_view_scale)
+
+            feature_area_total[d_x_1:d_x_2, d_y_1:d_y_2] = 1
+
+            if size <= inset_thres:
+                inset_centroids.append(np.mean([f[0:2], f[2:4]], axis=1))
+                inset_size_min = min(size, inset_size_min)
+                inset_size_max = max(size, inset_size_max)
+                inset_dims.append([f_width, f_height])
+                inset_aspect_ratio.append(f_width / f_height)
+
+    def lin_scl(v, d_from, d_to, r_from, r_to, is_clapped):
+        return np.minimum(
+            r_to if is_clapped else np.inf,
+            np.maximum(
+                r_from if is_clapped else -np.inf,
+                (((v - d_from) / (d_to - d_from)) * (r_to - r_from)) + r_from
+            )
         )
+
+    inset_dims = np.array(inset_dims)
+
+    try:
+        inset_dim_max = np.maximum(inset_dims[:, 0], inset_dims[:, 1])
+    except Exception as e:
+        inset_dim_max = np.array([])
+
+    inset_size_to_disp_scale = lin_scl(
+        inset_dim_max,
+        inset_size_min,
+        inset_size_max,
+        inset_disp_size_min,
+        inset_disp_size_max,
+        True
+    ) / inset_dim_max
+    inset_disp_size = (inset_dims.T * inset_size_to_disp_scale).T
+
+    # View area
+    view_area = width * height
+    inset_area_total = np.sum(inset_disp_size)
 
     num_clust = 0
 
-    if len(all_features) > 0:
-        db = HDBSCAN(min_cluster_size=5).fit(all_features)
+    if len(inset_centroids) > 0:
+        db = HDBSCAN(min_cluster_size=min_cluster_size).fit(inset_centroids)
 
         # Get labels
         labels = db.labels_
 
         # "-1" is the cluster of noise
-        num_clust = int(labels.max() + 1)
+        num_clust = labels.max() + 1
 
     # Cache results for 30 mins
     rdb.set('clust_frag_%s' % fingerprint, pickle.dumps(results), 60 * 30)
 
     results = {
-        'num_clust': num_clust
+        'num_clust': int(num_clust),
+        'view_area': int(view_area),
+        'feature_area_total': int(np.sum(feature_area_total)),
+        'inset_area_total': int(inset_area_total),
     }
 
     return JsonResponse(results)
