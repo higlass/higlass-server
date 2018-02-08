@@ -113,6 +113,36 @@ bumpversion patch
 ./update.sh
 ```
 
+### Jupyter Notebook
+
+You 😍 Jupyter Notebook and want to test new fancy stuff for HGS in there first?
+Open `config.json` and add the following:
+
+```
+{
+  ...
+  "INSTALLED_APPS": ["django_extensions"],
+  ...
+}
+```
+
+Also make sure you have Jupyter installed:
+
+```
+pip install jupyter
+```
+
+Now start up Jupyter Notebook with mighty Django power:
+
+```
+./manage.py shell_plus --notebook
+```
+
+Finally, let magic happen and start a new notebook by selecting
+_New > Django Shell-Plus_. You can now import you beloved models just like you
+do the actual code. E.g., `from tilesets.models import Tileset`.
+
+
 ## Troubleshooting
 
 **pybbi installation fails on macOS**: Check out https://github.com/nvictus/pybbi/issues/2
