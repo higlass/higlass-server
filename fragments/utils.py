@@ -16,8 +16,10 @@ from random import random
 from io import BytesIO, StringIO
 from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
+from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.utils.extmath import cartesian
 from scipy.ndimage.interpolation import zoom
+from scipy.spatial.distance import cdist
 
 from tilesets.models import Tileset
 
@@ -126,6 +128,7 @@ def cluster_fragments(
         )
 
     inset_dims = np.array(inset_dims)
+    inset_centroids = np.array(inset_centroids)
 
     try:
         inset_dim_max = np.maximum(inset_dims[:, 0], inset_dims[:, 1])
@@ -144,7 +147,8 @@ def cluster_fragments(
 
     # View area
     view_area = width * height
-    inset_area_total = np.sum(inset_disp_size[:, 0] * inset_disp_size[:, 1])
+    inset_disp_area = inset_disp_size[:, 0] * inset_disp_size[:, 1]
+    inset_disp_area_total = np.sum(inset_disp_area)
 
     num_clust = 0
 
@@ -164,16 +168,81 @@ def cluster_fragments(
 
         labels, num_clust = cluster_points(inset_centroids, clust_meth, config)
 
+        clust_density = compute_intra_cluster_density(
+            inset_centroids / data_to_view_scale,
+            inset_dims,
+            inset_disp_area,
+            labels,
+            num_clust,
+            feature_area_total,
+            inset_disp_size_min=inset_disp_size_min,
+            inset_disp_size_max=inset_disp_size_max,
+            clust_rel_pad=clust_rel_pad
+        )
+
     return {
+        'clust_density': clust_density,
         'num_clust': int(num_clust),
         'num_insets': len(inset_centroids),
         'view_area': int(view_area),
         'feature_area_total': int(np.sum(feature_area_total)),
         'feature_stress': np.sum(feature_area_total) / view_area,
-        'inset_area_total': int(inset_area_total),
-        'inset_stress': inset_area_total / view_area,
+        'inset_disp_area_total': int(inset_disp_area_total),
+        'inset_stress': inset_disp_area_total / view_area,
         'feature_area': feature_area_total
     }
+
+
+def bbox_points(points):
+    x_from = np.min(points[:, 0])
+    x_to = np.max(points[:, 0])
+    y_from = np.min(points[:, 1])
+    y_to = np.max(points[:, 1])
+    width = x_to - x_from
+    height = y_to - y_from
+
+    return (x_from, x_to, y_from, y_to, width, height)
+
+
+def compute_intra_cluster_density(
+    all_inset_centroids,
+    all_inset_dims,
+    all_inset_disp_area,
+    labels,
+    num_clust,
+    feature_area_total,
+    inset_disp_size_min=16,
+    inset_disp_size_max=64,
+    clust_rel_pad=0.0
+):
+    unique_labels = set(labels)
+    density = {}
+
+    for label in unique_labels:
+        if label == -1:
+            continue
+
+        insets_per_label = np.where(labels == label)
+        inset_centroids = all_inset_centroids[insets_per_label]
+        inset_dims = all_inset_dims[insets_per_label]
+        inset_disp_area_total = np.sum(all_inset_disp_area[insets_per_label])
+        bbox = bbox_points(inset_dims)
+        bbox_area = bbox[4] * bbox[5]
+
+        mean_dist = np.mean(
+            # the mean distance to oneself is always 0, so ... boring!
+            np.sum(
+                pairwise_distances(inset_centroids), axis=0
+            ) / (inset_centroids.shape[0] - 1)
+        )
+
+        density[str(label)] = {
+            'inset_stress': inset_disp_area_total / bbox_area,
+            'mean_dist': 0 if math.isnan(mean_dist) else mean_dist,
+            'num_insets': inset_centroids.shape[0],
+        }
+
+    return density
 
 
 def cluster_points(points, method, config):
