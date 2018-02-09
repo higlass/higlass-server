@@ -204,6 +204,5 @@ def get_tiles(db_file_path, zoom, x, y, width=1, height=1):
                         'geometry': geometry,
                         'properties': properties,
                     }]
-    conn.close()
 
     return new_rows
