@@ -12,7 +12,7 @@ import requests
 import math
 
 from random import random
-from io import BytesIO, StringIO
+from io import BytesIO
 from PIL import Image
 from scipy.ndimage.interpolation import zoom
 from geotiles.utils import get_tile_pos_from_lng_lat
@@ -135,7 +135,8 @@ def get_frag_by_loc_from_cool(
     padding=None,
     percentile=100.0,
     ignore_diags=0,
-    no_normalize=False
+    no_normalize=False,
+    aggregate=False,
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
@@ -155,10 +156,48 @@ def get_frag_by_loc_from_cool(
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
-            no_normalize=no_normalize
+            no_normalize=no_normalize,
+            aggregate=aggregate
         )
 
     return fragments
+
+
+def aggregate_frags(frags, method='mean'):
+    # Use the smallest dim
+    dim_x = np.inf
+    dim_y = np.inf
+
+    for frag in frags:
+        f_dim_x, f_dim_y = frag.shape
+        dim_x = min(dim_x, f_dim_x)
+        dim_y = min(dim_y, f_dim_y)
+
+    out = np.zeros([len(frags), dim_x, dim_y])
+
+    for i, frag in enumerate(frags):
+        # Downsample
+        if frag.shape[0] > dim_x or frag.shape[1] > dim_y:
+            scaledFrag = np.zeros((dim_x, dim_y), float)
+            frag = scaledFrag + zoomArray(
+                frag, scaledFrag.shape, order=1
+            )
+
+        out[i] = frag
+
+    if method == 'median':
+        return np.nanmedian(out, axis=0)
+
+    elif method == 'std':
+        return np.nanstd(out, axis=0)
+
+    elif method == 'var':
+        return np.nanvar(out, axis=0)
+
+    elif method != 'mean':
+        print('Unknown aggregation method: {}'.format(method))
+
+    return np.nanmean(out, axis=0)
 
 
 def get_frag_by_loc_from_imtiles(
@@ -456,26 +495,25 @@ def collect_frags(
     balanced=True,
     percentile=100.0,
     ignore_diags=0,
-    no_normalize=False
+    no_normalize=False,
+    aggregate=False
 ):
-    fragments = np.zeros((len(loci), dim, dim))
+    fragments = []
 
-    k = 0
     for locus in loci:
-        fragments[k] = get_frag(
+        last_loc = len(locus) - 1
+        fragments.append(get_frag(
             c,
             resolution,
             offsets,
             *locus[:6],
-            width=dim,
+            width=locus[last_loc] if locus[last_loc] else dim,
             padding=padding,
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
             no_normalize=no_normalize
-        )
-
-        k += 1
+        ))
 
     return fragments
 

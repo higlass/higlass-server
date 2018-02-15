@@ -22,6 +22,7 @@ from fragments.utils import (
     calc_measure_size,
     calc_measure_noise,
     calc_measure_sharpness,
+    aggregate_frags,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
@@ -35,6 +36,8 @@ rdb = getRdb()
 logger = logging.getLogger(__name__)
 
 SUPPORTED_MEASURES = ['distance-to-diagonal', 'noise', 'size', 'sharpness']
+
+SUPPORTED_FILETYPES = ['matrix', 'im-tiles', 'osm-tiles']
 
 
 @api_view(['POST'])
@@ -79,6 +82,7 @@ def fragments_by_loci(request):
         no_cache = False
 
     try:
+        # Global dimension
         dims = int(request.GET.get('dims', 22))
     except ValueError:
         dims = 22
@@ -108,6 +112,16 @@ def fragments_by_loci(request):
     except ValueError:
         no_normalize = False
 
+    try:
+        aggregate = request.GET.get('aggregate', False)
+    except ValueError:
+        aggregate = False
+
+    try:
+        aggregation_method = request.GET.get('aggregation-method', 'mean')
+    except ValueError:
+        aggregation_method = 'mean'
+
     '''
     Loci list must be of type:
     [cooler]          [imtiles]
@@ -117,12 +131,17 @@ def fragments_by_loci(request):
     3: chrom2         end2
     4: start2         dataset
     5: end2           zoomLevel
-    6: dataset
+    6: dataset        dim*
     7: zoomOutLevel
+    8: dim*
+
+    *) Optional
     '''
 
-    tileset_idx = 6 if len(loci) and len(loci[0]) > 6 else 4
+    tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
     zoom_level_idx = tileset_idx + 1
+
+    print(len(loci[0]), tileset_idx, zoom_level_idx)
 
     filetype = None
 
@@ -170,23 +189,44 @@ def fragments_by_loci(request):
             if locus[zoom_level_idx] not in loci_lists[tileset_file]:
                 loci_lists[tileset_file][locus[zoom_level_idx]] = []
 
+            inset_dim = [
+                locus[zoom_level_idx + 1]
+                if (
+                    len(locus) >= zoom_level_idx + 2 and
+                    locus[zoom_level_idx + 1]
+                )
+                else 0
+            ]
+
             loci_lists[tileset_file][locus[zoom_level_idx]].append(
-                locus[0:tileset_idx] + [i]
+                locus[0:tileset_idx] + [i] + inset_dim
             )
 
+            new_filetype = (
+                tileset.filetype
+                if tileset
+                else tileset_file[tileset_file.rfind('.') + 1:]
+            )
+
+            if filetype is None:
+                filetype = new_filetype
+
+            if filetype != new_filetype:
+                return JsonResponse({
+                    'error': (
+                        'Multiple file types per query are not supported yet.'
+                    )
+                }, status=400)
+
             i += 1
+
+        print('LL', loci_lists, zoom_level_idx)
 
     except Exception as e:
         return JsonResponse({
             'error': 'Could not convert loci.',
             'error_message': str(e)
         }, status=500)
-
-    filetype = filetype if filetype else (
-        tileset.filetype
-        if tileset
-        else tileset_file[tileset_file.rfind('.') + 1:]
-    )
 
     # Get a unique string for caching
     dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
@@ -217,18 +257,14 @@ def fragments_by_loci(request):
                         padding=int(padding),
                         percentile=percentile,
                         ignore_diags=ignore_diags,
-                        no_normalize=no_normalize
+                        no_normalize=no_normalize,
+                        aggregate=aggregate,
                     )
 
-                    if precision > 0:
-                        raw_matrices = np.around(
-                            raw_matrices, decimals=precision
-                        )
-
                     i = 0
-                    for raw_matrix in raw_matrices:
+                    for matrix in raw_matrices:
                         idx = loci_lists[dataset][zoomout_level][i][6]
-                        matrices[idx] = raw_matrix.tolist()
+                        matrices[idx] = matrix
                         data_types[idx] = 'matrix'
                         i += 1
 
@@ -267,6 +303,25 @@ def fragments_by_loci(request):
             'error': 'Could not retrieve fragments.',
             'error_message': str(ex)
         }, status=500)
+
+    if aggregate:
+        try:
+            matrices = [
+                aggregate_frags(matrices, aggregation_method)
+            ]
+            data_types = [data_types[0]]
+        except Exception as ex:
+            raise
+            return JsonResponse({
+                'error': 'Could not aggregate fragments.',
+                'error_message': str(ex)
+            }, status=500)
+
+    # Adjust precision and convert to list
+    for i, matrix in enumerate(matrices):
+        if precision > 0:
+            matrix = np.round(matrix, decimals=precision)
+        matrices[i] = matrix.tolist()
 
     # Create results
     results = {
