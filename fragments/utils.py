@@ -186,18 +186,26 @@ def aggregate_frags(frags, method='mean'):
         out[i] = frag
 
     if method == 'median':
-        return np.nanmedian(out, axis=0)
+        aggregate = np.nanmedian(out, axis=0)
+        preview = np.nanmedian(out, axis=1)
+        return aggregate, preview
 
     elif method == 'std':
-        return np.nanstd(out, axis=0)
+        aggregate = np.nanstd(out, axis=0)
+        preview = np.nanstd(out, axis=1)
+        return aggregate, preview
 
     elif method == 'var':
-        return np.nanvar(out, axis=0)
+        aggregate = np.nanvar(out, axis=0)
+        preview = np.nanvar(out, axis=1)
+        return aggregate, preview
 
     elif method != 'mean':
         print('Unknown aggregation method: {}'.format(method))
 
-    return np.nanmean(out, axis=0)
+    aggregate = np.nanmean(out, axis=0)
+    preview = np.nanmean(out, axis=1)
+    return aggregate, preview
 
 
 def get_frag_by_loc_from_imtiles(

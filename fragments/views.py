@@ -118,6 +118,12 @@ def fragments_by_loci(request):
         aggregate = False
 
     try:
+        preview = request.GET.get('preview', False)
+        previews = []
+    except ValueError:
+        preview = False
+
+    try:
         aggregation_method = request.GET.get('aggregation-method', 'mean')
     except ValueError:
         aggregation_method = 'mean'
@@ -220,8 +226,6 @@ def fragments_by_loci(request):
 
             i += 1
 
-        print('LL', loci_lists, zoom_level_idx)
-
     except Exception as e:
         return JsonResponse({
             'error': 'Could not convert loci.',
@@ -306,9 +310,9 @@ def fragments_by_loci(request):
 
     if aggregate:
         try:
-            matrices = [
-                aggregate_frags(matrices, aggregation_method)
-            ]
+            aggr_z, aggr_y = aggregate_frags(matrices, aggregation_method)
+            matrices = [aggr_z]
+            previews = [aggr_y]
             data_types = [data_types[0]]
         except Exception as ex:
             raise
@@ -326,8 +330,14 @@ def fragments_by_loci(request):
     # Create results
     results = {
         'fragments': matrices,
-        'dataTypes': data_types
+        'dataTypes': data_types,
     }
+
+    # Return Y aggregates as 1D previews on demand
+    if preview:
+        for i, prev in enumerate(previews):
+            previews[i] = prev.tolist()
+        results['previews'] = previews
 
     # Cache results for 30 minutes
     rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
