@@ -436,7 +436,6 @@ def get_fragments_by_loci(request):
         if max_previews > 0:
             for i, preview in enumerate(previews):
                 previews[i] = preview.tolist()
-            results['previews'] = previews
 
     # Encode matrix if required
     if encoding == 'b64':
