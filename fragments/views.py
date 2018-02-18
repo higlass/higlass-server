@@ -47,7 +47,7 @@ GET_FRAG_PARAMS = {
         'short': 'di',
         'dtype': 'int',
         'default': 22,
-        'help': 'Global number of dimensions.  (Only used for cooler tilesets.)'
+        'help': 'Global number of dimensions. (Only used for cooler tilesets.)'
     },
     'padding': {
         'short': 'pd',
@@ -59,19 +59,26 @@ GET_FRAG_PARAMS = {
         'short': 'nb',
         'dtype': 'bool',
         'default': False,
-        'help': 'Do not balance fragmens if true. (Only used for cooler tilesets.)'
+        'help': (
+            'Do not balance fragmens if true. (Only used for cooler tilesets.)'
+        )
     },
     'percentile': {
         'short': 'pe',
         'dtype': 'float',
         'default': 100.0,
-        'help': 'Cap values at given percentile. (Only used for cooler tilesets.)'
+        'help': (
+            'Cap values at given percentile. (Only used for cooler tilesets.)'
+        )
     },
     'precision': {
         'short': 'pr',
         'dtype': 'int',
         'default': 0,
-        'help': 'Number of decimals of the numerical values. (Only used for cooler tilesets.)'
+        'help': (
+            'Number of decimals of the numerical values. '
+            '(Only used for cooler tilesets.)'
+        )
     },
     'no-cache': {
         'short': 'nc',
@@ -83,13 +90,19 @@ GET_FRAG_PARAMS = {
         'short': 'nd',
         'dtype': 'int',
         'default': 0,
-        'help': 'Ignore N diagonals, i.e., set them to zero. (Only used for cooler tilesets.)'
+        'help': (
+            'Ignore N diagonals, i.e., set them to zero. '
+            '(Only used for cooler tilesets.)'
+        )
     },
     'no-normalize': {
         'short': 'nn',
         'dtype': 'bool',
         'default': False,
-        'help': 'Do not normalize fragments if true. (Only used for cooler tilesets.)'
+        'help': (
+            'Do not normalize fragments if true. '
+            '(Only used for cooler tilesets.)'
+        )
     },
     'aggregate': {
         'short': 'ag',
