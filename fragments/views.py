@@ -15,7 +15,7 @@ except:
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
 from tilesets.utils import get_datapath
@@ -126,7 +126,10 @@ GET_FRAG_PARAMS = {
         'short': 'en',
         'dtype': 'str',
         'default': 'matrix',
-        'help': 'Data encoding: matrix or b64.'
+        'help': (
+            'Data encoding: matrix, b64, or image. (Image encoding only '
+            'supported when one fragment is to be returned)'
+        )
     },
 }
 
@@ -359,7 +362,7 @@ def get_fragments_by_loci(request):
             'error_message': str(ex)
         }, status=500)
 
-    if aggregate:
+    if aggregate and len(matrices) > 1:
         try:
             aggr_z, aggr_y = aggregate_frags(matrices, aggregation_method)
             matrices = [aggr_z]
@@ -372,18 +375,19 @@ def get_fragments_by_loci(request):
                 'error_message': str(ex)
             }, status=500)
 
-    # Adjust precision and convert to list
-    for i, matrix in enumerate(matrices):
-        if precision > 0:
-            matrix = np.round(matrix, decimals=precision)
-        matrices[i] = matrix.tolist()
+    if encoding != 'b64' and encoding != 'image':
+        # Adjust precision and convert to list
+        for i, matrix in enumerate(matrices):
+            if precision > 0:
+                matrix = np.round(matrix, decimals=precision)
+            matrices[i] = matrix.tolist()
 
     # Encode matrix if required
     if encoding == 'b64':
         for i, matrix in enumerate(matrices):
-            im_out = Image.fromarray(np.uint8(matrix))
+            im = Image.fromarray(matrix)
             im_buffer = BytesIO()
-            im_out.save(im_buffer, format='png')
+            im.save(im_buffer, format='png')
             matrices[i] = base64.b64encode(
                 im_buffer.getvalue()
             ).decode('utf-8')
@@ -403,6 +407,12 @@ def get_fragments_by_loci(request):
 
     # Cache results for 30 minutes
     rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
+
+    if encoding == 'image' and len(matrices) == 1:
+        im = Image.fromarray(np.uint8(matrices[0]))
+        response = HttpResponse(content_type='image/png')
+        im.save(response, format='png')
+        return response
 
     return JsonResponse(results)
 

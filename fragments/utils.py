@@ -202,6 +202,21 @@ def get_frag_by_loc_from_cool(
 
 
 def aggregate_frags(frags, method='mean'):
+    """Aggregate multiple fragments into one
+
+    Arguments:
+        frags {list} -- A list of numpy arrays to be aggregated
+
+    Keyword Arguments:
+        method {str} -- Aggregation method. Available methods are
+            {'mean', 'median', 'std', 'var'}. (default: {'mean'})
+
+    Returns:
+        np.array -- Numpy array aggregated by the fragments. This array
+            represents the image aggregation.
+        np.array -- Numpy arrat aggregated along the Y axis. This array
+            represents the 1D previews.
+    """
     # Use the smallest dim
     dim_x = np.inf
     dim_y = np.inf
@@ -300,7 +315,7 @@ def get_frag_from_image_tiles(
     end2_rel = to_y - tile_start2_id * tile_size
 
     # Notice the shape: height x width x channel
-    return np.asarray(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
+    return np.array(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
 
 
 def get_frag_by_loc_from_imtiles(
@@ -438,8 +453,9 @@ def get_frag_by_loc_from_osm(
                 )
 
                 r = requests.get(src)
+
                 if r.status_code == 200:
-                    tiles.append(Image.open(BytesIO(r.content)))
+                    tiles.append(Image.open(BytesIO(r.content)).convert('RGB'))
                 else:
                     tiles.append(None)
 
