@@ -203,7 +203,7 @@ def get_frag_by_loc_from_cool(
     return fragments
 
 
-def scale_frags_to_same_size(frags):
+def get_scale_frags_to_same_size(frags):
     """Scale fragments to same size
 
     [description]
@@ -281,9 +281,14 @@ def get_rep_frags(frags, num_reps=4):
     num_frags = len(frags)
 
     if num_frags < 5:
-        return frags
+        sizes = np.zeros([num_frags])
 
-    out, largest_frag_idx, _ = scale_frags_to_same_size(frags)
+        for i, frag in enumerate(frags):
+            sizes[i] = np.prod(frag.shape[0:2])
+
+        return [frags[i] for i in np.sort(sizes)]
+
+    out, largest_frag_idx, _ = get_scale_frags_to_same_size(frags)
 
     mean_frag = np.nanmean(out, axis=0)
     diff_mean_frags = out - mean_frag
@@ -333,7 +338,7 @@ def aggregate_frags(frags, method='mean'):
         np.array -- Numpy arrat aggregated along the Y axis. This array
             represents the 1D previews.
     """
-    out, _, _ = scale_frags_to_same_size(frags)
+    out, _, _ = get_scale_frags_to_same_size(frags)
 
     x_dim_id = 2 if np.ndim(out) == 4 else 1
 
