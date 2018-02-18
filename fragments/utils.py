@@ -15,6 +15,8 @@ from random import random
 from io import BytesIO
 from PIL import Image
 from scipy.ndimage.interpolation import zoom
+from cachecontrol import CacheControl
+
 from geotiles.utils import get_tile_pos_from_lng_lat
 
 logger = logging.getLogger(__name__)
@@ -479,83 +481,84 @@ def get_frag_by_loc_from_osm(
     prefix_idx = math.floor(random() * len(prefixes))
     osm_src = 'http://{}.tile.openstreetmap.org'.format(prefixes[prefix_idx])
 
-    with requests.Session() as s:
-        for locus in loci:
-            start_lng = locus[0]
-            end_lng = locus[1]
-            start_lat = locus[2]
-            end_lat = locus[3]
+    s = CacheControl(requests.Session())
 
-            if not is_within(
-                start_lng + 180,
-                end_lng + 180,
-                end_lat + 90,
-                start_lat + 90,
-                width,
-                height
-            ):
-                ims.append(None)
-                continue
+    for locus in loci:
+        start_lng = locus[0]
+        end_lng = locus[1]
+        start_lat = locus[2]
+        end_lat = locus[3]
 
-            # Get tile ids
-            start1, start2 = get_tile_pos_from_lng_lat(
-                start_lng, start_lat, zoom_level
-            )
-            end1, end2 = get_tile_pos_from_lng_lat(
-                end_lng, end_lat, zoom_level
-            )
+        if not is_within(
+            start_lng + 180,
+            end_lng + 180,
+            end_lat + 90,
+            start_lat + 90,
+            width,
+            height
+        ):
+            ims.append(None)
+            continue
 
-            xPad = padding * (end1 - start1)
-            yPad = padding * (start2 - end2)
+        # Get tile ids
+        start1, start2 = get_tile_pos_from_lng_lat(
+            start_lng, start_lat, zoom_level
+        )
+        end1, end2 = get_tile_pos_from_lng_lat(
+            end_lng, end_lat, zoom_level
+        )
 
-            start1 -= xPad
-            end1 += xPad
-            start2 += yPad
-            end2 -= yPad
+        xPad = padding * (end1 - start1)
+        yPad = padding * (start2 - end2)
 
-            tile_start1_id = math.floor(start1)
-            tile_start2_id = math.floor(start2)
-            tile_end1_id = math.floor(end1)
-            tile_end2_id = math.floor(end2)
+        start1 -= xPad
+        end1 += xPad
+        start2 += yPad
+        end2 -= yPad
 
-            start1 = math.floor(start1 * tile_size)
-            start2 = math.floor(start2 * tile_size)
-            end1 = math.ceil(end1 * tile_size)
-            end2 = math.ceil(end2 * tile_size)
+        tile_start1_id = math.floor(start1)
+        tile_start2_id = math.floor(start2)
+        tile_end1_id = math.floor(end1)
+        tile_end2_id = math.floor(end2)
 
-            tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
-            tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+        start1 = math.floor(start1 * tile_size)
+        start2 = math.floor(start2 * tile_size)
+        end1 = math.ceil(end1 * tile_size)
+        end2 = math.ceil(end2 * tile_size)
 
-            # Extract image tiles
-            tiles = []
-            for y in tiles_y_range:
-                for x in tiles_x_range:
-                    src = (
-                        '{}/{}/{}/{}.png'
-                        .format(osm_src, zoom_level, x, y)
-                    )
+        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
 
-                    r = s.get(src)
+        # Extract image tiles
+        tiles = []
+        for y in tiles_y_range:
+            for x in tiles_x_range:
+                src = (
+                    '{}/{}/{}/{}.png'
+                    .format(osm_src, zoom_level, x, y)
+                )
 
-                    if r.status_code == 200:
-                        tiles.append(Image.open(
-                            BytesIO(r.content)
-                        ).convert('RGB'))
-                    else:
-                        tiles.append(None)
+                r = s.get(src)
 
-            ims.append(get_frag_from_image_tiles(
-                tiles,
-                tile_size,
-                tiles_x_range,
-                tiles_y_range,
-                tile_start1_id,
-                tile_start2_id,
-                start1,
-                end1,
-                start2,
-                end2
-            ))
+                if r.status_code == 200:
+                    tiles.append(Image.open(
+                        BytesIO(r.content)
+                    ).convert('RGB'))
+                else:
+                    tiles.append(None)
+
+        ims.append(get_frag_from_image_tiles(
+            tiles,
+            tile_size,
+            tiles_x_range,
+            tiles_y_range,
+            tile_start1_id,
+            tile_start2_id,
+            start1,
+            end1,
+            start2,
+            end2
+        ))
 
     return ims
 
