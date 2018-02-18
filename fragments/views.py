@@ -112,16 +112,20 @@ GET_FRAG_PARAMS = {
         'help': 'Aggregate fragments if true.'
     },
     'aggregation-method': {
-        'short': 'ag',
+        'short': 'am',
         'dtype': 'str',
         'default': 'mean',
         'help': 'Aggregation method: mean, median, std, var.'
     },
-    'preview': {
-        'short': 'pv',
-        'dtype': 'bool',
-        'default': False,
-        'help': 'Return a 1D preview along with the fragment.'
+    'max-previews': {
+        'short': 'mp',
+        'dtype': 'int',
+        'default': 0,
+        'help': (
+            'Max. number of 1D previews to return. When the number of '
+            'fragments s higher than the previews we cluster the frags by '
+            'k-means.'
+        )
     },
     'encoding': {
         'short': 'en',
@@ -214,7 +218,7 @@ def get_fragments_by_loci(request):
     no_normalize = params['no-normalize']
     aggregate = params['aggregate']
     aggregation_method = params['aggregation-method']
-    preview = params['preview']
+    max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
 
@@ -375,7 +379,9 @@ def get_fragments_by_loci(request):
 
     if aggregate and len(matrices) > 1:
         try:
-            aggr_z, aggr_y = aggregate_frags(matrices, aggregation_method)
+            aggr_z, aggr_y = aggregate_frags(
+                matrices, aggregation_method, max_previews
+            )
             matrices = [aggr_z]
             previews = [aggr_y]
             data_types = [data_types[0]]
@@ -405,6 +411,11 @@ def get_fragments_by_loci(request):
                 matrix = np.round(matrix, decimals=precision)
             matrices[i] = matrix.tolist()
 
+        if max_previews > 0:
+            for i, preview in enumerate(previews):
+                previews[i] = preview.tolist()
+            results['previews'] = previews
+
     # Encode matrix if required
     if encoding == 'b64':
         for i, matrix in enumerate(matrices):
@@ -416,6 +427,15 @@ def get_fragments_by_loci(request):
             ).decode('utf-8')
             data_types[i] = 'dataUrl'
 
+        if max_previews > 0:
+            for i, preview in enumerate(previews):
+                im = Image.fromarray(preview.astype('uint8'))
+                im_buffer = BytesIO()
+                im.save(im_buffer, format='png')
+                previews[i] = base64.b64encode(
+                    im_buffer.getvalue()
+                ).decode('utf-8')
+
     # Create results
     results = {
         'fragments': matrices,
@@ -423,9 +443,7 @@ def get_fragments_by_loci(request):
     }
 
     # Return Y aggregates as 1D previews on demand
-    if preview:
-        for i, prev in enumerate(previews):
-            previews[i] = prev.tolist()
+    if max_previews > 0:
         results['previews'] = previews
 
     # Cache results for 30 minutes

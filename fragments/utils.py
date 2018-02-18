@@ -14,6 +14,7 @@ import math
 from random import random
 from io import BytesIO
 from PIL import Image
+from sklearn.cluster import KMeans
 from scipy.ndimage.interpolation import zoom
 from cachecontrol import CacheControl
 
@@ -322,7 +323,9 @@ def get_rep_frags(frags, num_reps=4):
     ]
 
 
-def aggregate_frags(frags, method='mean'):
+def aggregate_frags(
+    frags, method='mean', max_previews=8, preview_height=2
+):
     """Aggregate multiple fragments into one
 
     Arguments:
@@ -340,30 +343,72 @@ def aggregate_frags(frags, method='mean'):
     """
     out, _, _ = get_scale_frags_to_same_size(frags)
 
-    x_dim_id = 2 if np.ndim(out) == 4 else 1
+    prev_height_space = preview_height + 1
+
+    if len(frags) > max_previews:
+        clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
+            np.reshape(out, (out.shape[0], -1))
+        )
+        height = max_previews * preview_height
+        height += max_previews - 1
+        previews = np.zeros((height,) + out.shape[2:])
 
     if method == 'median':
         aggregate = np.nanmedian(out, axis=0)
-        preview = np.nanmedian(out, axis=x_dim_id)
-        return aggregate, preview
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanmedian(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
 
     elif method == 'std':
         aggregate = np.nanstd(out, axis=0)
-        preview = np.nanstd(out, axis=x_dim_id)
-        return aggregate, preview
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanstd(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
 
     elif method == 'var':
         aggregate = np.nanvar(out, axis=0)
-        preview = np.nanvar(out, axis=x_dim_id)
-        return aggregate, preview
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanvar(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
 
     elif method != 'mean':
         print('Unknown aggregation method: {}'.format(method))
 
     aggregate = np.nanmean(out, axis=0)
-    preview = np.nanmean(out, axis=x_dim_id)
+    if len(frags) > max_previews:
+        for i in range(max_previews):
+            i_from = i * prev_height_space
+            i_to = i_from + 2
 
-    return aggregate, preview
+            # Aggregated preview
+            prev = np.nanmean(
+                out[np.where(clusters.labels_ == i)[0]], axis=1
+            )[0]
+
+            # Duplicate data depending on preview height
+            previews[i_from:i_to] = np.tile(
+                prev,
+                [preview_height] + list(np.ones(prev.ndim, dtype=np.uint8))
+            )
+    else:
+        previews = np.nanmedian(out, axis=1)
+
+    return aggregate, previews
 
 
 def get_frag_from_image_tiles(
