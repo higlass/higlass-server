@@ -5,6 +5,8 @@ import hashlib
 import json
 import logging
 import numpy as np
+from io import BytesIO
+from PIL import Image
 try:
     import cPickle as pickle
 except:
@@ -128,6 +130,11 @@ def fragments_by_loci(request):
     except ValueError:
         aggregation_method = 'mean'
 
+    try:
+        encoding = request.GET.get('encoding', 'matrix')
+    except ValueError:
+        encoding = 'matrix'
+
     '''
     Loci list must be of type:
     [cooler]          [imtiles]
@@ -150,6 +157,7 @@ def fragments_by_loci(request):
     print(len(loci[0]), tileset_idx, zoom_level_idx)
 
     filetype = None
+    new_filetype = None
 
     i = 0
     loci_lists = {}
@@ -177,7 +185,7 @@ def fragments_by_loci(request):
                         }, status=400)
                     except Tileset.DoesNotExist:
                         if locus[tileset_idx].startswith('osm'):
-                            filetype = locus[tileset_idx]
+                            new_filetype = locus[tileset_idx]
                         else:
                             return JsonResponse({
                                 'error': 'Tileset ({}) does not exist'.format(
@@ -208,11 +216,12 @@ def fragments_by_loci(request):
                 locus[0:tileset_idx] + [i] + inset_dim
             )
 
-            new_filetype = (
-                tileset.filetype
-                if tileset
-                else tileset_file[tileset_file.rfind('.') + 1:]
-            )
+            if new_filetype is None:
+                new_filetype = (
+                    tileset.filetype
+                    if tileset
+                    else tileset_file[tileset_file.rfind('.') + 1:]
+                )
 
             if filetype is None:
                 filetype = new_filetype
@@ -265,12 +274,10 @@ def fragments_by_loci(request):
                         aggregate=aggregate,
                     )
 
-                    i = 0
-                    for matrix in raw_matrices:
+                    for i, matrix in enumerate(raw_matrices):
                         idx = loci_lists[dataset][zoomout_level][i][6]
                         matrices[idx] = matrix
                         data_types[idx] = 'matrix'
-                        i += 1
 
                 if filetype == 'imtiles' or filetype == 'osm-image':
                     extractor = (
@@ -286,20 +293,12 @@ def fragments_by_loci(request):
                         padding=float(padding),
                     )
 
-                    i = 0
-                    for im in sub_ims:
+                    for i, im in enumerate(sub_ims):
                         idx = loci_lists[dataset][zoomout_level][i][4]
 
-                        try:
-                            # Store images as data URI
-                            matrices[idx] = \
-                                base64.b64encode(im[0]).decode('utf-8')
-                        except TypeError:
-                            matrices[idx] = None
+                        matrices[idx] = im
 
-                        data_types[idx] = 'dataUrl'
-
-                        i += 1
+                        data_types[idx] = 'matrix'
 
     except Exception as ex:
         raise
@@ -326,6 +325,17 @@ def fragments_by_loci(request):
         if precision > 0:
             matrix = np.round(matrix, decimals=precision)
         matrices[i] = matrix.tolist()
+
+    # Encode matrix if required
+    if encoding == 'b64':
+        for i, matrix in enumerate(matrices):
+            im_out = Image.fromarray(np.uint8(matrix))
+            im_buffer = BytesIO()
+            im_out.save(im_buffer, format='png')
+            matrices[i] = base64.b64encode(
+                im_buffer.getvalue()
+            ).decode('utf-8')
+            data_types[i] = 'dataUrl'
 
     # Create results
     results = {

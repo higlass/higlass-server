@@ -167,18 +167,36 @@ def aggregate_frags(frags, method='mean'):
     # Use the smallest dim
     dim_x = np.inf
     dim_y = np.inf
+    is_image = False
 
     for frag in frags:
-        f_dim_x, f_dim_y = frag.shape
+        is_image = is_image or frag.ndim == 3
+
+        if is_image:
+            f_dim_y, f_dim_x, _ = frag.shape  # from PIL.Image
+        else:
+            f_dim_x, f_dim_y = frag.shape
+
         dim_x = min(dim_x, f_dim_x)
         dim_y = min(dim_y, f_dim_y)
 
-    out = np.zeros([len(frags), dim_x, dim_y])
+    if is_image:
+        out = np.zeros([len(frags), dim_y, dim_x, 3])
+        x_dim_id = 2
+    else:
+        out = np.zeros([len(frags), dim_x, dim_y])
+        x_dim_id = 1
 
     for i, frag in enumerate(frags):
-        # Downsample
-        if frag.shape[0] > dim_x or frag.shape[1] > dim_y:
+        if is_image:
+            f_dim_y, f_dim_x, _ = frag.shape  # from PIL.Image
+            scaledFrag = np.zeros((dim_y, dim_x, 3), float)
+        else:
+            f_dim_x, f_dim_y = frag.shape
             scaledFrag = np.zeros((dim_x, dim_y), float)
+
+        # Downsample
+        if f_dim_x > dim_x or f_dim_y > dim_y:
             frag = scaledFrag + zoomArray(
                 frag, scaledFrag.shape, order=1
             )
@@ -187,25 +205,64 @@ def aggregate_frags(frags, method='mean'):
 
     if method == 'median':
         aggregate = np.nanmedian(out, axis=0)
-        preview = np.nanmedian(out, axis=1)
+        preview = np.nanmedian(out, axis=x_dim_id)
         return aggregate, preview
 
     elif method == 'std':
         aggregate = np.nanstd(out, axis=0)
-        preview = np.nanstd(out, axis=1)
+        preview = np.nanstd(out, axis=x_dim_id)
         return aggregate, preview
 
     elif method == 'var':
         aggregate = np.nanvar(out, axis=0)
-        preview = np.nanvar(out, axis=1)
+        preview = np.nanvar(out, axis=x_dim_id)
         return aggregate, preview
 
     elif method != 'mean':
         print('Unknown aggregation method: {}'.format(method))
 
     aggregate = np.nanmean(out, axis=0)
-    preview = np.nanmean(out, axis=1)
+    preview = np.nanmean(out, axis=x_dim_id)
     return aggregate, preview
+
+
+def get_frag_from_image_tiles(
+    tiles,
+    tile_size,
+    tiles_x_range,
+    tiles_y_range,
+    tile_start1_id,
+    tile_start2_id,
+    from_x,
+    to_x,
+    from_y,
+    to_y
+):
+    im = (
+        tiles[0]
+        if len(tiles) == 1
+        else Image.new(
+            'RGB',
+            (tile_size * len(tiles_x_range), tile_size * len(tiles_y_range))
+        )
+    )
+
+    # Stitch them tiles together
+    if len(tiles) > 1:
+        i = 0
+        for y in range(len(tiles_y_range)):
+            for x in range(len(tiles_x_range)):
+                im.paste(tiles[i], (x * tile_size, y * tile_size))
+                i += 1
+
+    # Convert starts and ends to local tile ids
+    start1_rel = from_x - tile_start1_id * tile_size
+    end1_rel = to_x - tile_start1_id * tile_size
+    start2_rel = from_y - tile_start2_id * tile_size
+    end2_rel = to_y - tile_start2_id * tile_size
+
+    # Notice the shape: height x width x channel
+    return np.asarray(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
 
 
 def get_frag_by_loc_from_imtiles(
@@ -220,7 +277,6 @@ def get_frag_by_loc_from_imtiles(
     max_zoom = info[6]
     max_width = info[8]
     max_height = info[9]
-    im_type = 'JPEG' if info[10].lower() == 'jpg' else info[10]
 
     div = 2 ** (max_zoom - zoom_level)
     width = max_width / div
@@ -256,40 +312,18 @@ def get_frag_by_loc_from_imtiles(
                     (zoom_level, y, x)
                 ).fetchone()[0])))
 
-        im = (
-            tiles[0]
-            if len(tiles) == 1
-            else Image.new(
-                'RGB',
-                (
-                    tile_size * len(tiles_x_range),
-                    tile_size * len(tiles_y_range)
-                )
-            )
-        )
-
-        # Stitch them tiles together
-        if len(tiles) > 1:
-            i = 0
-            for y in range(len(tiles_y_range)):
-                for x in range(len(tiles_x_range)):
-                    im.paste(
-                        tiles[i], (x * tile_size, y * tile_size)
-                    )
-                    i += 1
-
-        # Convert starts and ends to local tile ids
-        start1_rel = start1 - tile_start1_id * tile_size
-        end1_rel = end1 - tile_start1_id * tile_size
-        start2_rel = start2 - tile_start2_id * tile_size
-        end2_rel = end2 - tile_start2_id * tile_size
-
-        # Cut out the corresponding snippet
-        im_out = im.crop((start1_rel, start2_rel, end1_rel, end2_rel))
-
-        im_buffer = BytesIO()
-        im_out.save(im_buffer, format=im_type)
-        ims.append((im_buffer.getvalue(), 'image/{}'.format(im_type.lower())))
+        ims.append(get_frag_from_image_tiles(
+            tiles,
+            tile_size,
+            tiles_x_range,
+            tiles_y_range,
+            tile_start1_id,
+            tile_start2_id,
+            start1,
+            end1,
+            start2,
+            end2
+        ))
 
     db.close()
 
@@ -305,7 +339,6 @@ def get_frag_by_loc_from_osm(
 ):
     width = 360
     height = 180
-    im_type = 'PNG'
 
     ims = []
 
@@ -372,40 +405,18 @@ def get_frag_by_loc_from_osm(
                 else:
                     tiles.append(None)
 
-        im = (
-            tiles[0]
-            if len(tiles) == 1
-            else Image.new(
-                'RGB',
-                (
-                    tile_size * len(tiles_x_range),
-                    tile_size * len(tiles_y_range)
-                )
-            )
-        )
-
-        # Stitch them tiles together
-        if len(tiles) > 1:
-            i = 0
-            for y in range(len(tiles_y_range)):
-                for x in range(len(tiles_x_range)):
-                    im.paste(
-                        tiles[i], (x * tile_size, y * tile_size)
-                    )
-                    i += 1
-
-        # Convert starts and ends to local tile ids
-        start1_rel = start1 - tile_start1_id * tile_size
-        end1_rel = end1 - tile_start1_id * tile_size
-        start2_rel = start2 - tile_start2_id * tile_size
-        end2_rel = end2 - tile_start2_id * tile_size
-
-        # Cut out the corresponding snippet
-        im_out = im.crop((start1_rel, start2_rel, end1_rel, end2_rel))
-
-        im_buffer = BytesIO()
-        im_out.save(im_buffer, format=im_type)
-        ims.append((im_buffer.getvalue(), 'image/{}'.format(im_type.lower())))
+        ims.append(get_frag_from_image_tiles(
+            tiles,
+            tile_size,
+            tiles_x_range,
+            tiles_y_range,
+            tile_start1_id,
+            tile_start2_id,
+            start1,
+            end1,
+            start2,
+            end2
+        ))
 
     return ims
 
