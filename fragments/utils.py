@@ -22,6 +22,44 @@ logger = logging.getLogger(__name__)
 
 # Methods
 
+def get_params(request, param_def):
+    """Get query params of a request
+
+    Retrieve query params of a request given the parameter definition file. A
+    parameter definition looks like
+    ```
+    '<PARAMETER FULL NAME>': {
+        'short': '<PARAMETER SHORT NAME>',
+        'dtype': '<PARAMETER DATA TYPE>',
+        'help': '<PARAMETER HELP MESSAGE>'
+    }
+    ```
+
+    Arguments:
+        request {request} -- Request object
+        param_def {dict} -- [description]
+
+    Returns:
+        dict -- Dictionary of parameter name<>values pairs
+    """
+    p = {}
+    dtype = {
+        'int': int,
+        'float': float,
+        'bool': bool,
+        'str': str,
+    }
+
+    for key in param_def.keys():
+
+        p[key] = request.GET.get(param_def[key]['short'])
+        p[key] = p[key] if p[key] else request.GET.get(key)
+        p[key] = p[key] if p[key] else param_def[key]['default']
+        p[key] = dtype[param_def[key]['dtype']](p[key])
+
+    return p
+
+
 def get_chrom_names_cumul_len(c):
     '''
     Get the chromosome names and cumulative lengths:

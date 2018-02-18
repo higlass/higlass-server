@@ -29,6 +29,7 @@ from fragments.utils import (
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
     get_intra_chr_loops_from_looplist,
+    get_params,
     rel_loci_2_obj
 )
 from higlass_server.utils import getRdb
@@ -41,10 +42,96 @@ SUPPORTED_MEASURES = ['distance-to-diagonal', 'noise', 'size', 'sharpness']
 
 SUPPORTED_FILETYPES = ['matrix', 'im-tiles', 'osm-tiles']
 
+GET_FRAG_PARAMS = {
+    'dims': {
+        'short': 'di',
+        'dtype': 'int',
+        'default': 22,
+        'help': 'Global number of dimensions.  (Only used for cooler tilesets.)'
+    },
+    'padding': {
+        'short': 'pd',
+        'dtype': 'float',
+        'default': 0,
+        'help': 'Add given percent of the fragment size as padding.'
+    },
+    'no-balance': {
+        'short': 'nb',
+        'dtype': 'bool',
+        'default': False,
+        'help': 'Do not balance fragmens if true. (Only used for cooler tilesets.)'
+    },
+    'percentile': {
+        'short': 'pe',
+        'dtype': 'float',
+        'default': 100.0,
+        'help': 'Cap values at given percentile. (Only used for cooler tilesets.)'
+    },
+    'precision': {
+        'short': 'pr',
+        'dtype': 'int',
+        'default': 0,
+        'help': 'Number of decimals of the numerical values. (Only used for cooler tilesets.)'
+    },
+    'no-cache': {
+        'short': 'nc',
+        'dtype': 'bool',
+        'default': 0,
+        'help': 'Do not cache fragments if true. Useful for debugging.'
+    },
+    'ignore-diags': {
+        'short': 'nd',
+        'dtype': 'int',
+        'default': 0,
+        'help': 'Ignore N diagonals, i.e., set them to zero. (Only used for cooler tilesets.)'
+    },
+    'no-normalize': {
+        'short': 'nn',
+        'dtype': 'bool',
+        'default': False,
+        'help': 'Do not normalize fragments if true. (Only used for cooler tilesets.)'
+    },
+    'aggregate': {
+        'short': 'ag',
+        'dtype': 'bool',
+        'default': False,
+        'help': 'Aggregate fragments if true.'
+    },
+    'aggregation-method': {
+        'short': 'ag',
+        'dtype': 'str',
+        'default': 'mean',
+        'help': 'Aggregation method: mean, median, std, var.'
+    },
+    'preview': {
+        'short': 'pv',
+        'dtype': 'bool',
+        'default': False,
+        'help': 'Return a 1D preview along with the fragment.'
+    },
+    'encoding': {
+        'short': 'en',
+        'dtype': 'str',
+        'default': 'matrix',
+        'help': 'Data encoding: matrix or b64.'
+    },
+}
 
-@api_view(['POST'])
+
+@api_view(['GET', 'POST'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def fragments_by_loci(request):
+    if request.method == 'GET':
+        return get_fragments_by_loci_info(request)
+
+    return get_fragments_by_loci(request)
+
+
+def get_fragments_by_loci_info(request):
+    return JsonResponse(GET_FRAG_PARAMS)
+
+
+def get_fragments_by_loci(request):
     '''
     Retrieve a list of locations and return the corresponding matrix fragments
 
@@ -73,68 +160,6 @@ def fragments_by_loci(request):
             'error_message': str(e)
         }, status=400)
 
-    try:
-        precision = int(request.GET.get('precision', False))
-    except ValueError:
-        precision = False
-
-    try:
-        no_cache = bool(request.GET.get('no-cache', False))
-    except ValueError:
-        no_cache = False
-
-    try:
-        # Global dimension
-        dims = int(request.GET.get('dims', 22))
-    except ValueError:
-        dims = 22
-
-    try:
-        padding = request.GET.get('padding', 0)
-    except ValueError:
-        padding = 0
-
-    try:
-        no_balance = bool(request.GET.get('no-balance', False))
-    except ValueError:
-        no_balance = False
-
-    try:
-        percentile = float(request.GET.get('percentile', 100.0))
-    except ValueError:
-        percentile = 100.0
-
-    try:
-        ignore_diags = int(request.GET.get('ignore-diags', 0))
-    except ValueError:
-        ignore_diags = 0
-
-    try:
-        no_normalize = bool(request.GET.get('no-normalize', False))
-    except ValueError:
-        no_normalize = False
-
-    try:
-        aggregate = request.GET.get('aggregate', False)
-    except ValueError:
-        aggregate = False
-
-    try:
-        preview = request.GET.get('preview', False)
-        previews = []
-    except ValueError:
-        preview = False
-
-    try:
-        aggregation_method = request.GET.get('aggregation-method', 'mean')
-    except ValueError:
-        aggregation_method = 'mean'
-
-    try:
-        encoding = request.GET.get('encoding', 'matrix')
-    except ValueError:
-        encoding = 'matrix'
-
     '''
     Loci list must be of type:
     [cooler]          [imtiles]
@@ -151,13 +176,27 @@ def fragments_by_loci(request):
     *) Optional
     '''
 
+    params = get_params(request, GET_FRAG_PARAMS)
+
+    dims = params['dims']
+    padding = params['padding']
+    no_balance = params['no-balance']
+    percentile = params['percentile']
+    precision = params['precision']
+    no_cache = params['no-cache']
+    ignore_diags = params['ignore-diags']
+    no_normalize = params['no-normalize']
+    aggregate = params['aggregate']
+    aggregation_method = params['aggregation-method']
+    preview = params['preview']
+    encoding = params['encoding']
+
     tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
     zoom_level_idx = tileset_idx + 1
 
-    print(len(loci[0]), tileset_idx, zoom_level_idx)
-
     filetype = None
     new_filetype = None
+    previews = []
 
     i = 0
     loci_lists = {}
