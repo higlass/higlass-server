@@ -201,28 +201,28 @@ def get_frag_by_loc_from_cool(
     return fragments
 
 
-def aggregate_frags(frags, method='mean'):
-    """Aggregate multiple fragments into one
+def scale_frags_to_same_size(frags):
+    """Scale fragments to same size
+
+    [description]
 
     Arguments:
-        frags {list} -- A list of numpy arrays to be aggregated
-
-    Keyword Arguments:
-        method {str} -- Aggregation method. Available methods are
-            {'mean', 'median', 'std', 'var'}. (default: {'mean'})
+        frags {list} -- List of numpy arrays representing the fragments
 
     Returns:
-        np.array -- Numpy array aggregated by the fragments. This array
-            represents the image aggregation.
-        np.array -- Numpy arrat aggregated along the Y axis. This array
-            represents the 1D previews.
+        np.array -- Numpy array of scaled fragments
     """
     # Use the smallest dim
     dim_x = np.inf
     dim_y = np.inf
     is_image = False
 
-    for frag in frags:
+    largest_frag_idx = -1
+    largest_frag_size = 0
+    smallest_frag_idx = -1
+    smallest_frag_size = np.inf
+
+    for i, frag in enumerate(frags):
         is_image = is_image or frag.ndim == 3
 
         if is_image:
@@ -230,15 +230,23 @@ def aggregate_frags(frags, method='mean'):
         else:
             f_dim_x, f_dim_y = frag.shape
 
+        size = f_dim_x * f_dim_y
+
+        if size > largest_frag_size:
+            largest_frag_idx = i
+            largest_frag_size = size
+
+        if size < smallest_frag_size:
+            smallest_frag_idx = i
+            smallest_frag_size = size
+
         dim_x = min(dim_x, f_dim_x)
         dim_y = min(dim_y, f_dim_y)
 
     if is_image:
         out = np.zeros([len(frags), dim_y, dim_x, 3])
-        x_dim_id = 2
     else:
         out = np.zeros([len(frags), dim_x, dim_y])
-        x_dim_id = 1
 
     for i, frag in enumerate(frags):
         if is_image:
@@ -255,6 +263,77 @@ def aggregate_frags(frags, method='mean'):
             )
 
         out[i] = frag
+
+    return out, largest_frag_idx, smallest_frag_idx
+
+
+def get_rep_frags(frags, num_reps=4):
+    """Get a number of representatives for each cluster
+
+    [description]
+
+    Arguments:
+        frags {list} -- List of numpy arrays representing the fragment
+        num_reps {int} -- Number of representatives
+    """
+    num_frags = len(frags)
+
+    if num_frags < 5:
+        return frags
+
+    out, largest_frag_idx, _ = scale_frags_to_same_size(frags)
+
+    mean_frag = np.nanmean(out, axis=0)
+    diff_mean_frags = out - mean_frag
+
+    # Sum each x,y and c (channel) value up per f (fragment) and take the
+    # sqaure root to get the L2 norm
+    dist_to_mean = np.sqrt(
+        np.einsum('fxyc,fxyc->f', diff_mean_frags, diff_mean_frags)
+    )
+
+    # Get the fragment closest to the mean
+    closest_mean_frag = out[np.argmin(dist_to_mean)]
+
+    # Get the frag farthest away from
+    farthest_mean_frag = out[np.argmax(dist_to_mean)]
+
+    # Distance to farthest away frag
+    diff_farthest_frags = out - farthest_mean_frag
+    dist_to_farthest = np.sqrt(
+        np.einsum('fxyc,fxyc->f', diff_farthest_frags, diff_farthest_frags)
+    )
+
+    # Get the frag farthest away from the frag farthest away from the mean
+    farthest_farthest_frag = out[np.argmax(dist_to_farthest)]
+
+    return [
+        out[largest_frag_idx],
+        closest_mean_frag,
+        farthest_mean_frag,
+        farthest_farthest_frag
+    ]
+
+
+def aggregate_frags(frags, method='mean'):
+    """Aggregate multiple fragments into one
+
+    Arguments:
+        frags {list} -- A list of numpy arrays to be aggregated
+
+    Keyword Arguments:
+        method {str} -- Aggregation method. Available methods are
+            {'mean', 'median', 'std', 'var'}. (default: {'mean'})
+
+    Returns:
+        np.array -- Numpy array aggregated by the fragments. This array
+            represents the image aggregation.
+        np.array -- Numpy arrat aggregated along the Y axis. This array
+            represents the 1D previews.
+    """
+    out, _, _ = scale_frags_to_same_size(frags)
+
+    x_dim_id = 2 if np.ndim(out) == 4 else 1
 
     if method == 'median':
         aggregate = np.nanmedian(out, axis=0)
@@ -276,6 +355,7 @@ def aggregate_frags(frags, method='mean'):
 
     aggregate = np.nanmean(out, axis=0)
     preview = np.nanmean(out, axis=x_dim_id)
+
     return aggregate, preview
 
 
@@ -395,82 +475,87 @@ def get_frag_by_loc_from_osm(
 
     ims = []
 
-    for locus in loci:
-        start_lng = locus[0]
-        end_lng = locus[1]
-        start_lat = locus[2]
-        end_lat = locus[3]
+    prefixes = ['a', 'b', 'c']
+    prefix_idx = math.floor(random() * len(prefixes))
+    osm_src = 'http://{}.tile.openstreetmap.org'.format(prefixes[prefix_idx])
 
-        if not is_within(
-            start_lng + 180,
-            end_lng + 180,
-            end_lat + 90,
-            start_lat + 90,
-            width,
-            height
-        ):
-            ims.append(None)
-            continue
+    with requests.Session() as s:
+        for locus in loci:
+            start_lng = locus[0]
+            end_lng = locus[1]
+            start_lat = locus[2]
+            end_lat = locus[3]
 
-        # Get tile ids
-        start1, start2 = get_tile_pos_from_lng_lat(
-            start_lng, start_lat, zoom_level
-        )
-        end1, end2 = get_tile_pos_from_lng_lat(
-            end_lng, end_lat, zoom_level
-        )
+            if not is_within(
+                start_lng + 180,
+                end_lng + 180,
+                end_lat + 90,
+                start_lat + 90,
+                width,
+                height
+            ):
+                ims.append(None)
+                continue
 
-        xPad = padding * (end1 - start1)
-        yPad = padding * (start2 - end2)
+            # Get tile ids
+            start1, start2 = get_tile_pos_from_lng_lat(
+                start_lng, start_lat, zoom_level
+            )
+            end1, end2 = get_tile_pos_from_lng_lat(
+                end_lng, end_lat, zoom_level
+            )
 
-        start1 -= xPad
-        end1 += xPad
-        start2 += yPad
-        end2 -= yPad
+            xPad = padding * (end1 - start1)
+            yPad = padding * (start2 - end2)
 
-        tile_start1_id = math.floor(start1)
-        tile_start2_id = math.floor(start2)
-        tile_end1_id = math.floor(end1)
-        tile_end2_id = math.floor(end2)
+            start1 -= xPad
+            end1 += xPad
+            start2 += yPad
+            end2 -= yPad
 
-        start1 = math.floor(start1 * tile_size)
-        start2 = math.floor(start2 * tile_size)
-        end1 = math.ceil(end1 * tile_size)
-        end2 = math.ceil(end2 * tile_size)
+            tile_start1_id = math.floor(start1)
+            tile_start2_id = math.floor(start2)
+            tile_end1_id = math.floor(end1)
+            tile_end2_id = math.floor(end2)
 
-        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
-        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+            start1 = math.floor(start1 * tile_size)
+            start2 = math.floor(start2 * tile_size)
+            end1 = math.ceil(end1 * tile_size)
+            end2 = math.ceil(end2 * tile_size)
 
-        # Extract image tiles
-        tiles = []
-        for y in tiles_y_range:
-            for x in tiles_x_range:
-                prefixes = ['a', 'b', 'c']
-                prefix_idx = math.floor(random() * len(prefixes))
-                src = (
-                    'http://{}.tile.openstreetmap.org/{}/{}/{}.png'
-                    .format(prefixes[prefix_idx], zoom_level, x, y)
-                )
+            tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+            tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
 
-                r = requests.get(src)
+            # Extract image tiles
+            tiles = []
+            for y in tiles_y_range:
+                for x in tiles_x_range:
+                    src = (
+                        '{}/{}/{}/{}.png'
+                        .format(osm_src, zoom_level, x, y)
+                    )
 
-                if r.status_code == 200:
-                    tiles.append(Image.open(BytesIO(r.content)).convert('RGB'))
-                else:
-                    tiles.append(None)
+                    r = s.get(src)
 
-        ims.append(get_frag_from_image_tiles(
-            tiles,
-            tile_size,
-            tiles_x_range,
-            tiles_y_range,
-            tile_start1_id,
-            tile_start2_id,
-            start1,
-            end1,
-            start2,
-            end2
-        ))
+                    if r.status_code == 200:
+                        tiles.append(Image.open(
+                            BytesIO(r.content)
+                        ).convert('RGB'))
+                    else:
+                        tiles.append(None)
+
+            ims.append(get_frag_from_image_tiles(
+                tiles,
+                tile_size,
+                tiles_x_range,
+                tiles_y_range,
+                tile_start1_id,
+                tile_start2_id,
+                start1,
+                end1,
+                start2,
+                end2
+            ))
 
     return ims
 

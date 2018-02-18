@@ -30,6 +30,7 @@ from fragments.utils import (
     get_frag_by_loc_from_osm,
     get_intra_chr_loops_from_looplist,
     get_params,
+    get_rep_frags,
     rel_loci_2_obj
 )
 from higlass_server.utils import getRdb
@@ -131,6 +132,15 @@ GET_FRAG_PARAMS = {
             'supported when one fragment is to be returned)'
         )
     },
+    'representatives': {
+        'short': 'rp',
+        'dtype': 'int',
+        'default': 0,
+        'help': (
+            'Number of representative fragments when requesting multiple '
+            'fragments.'
+        )
+    },
 }
 
 
@@ -206,6 +216,7 @@ def get_fragments_by_loci(request):
     aggregation_method = params['aggregation-method']
     preview = params['preview']
     encoding = params['encoding']
+    representatives = params['representatives']
 
     tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
     zoom_level_idx = tileset_idx + 1
@@ -375,6 +386,18 @@ def get_fragments_by_loci(request):
                 'error_message': str(ex)
             }, status=500)
 
+    if representatives and len(matrices) > 1:
+        try:
+            rep_frags = get_rep_frags(matrices, representatives)
+            matrices = rep_frags
+            data_types = [data_types[0]] * len(rep_frags)
+        except Exception as ex:
+            raise
+            return JsonResponse({
+                'error': 'Could get representative fragments.',
+                'error_message': str(ex)
+            }, status=500)
+
     if encoding != 'b64' and encoding != 'image':
         # Adjust precision and convert to list
         for i, matrix in enumerate(matrices):
@@ -385,7 +408,7 @@ def get_fragments_by_loci(request):
     # Encode matrix if required
     if encoding == 'b64':
         for i, matrix in enumerate(matrices):
-            im = Image.fromarray(matrix)
+            im = Image.fromarray(matrix.astype('uint8'))
             im_buffer = BytesIO()
             im.save(im_buffer, format='png')
             matrices[i] = base64.b64encode(
