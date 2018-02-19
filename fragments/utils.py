@@ -353,8 +353,7 @@ def aggregate_frags(
         clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
             np.reshape(out, (out.shape[0], -1))
         )
-        height = max_previews * preview_height
-        height += (max_previews - 1) * preview_spacing
+        height = max_previews
         previews = np.zeros((height,) + out.shape[2:])
 
     if method == 'median':
@@ -363,7 +362,7 @@ def aggregate_frags(
             for i in range(max_previews):
                 previews[i] = np.nanmedian(
                     out[np.where(clusters.labels_ == i)], axis=1
-                )
+                )[0]
         else:
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
@@ -374,7 +373,7 @@ def aggregate_frags(
             for i in range(max_previews):
                 previews[i] = np.nanstd(
                     out[np.where(clusters.labels_ == i)], axis=1
-                )
+                )[0]
         else:
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
@@ -385,7 +384,7 @@ def aggregate_frags(
             for i in range(max_previews):
                 previews[i] = np.nanvar(
                     out[np.where(clusters.labels_ == i)], axis=1
-                )
+                )[0]
         else:
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
@@ -400,15 +399,9 @@ def aggregate_frags(
             i_to = i_from + preview_height
 
             # Aggregated preview
-            prev = np.nanmean(
+            previews[i_from:i_to] = np.nanmean(
                 out[np.where(clusters.labels_ == i)[0]], axis=1
             )[0]
-
-            # Duplicate data depending on preview height
-            previews[i_from:i_to] = np.tile(
-                prev,
-                [preview_height] + list(np.ones(prev.ndim, dtype=np.uint8))
-            )
     else:
         previews = np.nanmedian(out, axis=1)
 

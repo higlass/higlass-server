@@ -405,7 +405,7 @@ def get_fragments_by_loci(request):
                 preview_spacing
             )
             matrices = [aggr_z]
-            previews = [aggr_y]
+            previews = np.split(aggr_y, range(1, aggr_y.shape[0]))
             data_types = [data_types[0]]
         except Exception as ex:
             raise
