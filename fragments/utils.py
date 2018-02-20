@@ -287,7 +287,7 @@ def get_rep_frags(frags, num_reps=4):
         for i, frag in enumerate(frags):
             sizes[i] = np.prod(frag.shape[0:2])
 
-        return [frags[i] for i in np.sort(sizes)]
+        return [frags[i] for i in np.argsort(sizes).astype(np.uint8)[::-1]]
 
     out, largest_frag_idx, _ = get_scale_frags_to_same_size(frags)
 
