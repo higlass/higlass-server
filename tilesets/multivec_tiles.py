@@ -209,6 +209,7 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
             if chrom not in f['resolutions'][str(resolution)]['values']:
                 continue
             
+            print('values:', f['resolutions'][str(resolution)]['values'][chrom][:])
             x = f['resolutions'][str(resolution)]['values'][chrom][start_pos:end_pos]
             current_binned_data_position += binsize * (end_pos - start_pos)
 
@@ -235,6 +236,7 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
 
         arrays.append(x)
 
+    # print("arrays:", arrays[0])
     print("total_length:", total_length)
     t3 = time.time()
     # print("total fetch time:", t3 - t0)
