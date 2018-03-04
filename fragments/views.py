@@ -397,15 +397,18 @@ def get_fragments_by_loci(request):
 
     if aggregate and len(matrices) > 1:
         try:
-            aggr_z, aggr_y = aggregate_frags(
+            cover, previews_1d, previews_2d = aggregate_frags(
                 matrices,
                 aggregation_method,
                 max_previews,
                 preview_height,
                 preview_spacing
             )
-            matrices = [aggr_z]
-            previews = np.split(aggr_y, range(1, aggr_y.shape[0]))
+            matrices = [cover]
+            if previews_1d is not None:
+                previews = np.split(
+                    previews_1d, range(1, previews_1d.shape[0])
+                )
             data_types = [data_types[0]]
         except Exception as ex:
             raise
@@ -436,6 +439,8 @@ def get_fragments_by_loci(request):
         if max_previews > 0:
             for i, preview in enumerate(previews):
                 previews[i] = preview.tolist()
+            for i, preview_2d in enumerate(previews_2d):
+                previews_2d[i] = preview_2d.tolist()
 
     # Encode matrix if required
     if encoding == 'b64':
@@ -456,6 +461,13 @@ def get_fragments_by_loci(request):
                 previews[i] = base64.b64encode(
                     im_buffer.getvalue()
                 ).decode('utf-8')
+            for i, preview_2d in enumerate(previews_2d):
+                im = Image.fromarray(preview_2d.astype('uint8'))
+                im_buffer = BytesIO()
+                im.save(im_buffer, format='png')
+                previews_2d[i] = base64.b64encode(
+                    im_buffer.getvalue()
+                ).decode('utf-8')
 
     # Create results
     results = {
@@ -466,6 +478,7 @@ def get_fragments_by_loci(request):
     # Return Y aggregates as 1D previews on demand
     if max_previews > 0:
         results['previews'] = previews
+        results['previews2d'] = previews_2d
 
     # Cache results for 30 minutes
     rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)

@@ -349,12 +349,17 @@ def aggregate_frags(
 
     prev_height_space = preview_height + preview_spacing
 
-    if len(frags) > max_previews:
-        clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
-            np.reshape(out, (out.shape[0], -1))
-        )
-        height = max_previews
-        previews = np.zeros((height,) + out.shape[2:])
+    if max_previews > 0:
+        if len(frags) > max_previews:
+            clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
+                np.reshape(out, (out.shape[0], -1))
+            )
+            previews = np.zeros((max_previews,) + out.shape[2:])
+
+        else:
+            previews = np.zeros((len(frags),) + out.shape[2:])
+
+    previews_2d = []
 
     if method == 'median':
         aggregate = np.nanmedian(out, axis=0)
@@ -393,19 +398,27 @@ def aggregate_frags(
         print('Unknown aggregation method: {}'.format(method))
 
     aggregate = np.nanmean(out, axis=0)
-    if len(frags) > max_previews:
-        for i in range(max_previews):
-            i_from = i * prev_height_space
-            i_to = i_from + preview_height
+    if max_previews > 0:
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                i_from = i * prev_height_space
+                i_to = i_from + preview_height
 
-            # Aggregated preview
-            previews[i_from:i_to] = np.nanmean(
-                out[np.where(clusters.labels_ == i)[0]], axis=1
-            )[0]
+                # Aggregated preview
+                previews[i_from:i_to] = np.nanmean(
+                    out[np.where(clusters.labels_ == i)[0]], axis=1
+                )[0]
+                previews_2d.append(np.nanmean(
+                    out[np.where(clusters.labels_ == i)], axis=0
+                ))
+        else:
+            previews = np.nanmedian(out, axis=1)
+            previews_2d = frags
     else:
-        previews = np.nanmedian(out, axis=1)
+        previews = None
+        previews_2d = None
 
-    return aggregate, previews
+    return aggregate, previews, previews_2d
 
 
 def get_frag_from_image_tiles(
