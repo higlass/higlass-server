@@ -246,6 +246,7 @@ def get_fragments_by_loci(request):
     filetype = None
     new_filetype = None
     previews = []
+    previews_2d = []
 
     i = 0
     loci_lists = {}
