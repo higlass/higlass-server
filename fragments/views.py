@@ -331,7 +331,23 @@ def get_fragments_by_loci(request):
         }, status=500)
 
     # Get a unique string for caching
-    dump = json.dumps(loci, sort_keys=True) + str(precision) + str(dims)
+    dump = (
+        json.dumps(loci, sort_keys=True) +
+        str(dims) +
+        str(padding) +
+        str(no_balance) +
+        str(percentile) +
+        str(precision) +
+        str(ignore_diags) +
+        str(no_normalize) +
+        str(aggregate) +
+        str(aggregation_method) +
+        str(max_previews) +
+        str(preview_height) +
+        str(preview_spacing) +
+        str(encoding) +
+        str(representatives)
+    )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
     # Check if something is cached
