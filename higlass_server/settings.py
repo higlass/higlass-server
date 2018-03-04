@@ -50,9 +50,9 @@ except ValueError as e:
     raise ImproperlyConfigured(error_msg)
 
 
-def get_setting(name, default=None, settings=local_settings):
+def get_setting(name, default=None, optional=False, settings=local_settings):
     """Get the local settings variable or return explicit exception"""
-    if default is None:
+    if default is None and not optional:
         raise ImproperlyConfigured(
             "Missing default value for '{0}'".format(name)
         )
@@ -69,7 +69,7 @@ def get_setting(name, default=None, settings=local_settings):
 
     # If nothing is found return the default setting
     except KeyError:
-        if default is not None:
+        if default is not None or optional:
             return default
         else:
             raise ImproperlyConfigured(
@@ -143,12 +143,8 @@ if DEBUG:
     for logger in LOGGING['loggers']:
         LOGGING['loggers'][logger]['handlers'] = ['console']
 
-if 'REDIS_HOST' in os.environ and 'REDIS_PORT' in os.environ:
-    REDIS_HOST = os.environ['REDIS_HOST']
-    REDIS_PORT = os.environ['REDIS_PORT']
-else:
-    REDIS_HOST = None
-    REDIS_PORT = None
+REDIS_HOST = get_setting('REDIS_HOST', None, True)
+REDIS_PORT = get_setting('REDIS_PORT', None, True)
 
 # DEFAULT_FILE_STORAGE = 'tilesets.storage.HashedFilenameFileSystemStorage'
 
