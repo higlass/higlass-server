@@ -25,7 +25,9 @@ def get_chromsizes(bwpath):
     
     """
     chromsizes = bbi.chromsizes(bwpath)
-    chromosomes = cooler.util.natsorted(chromsizes.keys())
+    chromosomes = [c for c in chromsizes.keys() 
+                        if not c.endswith('_random') and not c.startswith('chrUn_')]
+    chromosomes = cooler.util.natsorted(chromosomes)
     return pd.Series(chromsizes)[chromosomes]
 
 
