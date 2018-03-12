@@ -1,11 +1,10 @@
 from __future__ import print_function
 
-import base64
 import hashlib
 import json
 import logging
 import numpy as np
-from io import BytesIO
+import pybase64
 from PIL import Image
 try:
     import cPickle as pickle
@@ -31,7 +30,9 @@ from fragments.utils import (
     get_intra_chr_loops_from_looplist,
     get_params,
     get_rep_frags,
-    rel_loci_2_obj
+    rel_loci_2_obj,
+    np_to_png,
+    write_png
 )
 from higlass_server.utils import getRdb
 
@@ -247,15 +248,21 @@ def get_fragments_by_loci(request):
     new_filetype = None
     previews = []
     previews_2d = []
+    ts_cache = {}
+    mat_idx = None
 
     i = 0
     loci_lists = {}
+    loci_ids = []
     try:
         for locus in loci:
             tileset_file = ''
 
             if locus[tileset_idx]:
-                if locus[tileset_idx].endswith('.cool'):
+                if locus[tileset_idx] in ts_cache:
+                    tileset = ts_cache[locus[tileset_idx]]['obj']
+                    tileset_file = ts_cache[locus[tileset_idx]]['path']
+                elif locus[tileset_idx].endswith('.cool'):
                     tileset_file = path.join('data', locus[tileset_idx])
                 else:
                     try:
@@ -265,6 +272,10 @@ def get_fragments_by_loci(request):
                         tileset_file = get_datapath(
                             tileset.datafile.url
                         )
+                        ts_cache[locus[tileset_idx]] = {
+                            "obj": tileset,
+                            "path": tileset_file
+                        }
 
                     except AttributeError:
                         return JsonResponse({
@@ -292,18 +303,21 @@ def get_fragments_by_loci(request):
             if locus[zoom_level_idx] not in loci_lists[tileset_file]:
                 loci_lists[tileset_file][locus[zoom_level_idx]] = []
 
-            inset_dim = [
+            inset_dim = (
                 locus[zoom_level_idx + 1]
                 if (
                     len(locus) >= zoom_level_idx + 2 and
                     locus[zoom_level_idx + 1]
                 )
                 else 0
-            ]
+            )
+
+            locus_id = '.'.join(map(str, locus))
 
             loci_lists[tileset_file][locus[zoom_level_idx]].append(
-                locus[0:tileset_idx] + [i] + inset_dim
+                locus[0:tileset_idx] + [i, inset_dim, locus_id]
             )
+            loci_ids.append(locus_id)
 
             if new_filetype is None:
                 new_filetype = (
@@ -330,6 +344,8 @@ def get_fragments_by_loci(request):
             'error_message': str(e)
         }, status=500)
 
+    mat_idx = list(range(len(loci_ids)))
+
     # Get a unique string for caching
     dump = (
         json.dumps(loci, sort_keys=True) +
@@ -354,7 +370,6 @@ def get_fragments_by_loci(request):
     if not no_cache:
         try:
             results = rdb.get('frag_by_loci_%s' % uuid)
-
             if results:
                 return JsonResponse(pickle.loads(results))
         except:
@@ -396,6 +411,7 @@ def get_fragments_by_loci(request):
                         loci=loci_lists[dataset][zoomout_level],
                         zoom_level=zoomout_level,
                         padding=float(padding),
+                        no_cache=no_cache,
                     )
 
                     for i, im in enumerate(sub_ims):
@@ -416,6 +432,7 @@ def get_fragments_by_loci(request):
         try:
             cover, previews_1d, previews_2d = aggregate_frags(
                 matrices,
+                loci_ids,
                 aggregation_method,
                 max_previews,
                 preview_height,
@@ -436,8 +453,11 @@ def get_fragments_by_loci(request):
 
     if representatives and len(matrices) > 1:
         try:
-            rep_frags = get_rep_frags(matrices, representatives)
+            rep_frags, rep_idx = get_rep_frags(
+                matrices, loci_ids, representatives, no_cache
+            )
             matrices = rep_frags
+            mat_idx = rep_idx
             data_types = [data_types[0]] * len(rep_frags)
         except Exception as ex:
             raise
@@ -462,29 +482,34 @@ def get_fragments_by_loci(request):
     # Encode matrix if required
     if encoding == 'b64':
         for i, matrix in enumerate(matrices):
-            im = Image.fromarray(matrix.astype('uint8'))
-            im_buffer = BytesIO()
-            im.save(im_buffer, format='png')
-            matrices[i] = base64.b64encode(
-                im_buffer.getvalue()
-            ).decode('utf-8')
+            id = loci_ids[mat_idx[i]]
             data_types[i] = 'dataUrl'
+            if not no_cache:
+                mat_b64 = None
+                try:
+                    mat_b64 = rdb.get('im_b64_%s' % id)
+                    if mat_b64 is not None:
+                        matrices[i] = mat_b64.decode('ascii')
+                        continue
+                except:
+                    pass
+
+            mat_b64 = pybase64.b64encode(np_to_png(matrix)).decode('ascii')
+
+            if not no_cache:
+                rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
+
+            matrices[i] = mat_b64
 
         if max_previews > 0:
             for i, preview in enumerate(previews):
-                im = Image.fromarray(preview.astype('uint8'))
-                im_buffer = BytesIO()
-                im.save(im_buffer, format='png')
-                previews[i] = base64.b64encode(
-                    im_buffer.getvalue()
-                ).decode('utf-8')
+                previews[i] = pybase64.b64encode(
+                    np_to_png(preview)
+                ).decode('ascii')
             for i, preview_2d in enumerate(previews_2d):
-                im = Image.fromarray(preview_2d.astype('uint8'))
-                im_buffer = BytesIO()
-                im.save(im_buffer, format='png')
-                previews_2d[i] = base64.b64encode(
-                    im_buffer.getvalue()
-                ).decode('utf-8')
+                previews_2d[i] = pybase64.b64encode(
+                    np_to_png(preview_2d)
+                ).decode('ascii')
 
     # Create results
     results = {

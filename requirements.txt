@@ -9,9 +9,11 @@ django-rest-swagger
 Django==2.0
 djangorestframework==3.7.3
 h5py==2.6.0
+numba==0.37.0
 numpy==1.12.0
 pandas==0.19.1
 Pillow==5.0.0
+pybase64==0.2.1
 pyBigWig==0.3.2
 redis==2.10.5
 requests==2.12.3
