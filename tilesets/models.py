@@ -5,6 +5,10 @@ import slugid
 from django.db import models
 
 
+def createNewSlug():
+    return slugid.nice().decode('utf-8')
+
+
 class ViewConf(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     higlassVersion = models.CharField(max_length=16, default='')
@@ -27,7 +31,7 @@ class Tileset(models.Model):
     uuid = models.CharField(
         max_length=100,
         unique=True,
-        default=lambda: slugid.nice().decode('utf-8')
+        default=createNewSlug
     )
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
