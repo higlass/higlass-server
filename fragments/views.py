@@ -439,6 +439,7 @@ def get_fragments_by_loci(request):
                 preview_spacing
             )
             matrices = [cover]
+            mat_idx = []
             if previews_1d is not None:
                 previews = np.split(
                     previews_1d, range(1, previews_1d.shape[0])
@@ -484,7 +485,7 @@ def get_fragments_by_loci(request):
         for i, matrix in enumerate(matrices):
             id = loci_ids[mat_idx[i]]
             data_types[i] = 'dataUrl'
-            if not no_cache:
+            if not no_cache and id:
                 mat_b64 = None
                 try:
                     mat_b64 = rdb.get('im_b64_%s' % id)
@@ -514,6 +515,7 @@ def get_fragments_by_loci(request):
     # Create results
     results = {
         'fragments': matrices,
+        'indices': [int(i) for i in mat_idx],
         'dataTypes': data_types,
     }
 
