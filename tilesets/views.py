@@ -565,7 +565,7 @@ def tileset_info(request):
 
 
 @api_view(['POST'])
-@authentication_classes((BasicAuthentication,))
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def link_file(request):
     '''
     A file has been uploaded to S3. Finish the upload here by adding the file
@@ -604,7 +604,7 @@ def link_file(request):
             name=op.basename(body['filepath']),
             owner=request.user)
 
-    return JsonResponse({'uuid': obj.uuid.decode('utf8')})
+    return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
 
 @method_decorator(gzip_page, name='dispatch')

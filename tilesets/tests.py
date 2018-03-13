@@ -757,23 +757,20 @@ class FileUploadTest(dt.TestCase):
         like goofys, mounting s3 buckets
         '''
 
-        import pdb; pdb.set_trace()
         c = dt.Client()
         c.login(username='user1', password='pass')
 
-        f = open('data/tiny.txt', 'rb')
-
         response = c.post(
-            '/api/v1/tilesets/link',
-            {
-                'datafile': f,
+            '/api/v1/link_tile/',
+            json.dumps({
+                'filepath': 'Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
                 'filetype': 'hitile',
                 'datatype': 'vector',
                 'uid': 'bb',
                 'private': 'True',
                 'coordSystem': 'hg19'
-            },
-            format='multipart'
+            }),
+            content_type="application/json",
         )
 
         if hss.UPLOAD_ENABLED:
@@ -781,7 +778,8 @@ class FileUploadTest(dt.TestCase):
 
             response = c.get('/api/v1/tilesets/')
 
-            obj = tm.Tileset.objects.get(uuid='bb')
+            new_uuid = response.json()['results'][0]['uuid']
+            obj = tm.Tileset.objects.get(uuid=new_uuid)
 
             # make sure the file was actually created
             self.assertTrue(op.exists, obj.datafile.url)
