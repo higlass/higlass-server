@@ -388,10 +388,19 @@ def get_rep_frags(frags, loci_ids, num_reps=4, no_cache=False):
     )
 
     # Get the fragment closest to the mean
-    closest_mean_frag_idx = np.argmin(dist_to_mean)
+    # Get the index of the i-th smallest value i=0 == smallest value
+    closest_mean_frag_idx = np.argpartition(dist_to_mean, 0)[0]
+    if closest_mean_frag_idx == largest_frag_idx:
+        closest_mean_frag_idx = np.argpartition(dist_to_mean, 1)[1]
 
     # Get the frag farthest away from
-    farthest_mean_frag_idx = np.argmax(dist_to_mean)
+    for i in range(len(dist_to_mean) - 1, -1, -1):
+        farthest_mean_frag_idx = np.argpartition(dist_to_mean, i)[i]
+        if (
+            farthest_mean_frag_idx != largest_frag_idx and
+            farthest_mean_frag_idx != closest_mean_frag_idx
+        ):
+            break
 
     # Distance to farthest away frag
     diff_farthest_frags = out - out[np.argmax(dist_to_mean)]
@@ -400,7 +409,14 @@ def get_rep_frags(frags, loci_ids, num_reps=4, no_cache=False):
     )
 
     # Get the frag farthest away from the frag farthest away from the mean
-    farthest_farthest_frag_idx = np.argmax(dist_to_farthest)
+    for i in range(len(dist_to_farthest) - 1, -1, -1):
+        farthest_farthest_frag_idx = np.argpartition(dist_to_farthest, i)[i]
+        if (
+            farthest_farthest_frag_idx != largest_frag_idx and
+            farthest_farthest_frag_idx != closest_mean_frag_idx and
+            farthest_farthest_frag_idx != farthest_mean_frag_idx
+        ):
+            break
 
     frags = [
         frags[largest_frag_idx],
