@@ -381,7 +381,7 @@ def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
     # Get largest frag based on world coords
     largest_a = 0
     for i, locus in enumerate(loci):
-        a = (locus[1] - locus[0]) * (locus[3] - locus[2])
+        a = abs(locus[1] - locus[0]) * abs(locus[3] - locus[2])
         if a > largest_a:
             largest_a = a
             largest_frag_idx = i
