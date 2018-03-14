@@ -353,7 +353,7 @@ def get_scale_frags_to_same_size(frags, loci_ids, out_size=-1, no_cache=False):
     return out, largest_frag_idx, smallest_frag_idx
 
 
-def get_rep_frags(frags, loci_ids, num_reps=4, no_cache=False):
+def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
     """Get a number of representatives for each cluster
 
     [description]
@@ -374,9 +374,17 @@ def get_rep_frags(frags, loci_ids, num_reps=4, no_cache=False):
 
         return [frags[i] for i in idx], idx
 
-    out, largest_frag_idx, _ = get_scale_frags_to_same_size(
+    out, _, _ = get_scale_frags_to_same_size(
         frags, loci_ids, 32, no_cache
     )
+
+    # Get largest frag based on world coords
+    largest_a = 0
+    for i, locus in enumerate(loci):
+        a = (locus[1] - locus[0]) * (locus[3] - locus[2])
+        if a > largest_a:
+            largest_a = a
+            largest_frag_idx = i
 
     mean_frag = np.nanmean(out, axis=0)
     diff_mean_frags = out - mean_frag

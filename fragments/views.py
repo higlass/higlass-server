@@ -207,6 +207,12 @@ def get_fragments_by_loci(request):
             'error_message': str(e)
         }, status=400)
 
+    try:
+        forced_rep_idx = request.data.get('representativeIndices', None)
+    except Exception as e:
+        forced_rep_idx = None
+        pass
+
     '''
     Loci list must be of type:
     [cooler]          [imtiles]
@@ -349,6 +355,7 @@ def get_fragments_by_loci(request):
     # Get a unique string for caching
     dump = (
         json.dumps(loci, sort_keys=True) +
+        str(forced_rep_idx) +
         str(dims) +
         str(padding) +
         str(no_balance) +
@@ -453,19 +460,24 @@ def get_fragments_by_loci(request):
             }, status=500)
 
     if representatives and len(matrices) > 1:
-        try:
-            rep_frags, rep_idx = get_rep_frags(
-                matrices, loci_ids, representatives, no_cache
-            )
-            matrices = rep_frags
-            mat_idx = rep_idx
-            data_types = [data_types[0]] * len(rep_frags)
-        except Exception as ex:
-            raise
-            return JsonResponse({
-                'error': 'Could get representative fragments.',
-                'error_message': str(ex)
-            }, status=500)
+        if forced_rep_idx and len(forced_rep_idx) <= len(matrices):
+            matrices = [matrices[i] for i in forced_rep_idx]
+            mat_idx = forced_rep_idx
+            data_types = [data_types[0]] * len(forced_rep_idx)
+        else:
+            try:
+                rep_frags, rep_idx = get_rep_frags(
+                    matrices, loci, loci_ids, representatives, no_cache
+                )
+                matrices = rep_frags
+                mat_idx = rep_idx
+                data_types = [data_types[0]] * len(rep_frags)
+            except Exception as ex:
+                raise
+                return JsonResponse({
+                    'error': 'Could get representative fragments.',
+                    'error_message': str(ex)
+                }, status=500)
 
     if encoding != 'b64' and encoding != 'image':
         # Adjust precision and convert to list
