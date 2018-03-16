@@ -42,6 +42,37 @@ class TileTests(dt.TestCase):
 
         assert(len(result) == 1)
 
+class MultivecTests(dt.TestCase):
+    def test_get_tile(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/sample.bed.multires.mv5', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='multivec',
+            datatype='multivec',
+            coordSystem="hg38",
+            owner=self.user1,
+            uuid='a'
+        )
+
+        '''
+        ret = self.client.get('/api/v1/tiles/?d=a.12.0')
+        content = json.loads(ret.content)
+        r = base64.decodestring(content['a.12.0']['dense'].encode('utf-8'))
+        q = np.frombuffer(r, dtype=np.float16)
+        '''
+
+        ret = self.client.get('/api/v1/tiles/?d=a.11.0')
+        content = json.loads(ret.content)
+        r = base64.decodestring(content['a.11.0']['dense'].encode('utf-8'))
+        q = np.frombuffer(r, dtype=np.float16)
+
+        print('content:', q)
+
 
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):

@@ -22,6 +22,7 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
+import tilesets.multivec_tiles as tmt
 import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
@@ -522,7 +523,7 @@ def tileset_info(request):
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
         elif tileset_object.filetype == 'multivec':
-            tileset_infos[tileset_uuid] = tgt.generate_multivec_tileset_info(
+            tileset_infos[tileset_uuid] = tmt.get_tileset_info(
                     tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
