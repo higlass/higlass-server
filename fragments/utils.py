@@ -472,7 +472,6 @@ def aggregate_frags(
                 np.reshape(out, (out.shape[0], -1))
             )
             previews = np.zeros((max_previews,) + out.shape[2:])
-            print('KMEANS', out.shape, clusters.labels_)
 
         else:
             previews = np.zeros((len(frags),) + out.shape[2:])
