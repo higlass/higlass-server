@@ -128,22 +128,6 @@ GET_FRAG_PARAMS = {
             'k-means.'
         )
     },
-    'preview-height': {
-        'short': 'ph',
-        'dtype': 'int',
-        'default': 2,
-        'help': (
-            'Height (in pixels) of the 1D preview'
-        )
-    },
-    'preview-spacing': {
-        'short': 'ps',
-        'dtype': 'int',
-        'default': 1,
-        'help': (
-            'Spacing (in pixels) between 1D previews'
-        )
-    },
     'encoding': {
         'short': 'en',
         'dtype': 'str',
@@ -242,8 +226,6 @@ def get_fragments_by_loci(request):
     aggregate = params['aggregate']
     aggregation_method = params['aggregation-method']
     max_previews = params['max-previews']
-    preview_height = params['preview-height']
-    preview_spacing = params['preview-spacing']
     encoding = params['encoding']
     representatives = params['representatives']
 
@@ -366,8 +348,6 @@ def get_fragments_by_loci(request):
         str(aggregate) +
         str(aggregation_method) +
         str(max_previews) +
-        str(preview_height) +
-        str(preview_spacing) +
         str(encoding) +
         str(representatives)
     )
@@ -442,8 +422,6 @@ def get_fragments_by_loci(request):
                 loci_ids,
                 aggregation_method,
                 max_previews,
-                preview_height,
-                preview_spacing
             )
             matrices = [cover]
             mat_idx = []

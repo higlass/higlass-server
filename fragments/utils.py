@@ -448,8 +448,6 @@ def aggregate_frags(
     loci_ids,
     method='mean',
     max_previews=8,
-    preview_height=2,
-    preview_spacing=1
 ):
     """Aggregate multiple fragments into one
 
@@ -468,14 +466,13 @@ def aggregate_frags(
     """
     out, _, _ = get_scale_frags_to_same_size(frags, loci_ids, -1, True)
 
-    prev_height_space = preview_height + preview_spacing
-
     if max_previews > 0:
         if len(frags) > max_previews:
             clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
                 np.reshape(out, (out.shape[0], -1))
             )
             previews = np.zeros((max_previews,) + out.shape[2:])
+            print('KMEANS', out.shape, clusters.labels_)
 
         else:
             previews = np.zeros((len(frags),) + out.shape[2:])
@@ -522,11 +519,8 @@ def aggregate_frags(
     if max_previews > 0:
         if len(frags) > max_previews:
             for i in range(max_previews):
-                i_from = i * prev_height_space
-                i_to = i_from + preview_height
-
                 # Aggregated preview
-                previews[i_from:i_to] = np.nanmean(
+                previews[i] = np.nanmean(
                     out[np.where(clusters.labels_ == i)[0]], axis=1
                 )[0]
                 previews_2d.append(np.nanmean(
