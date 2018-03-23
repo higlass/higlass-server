@@ -1150,8 +1150,11 @@ def get_frag(
             pass
 
     # Copy pixel values onto the final array
-    frag = np.zeros(abs_dim1 * abs_dim2, dtype=np.float32)
-    frag[idx1] = values
+    frag_len = abs_dim1 * abs_dim2
+    frag = np.zeros(frag_len, dtype=np.float32)
+    # Make sure we're within the bounds
+    idx1_f = np.where(idx1 < frag_len)
+    frag[idx1[idx1_f]] = values[idx1_f]
     frag[idx2[validBins]] = values[validBins]
     frag = frag.reshape((abs_dim1, abs_dim2))
 
