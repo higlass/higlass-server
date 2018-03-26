@@ -598,11 +598,14 @@ def link_file(request):
 
     diff_path = abs_filepath[len(media_base_path)+1:]    # +1 for the slash
 
-    print("user:", request.user)
+    tile_data = body.copy()
+    tile_data.pop('filepath')
+    # print("user:", request.user)
     obj = tm.Tileset.objects.create(
             datafile=diff_path,
             name=op.basename(body['filepath']),
-            owner=request.user)
+            owner=request.user,
+            **tile_data)
 
     return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 

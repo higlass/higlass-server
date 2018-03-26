@@ -766,7 +766,7 @@ class FileUploadTest(dt.TestCase):
                 'filepath': 'Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
                 'filetype': 'hitile',
                 'datatype': 'vector',
-                'uid': 'bb',
+                'uuid': 'bb',
                 'private': 'True',
                 'coordSystem': 'hg19'
             }),
