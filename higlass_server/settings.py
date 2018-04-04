@@ -84,8 +84,7 @@ SECRET_KEY = get_setting('SECRET_KEY', slugid.nice())
 DEBUG = get_setting('DEBUG', False)
 
 ALLOWED_HOSTS = [
-    'localhost', '127.0.0.1', 'higlass.site', 'higlass.io', 'test.higlass.io',
-    '54.86.58.34'
+    '*',
 ]
 
 if 'SITE_URL' in os.environ:
