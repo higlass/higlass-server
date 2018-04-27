@@ -24,6 +24,36 @@ import tilesets.generate_tiles as tgt
 logger = logging.getLogger(__name__)
 
 
+class BedfileTests(dt.TestCase):
+    def test_get_tileset_info(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/bedfile.bed', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='bedfile',
+            datatype='bedlike',
+            coordSystem="hg38",
+            owner=self.user1,
+            uuid='a'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            coordSystem="hg19",
+            owner=self.user1,
+            uuid='b'
+        )
+
+        ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
+
 class TileTests(dt.TestCase):
     def test_partitioning(self):
         result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
