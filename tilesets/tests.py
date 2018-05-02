@@ -12,6 +12,7 @@ import django.test as dt
 import h5py
 import json
 import logging
+import os
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
@@ -23,6 +24,52 @@ import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
+def add_file(filename):
+    '''
+    Add a file to the media directory and return its
+    path. If a file with the same name exists, don't
+    override it.
+    Parameters:
+    -----------
+    filename: string
+        The path of the file in its original place
+    Returns:
+    -------
+    filename: string
+        The path of the file in the media directory
+    '''
+
+    target_dir = op.join(hss.MEDIA_ROOT, 'uploads', op.dirname(filename))
+
+    if not op.exists(target_dir):
+        os.makedirs(target_dir)
+
+    target_file = op.join(target_dir, op.basename(filename))
+
+    if not op.exists(target_file):
+        import shutil
+        shutil.copyfile(filename, 
+                target_file)
+
+    django_file = op.join('uploads', filename)
+
+    return django_file
+
+    # move the file to the media directory
+    # and give it some unique identifier
+    '''
+    upload_file = open('data/chromSizes.tsv', 'rb')
+    self.chroms = tm.Tileset.objects.create(
+        datafile=dcfu.SimpleUploadedFile(
+            upload_file.name, upload_file.read()
+        ),
+        filetype='bam',
+        datatype='chromsizes',
+        coordSystem="hg19",
+        owner=self.user1,
+        uuid='cs-hg19'
+    )
+    '''
 
 class BedfileTests(dt.TestCase):
     def test_get_tileset_info(self):
@@ -618,6 +665,44 @@ class CoolerTest(dt.TestCase):
         contents = json.loads(ret.content.decode('utf-8'))
 
         self.assertIn('g1a.0.0.0', contents)
+
+    def test_tile_multiresolution_consistency(self):
+        '''
+        Make sure that tiles are symmetric
+        '''
+        tileset = tm.Tileset.objects.create(
+            datafile=add_file('data/Rao2014-GM12878-MboI-allreps-filtered.1kb.multires.cool'),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='aa')
+
+        '''
+        tile_id = 'aa.6.10.19'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q = np.frombuffer(r, dtype=np.float16)
+        q = q.reshape((256,256))
+        '''
+
+        tile_id = 'aa.7.20.38'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q1 = np.frombuffer(r, dtype=np.float16)
+        print("Greater than 0:", len(q1[q1>0]))
+
+        #print(q1[0:10,0:10])
+
+        tile_id = 'aa.7.20.38.none'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q1 = np.frombuffer(r, dtype=np.float16)
+        print("Greater than 0:", len(q1[q1>0]))
+
+        #print(q1[0:10,0:10])
 
     def test_tile_symmetry(self):
         '''

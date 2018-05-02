@@ -17,6 +17,7 @@ import django.db.models.functions as dbmf
 
 import guardian.utils as gu
 
+import hgtiles.cooler as hgco
 import higlass_server.settings as hss
 import itertools as it
 
@@ -357,7 +358,7 @@ def add_transform_type(tile_id):
     tileset_uuid = tile_id_parts[0]
     tile_position = tile_id_parts[1:4]
 
-    transform_type = tgt.get_transform_type(tile_id)
+    transform_type = hgco.get_transform_type(tile_id)
     new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
     return new_tile_id
 
