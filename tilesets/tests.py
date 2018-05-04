@@ -12,6 +12,7 @@ import django.test as dt
 import h5py
 import json
 import logging
+import os
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
@@ -23,6 +24,82 @@ import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
+def add_file(filename):
+    '''
+    Add a file to the media directory and return its
+    path. If a file with the same name exists, don't
+    override it.
+    Parameters:
+    -----------
+    filename: string
+        The path of the file in its original place
+    Returns:
+    -------
+    filename: string
+        The path of the file in the media directory
+    '''
+
+    target_dir = op.join(hss.MEDIA_ROOT, 'uploads', op.dirname(filename))
+
+    if not op.exists(target_dir):
+        os.makedirs(target_dir)
+
+    target_file = op.join(target_dir, op.basename(filename))
+
+    if not op.exists(target_file):
+        import shutil
+        shutil.copyfile(filename, 
+                target_file)
+
+    django_file = op.join('uploads', filename)
+
+    return django_file
+
+    # move the file to the media directory
+    # and give it some unique identifier
+    '''
+    upload_file = open('data/chromSizes.tsv', 'rb')
+    self.chroms = tm.Tileset.objects.create(
+        datafile=dcfu.SimpleUploadedFile(
+            upload_file.name, upload_file.read()
+        ),
+        filetype='bam',
+        datatype='chromsizes',
+        coordSystem="hg19",
+        owner=self.user1,
+        uuid='cs-hg19'
+    )
+    '''
+
+class BedfileTests(dt.TestCase):
+    def test_get_tileset_info(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/bedfile.bed', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='bedfile',
+            datatype='bedlike',
+            coordSystem="hg38",
+            owner=self.user1,
+            uuid='a'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            coordSystem="hg19",
+            owner=self.user1,
+            uuid='b'
+        )
+
+        ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
@@ -589,6 +666,60 @@ class CoolerTest(dt.TestCase):
 
         self.assertIn('g1a.0.0.0', contents)
 
+
+    """
+    def test_tile_multiresolution_consistency(self):
+        '''
+        Make sure that tiles are symmetric
+        '''
+        tileset = tm.Tileset.objects.create(
+            datafile=add_file('data/Rao2014-GM12878-MboI-allreps-filtered.1kb.multires.cool'),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='aa')
+
+        '''
+        tile_id = 'aa.6.10.19'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q = np.frombuffer(r, dtype=np.float16)
+        q = q.reshape((256,256))
+        '''
+
+        tile_id = 'aa.7.20.38'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q1 = np.frombuffer(r, dtype=np.float16)
+        print("Greater than 0:", len(q1[q1>0]))
+
+        #print(q1[0:10,0:10])
+
+        tile_id = 'aa.7.20.38.none'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        r = base64.decodestring(content[tile_id]['dense'].encode('utf-8'))
+        q1 = np.frombuffer(r, dtype=np.float16)
+        print("Greater than 0:", len(q1[q1>0]))
+
+        #print(q1[0:10,0:10])
+    """
+
+    def test_tile_nans(self):
+        tileset = tm.Tileset.objects.create(
+            datafile=add_file('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool'),
+            filetype='cooler',
+            datatype='matrix',
+            owner=self.user1,
+            uuid='aa')
+
+        tile_id = 'aa.4.5.5'
+        ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
+        content = json.loads(ret.content.decode('utf-8'));
+        data = content[tile_id] 
+
     def test_tile_symmetry(self):
         '''
         Make sure that tiles are symmetric
@@ -683,20 +814,6 @@ class CoolerTest(dt.TestCase):
 
         assert('md.7.92.97' in content)
         assert('dense' in content['md.7.92.97'])
-
-    def test_get_oob_tiles(self):
-        # This test is obsolete
-        # We don't necessarily need to return tiles that
-        # are out of bounds. The client just handle the
-        # fact that they aren't there
-        ret = self.client.get('/api/v1/tiles/?d=md.6.63.63')
-        content = json.loads(ret.content.decode('utf-8'))
-
-        '''
-        print("content:", content)
-        assert('md.7.63.63' in content)
-        assert('dense' in content['md.7.63.63'])
-        '''
 
     def test_get_empty_tiles(self):
         # this test is here to ensure that the function call doesn't
