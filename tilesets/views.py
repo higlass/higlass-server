@@ -23,6 +23,13 @@ import itertools as it
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.multivec_tiles as tmt
+
+import hgtiles.bedfile as hgbe
+import hgtiles.cooler as hgco
+import hgtiles.bigwig as hgbi
+import hgtiles.multivec as hgmu
+
+import tilesets.chromsizes as tcs
 import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
@@ -105,28 +112,22 @@ def available_chrom_sizes(request):
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def sizes(request):
     '''Return chromosome sizes.
-
     Retrieves the chromSiyes.tsv and either retrieves it as is or converts it
     to a JSON format.
-
     Args:
         request: HTTP GET request object. The request can feature the following
             queries:
-
             id: id of the stored chromSizes [e.g.: hg19 or mm9]
-            type: return data format [csv, tsv, or json]
+            type: return data format [tsv or json]
             cum: return cumulative size or offset [0 or 1]
-
     Returns:
         A HTTP text or JSON response depending on the GET request.
-
         A text response looks like this:
         ```
         chr1    1
         chr2    2
         ...
         ```
-
         A JSON response looks like this:
         ```
         {
@@ -163,7 +164,7 @@ def sizes(request):
     try:
         chrom_sizes = tm.Tileset.objects.get(uuid=uuid)
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         err_msg = 'Oh lord! ChromSizes for %s not found. 😬' % uuid
         err_status = 404
 
@@ -175,12 +176,21 @@ def sizes(request):
     # Try to load the chromosome sizes and return them as a list of 
     # (name, size) tuples
     try:
-        if chrom_sizes.filetype == 'cooler':
-            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+        if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
+            data = hgbi.chromsizes(tut.get_datapath(chrom_sizes.datafile))
+        elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
+            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile))
+        elif tgt.get_tileset_filetype(chrom_sizes) == 'chromsizes-tsv':
+            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile))
+        elif tgt.get_tileset_filetype(chrom_sizes) == 'multivec':
+            data = tcs.get_multivec_chromsizes(tut.get_datapath(chrom_sizes.datafile))
         else:
-            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = '';
+
     except Exception as ex:
+        logger.exception(ex)
         err_msg = str(ex)
+        print('err_msg:', err_msg)
         err_status = 500
 
         if is_json:
@@ -196,7 +206,7 @@ def sizes(request):
         if res_type == 'tsv':
             lines = []
             for (name, size) in data:
-                lines += ["{}\t{}".format(name, size)]
+                lines += ["{}\t{}\n".format(name, size)]
                 data = lines
 
         if res_type == 'json' and not incl_cum:
@@ -224,7 +234,7 @@ def sizes(request):
 
             data = json_out
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         err_msg = 'THIS IS AN OUTRAGE!!!1! Something failed. 😡'
         err_status = 500
 
@@ -234,7 +244,6 @@ def sizes(request):
         return response(err_msg, status=err_status)
 
     return response(data)
-
 
 @api_view(['GET'])
 def suggest(request):
@@ -350,7 +359,7 @@ def add_transform_type(tile_id):
     tileset_uuid = tile_id_parts[0]
     tile_position = tile_id_parts[1:4]
 
-    transform_type = tgt.get_transform_type(tile_id)
+    transform_type = hgco.get_transform_type(tile_id)
     new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
     return new_tile_id
 
@@ -489,6 +498,27 @@ def tileset_info(request):
     queryset = tm.Tileset.objects.all()
     tileset_uuids = request.GET.getlist("d")
     tileset_infos = {}
+
+    chromsizes_error = None
+    print('getlist:', request.GET.getlist)
+
+    if 'cs' in request.GET:
+        # we need to call a different server to get the tiles
+        if not 'ci' in request.GET.getlist:
+            chromsizes_error = 'cs param present without ci'
+
+        # call the request server and get the chromsizes
+        pass
+    else:
+        if 'ci' in request.GET:
+            try:
+                chromsizes = tm.Tileset.objects.get(uuid=request.GET['ci'])
+                data = tcs.chromsizes_array_to_series(
+                        tcs.get_tsv_chromsizes(tut.get_datapath(chromsizes.datafile.url)))
+                print('data:', data)
+            except Exception as ex:
+                pass
+
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
 
@@ -520,10 +550,13 @@ def tileset_info(request):
                 "tile_size": int(tileset_info['tile_size']),
                 "max_zoom": int(tileset_info['max_zoom'])
             }
+        elif tileset_object.filetype == 'bedfile':
+            tileset_infos[tileset_uuid] = hgbe.tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
         elif tileset_object.filetype == 'multivec':
-            tileset_infos[tileset_uuid] = tmt.get_tileset_info(
+            tileset_infos[tileset_uuid] = hgmu.tileset_info(
                     tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(

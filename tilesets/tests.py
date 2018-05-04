@@ -1,7 +1,5 @@
 from __future__ import print_function
 
-import cooler.contrib.higlass as cch
-
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
 import django.contrib.auth.models as dcam
@@ -16,7 +14,6 @@ import os
 import os.path as op
 import numpy as np
 import rest_framework.status as rfs
-import tilesets.tiles as tt
 import tilesets.models as tm
 import higlass_server.settings as hss
 import tilesets.generate_tiles as tgt
@@ -665,7 +662,6 @@ class CoolerTest(dt.TestCase):
         contents = json.loads(ret.content.decode('utf-8'))
 
         self.assertIn('g1a.0.0.0', contents)
-
 
     """
     def test_tile_multiresolution_consistency(self):
