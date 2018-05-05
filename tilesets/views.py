@@ -571,13 +571,9 @@ def tileset_info(request):
                 tut.get_datapath(tileset_object.datafile.url)
             )
         elif tileset_object.filetype == 'cooler':
-            dsetname = tut.get_datapath(queryset.filter(
-                uuid=tileset_uuid
-            ).first().datafile.url)
-
-            if dsetname not in tgt.mats:
-                tgt.make_mats(dsetname)
-            tileset_infos[tileset_uuid] = tgt.mats[dsetname][1]
+            tileset_infos[tileset_uuid] = hgco.tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url)
+            )
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {
