@@ -577,7 +577,7 @@ def tileset_info(request):
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {
-                'message': 'Unknown filetype ' + tileset_object.filetype
+                'error': 'Unknown filetype ' + tileset_object.filetype
             }
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
