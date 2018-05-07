@@ -94,15 +94,18 @@ def get_cooler(f, zoomout_level=0):
     c = None
 
     try:
-        zoom_levels = np.array(list(f['resolutions'].keys()), dtype=int)
+        if 'resolutions' in f:
+            zoom_levels = np.array(list(f['resolutions'].keys()), dtype=int)
 
-        max_zoom = np.max(zoom_levels)
-        min_zoom = np.min(zoom_levels)
+            max_zoom = np.max(zoom_levels)
+            min_zoom = np.min(zoom_levels)
 
-        zoom_level = max_zoom - max(zoomout_level, 0)
+            zoom_level = max_zoom - max(zoomout_level, 0)
 
-        if (zoom_level >= min_zoom and zoom_level <= max_zoom):
-            c = cooler.Cooler(f['resolutions'][str(zoom_level)])
+            if (zoom_level >= min_zoom and zoom_level <= max_zoom):
+                c = cooler.Cooler(f['resolutions'][str(zoom_level)])
+            else:
+                c = cooler.Cooler(f['0'])
         else:
             c = cooler.Cooler(f['0'])
 

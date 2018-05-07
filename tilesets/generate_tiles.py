@@ -90,6 +90,9 @@ def extract_tileset_uid(tile_id):
     return tileset_uuid
 
 
+def get_tileset_filetype(tileset):
+    return tileset.filetype
+
 def generate_1d_tiles(filename, tile_ids, get_data_function):
     '''
     Generate a set of tiles for the given tile_ids.

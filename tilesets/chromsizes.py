@@ -64,7 +64,7 @@ def get_cooler_chromsizes(filename):
             c = get_cooler(f)
         except Exception as e:
             logger.error(e)
-            raise Exception('Yikes... Couldn~\'t init them cooler files 😵')
+            raise Exception('Yikes... Couldn~\'t init cooler files 😵')
 
         try:
             data = []
@@ -73,7 +73,7 @@ def get_cooler_chromsizes(filename):
             return data
         except Exception as e:
             logger.error(e)
-            raise Exception( 'Them cooler files has no `chromsizes` attribute 🤔')
+            raise Exception( 'Cooler file has no `chromsizes` attribute 🤔')
 
 def get_tsv_chromsizes(filename):
     '''

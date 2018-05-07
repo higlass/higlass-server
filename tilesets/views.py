@@ -177,13 +177,13 @@ def sizes(request):
     # (name, size) tuples
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
-            data = hgbi.chromsizes(tut.get_datapath(chrom_sizes.datafile))
+            data = hgbi.chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
         elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
-            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile))
+            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
         elif tgt.get_tileset_filetype(chrom_sizes) == 'chromsizes-tsv':
-            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile))
+            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
         elif tgt.get_tileset_filetype(chrom_sizes) == 'multivec':
-            data = tcs.get_multivec_chromsizes(tut.get_datapath(chrom_sizes.datafile))
+            data = tcs.get_multivec_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
         else:
             data = '';
 
@@ -500,7 +500,6 @@ def tileset_info(request):
     tileset_infos = {}
 
     chromsizes_error = None
-    print('getlist:', request.GET.getlist)
 
     if 'cs' in request.GET:
         # we need to call a different server to get the tiles
