@@ -16,15 +16,6 @@ import tilesets.utils as tut
 
 import higlass_server.settings as hss
 
-global mats
-mats = {}
-
-transform_descriptions = {}
-transform_descriptions['weight'] = {'name': 'ICE', 'value': 'weight'}
-transform_descriptions['KR'] = {'name': 'KR', 'value': 'KR'}
-transform_descriptions['VC'] = {'name': 'VC', 'value': 'VC'}
-transform_descriptions['VC_SQRT'] = {'name': 'VC_SQRT', 'value': 'VC_SQRT'}
-
 def get_cached_datapath(relpath):
     '''
     Check if we need to cache this file or if we have a cached copy

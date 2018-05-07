@@ -24,7 +24,6 @@ import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.multivec_tiles as tmt
 
-import hgtiles.bedfile as hgbe
 import hgtiles.cooler as hgco
 import hgtiles.bigwig as hgbi
 import hgtiles.multivec as hgmu
@@ -549,9 +548,6 @@ def tileset_info(request):
                 "tile_size": int(tileset_info['tile_size']),
                 "max_zoom": int(tileset_info['max_zoom'])
             }
-        elif tileset_object.filetype == 'bedfile':
-            tileset_infos[tileset_uuid] = hgbe.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bigwig':
             tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
         elif tileset_object.filetype == 'multivec':

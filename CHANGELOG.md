@@ -1,3 +1,7 @@
+v1.6.0 (2018-05-07)
+
+- Start factoring out hgtiles code
+
 v1.5.3 (2018-01-
 
 - Refactored the chromsizes code to be more modular
