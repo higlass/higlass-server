@@ -30,6 +30,7 @@ hic-resolutions.cool
 wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig
 wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 chr21.KL.bed.multires.mv5
+sample.bed.multires.mv5
 END
 )
 
