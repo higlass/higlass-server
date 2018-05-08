@@ -5,8 +5,9 @@ v1.6.0 (2018-??-??)
 - Added support for serving OpenStreetMap image tile fragments, i.e., fragments from tile sets of filetype `osm-image`.
 - Added support for serving "plain" 2d annotations (filetype `2dannodb`; datatype `2d-rectangle-domains`)
 - Added support for serving GeoJSON (filetype `geodb`; datatype `geo-json`)
+- Start factoring out hgtiles code
+- Fixed bug with TSV chrom sizes
 
-v1.5.3 (2018-??-??)
 
 - Refactored the chromsizes code to be more modular
 

@@ -1,4 +1,4 @@
-python manage.py   ingest_tileset   --filename tmp/my_file.multires   --datatype multi-vector   --filetype multivec   --coordSystem hg19
+python manage.py   ingest_tileset   --filename uploads/hg38.tiled.multires   --datatype multivec   --filetype multivec   --coordSystem hg19 --no-upload
 
 export PYTHONPATH=$PYTHONPATH:.
 python scripts/test_aws_bigWig_fetch.py "/Users/pete/projects/httpfs/https//pkerp.s3.amazonaws.com/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig.." 0 0
@@ -26,6 +26,7 @@ aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
 aws s3 cp s3://pkerp/public/hic-resolutions.cool data/
 aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig data/
 aws s3 cp s3://pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile data/
+aws s3 cp s3://pkerp/publicr21.KL.bed.multires.mv5 data/
 
 
 rm -f tmp.db db.sqlite3; rm -r tilesets/migrations; python manage.py makemigrations tilesets; python manage.py migrate; 

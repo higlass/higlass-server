@@ -26,7 +26,7 @@ class CommandlineTest(unittest.TestCase):
                        [r'"'+id+'.1.1.1":',
                         r'"max_value": 2.0264008045196533',
                         r'"min_value": 0.0',
-                        r'"dense": "OjkAAAAAAA'])
+                        r'"dense": "OjkAAAAA'])
 
     def test_cli_huge_upload(self):
         cooler = 'huge.fake.cool'
