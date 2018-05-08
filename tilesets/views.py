@@ -205,7 +205,7 @@ def sizes(request):
             lines = []
             for (name, size) in data:
                 lines += ["{}\t{}".format(name, size)]
-                data = lines
+            data = '\n'.join(lines)
 
         if res_type == 'json' and not incl_cum:
             json_out = {}
@@ -517,10 +517,10 @@ def tileset_info(request):
 
         if tileset_uuid == 'osm-image':
             tileset_infos[tileset_uuid] = {
-                'min_x': -180,
-                'max_height': 180,
-                'min_y': -90,
-                'max_y': 90,
+                'min_x': 0,
+                'max_height': 134217728,
+                'min_y': 0,
+                'max_y': 134217728,
                 'max_zoom': 19,
                 'tile_size': 256
             }
