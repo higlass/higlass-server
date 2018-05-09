@@ -494,7 +494,7 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
         tile_position = list(map(int, tile_id_parts[1:4]))
         zoom_level = tile_position[0]
 
-        transform_method = get_transform_type(tile_id)
+        transform_method = hgco.get_transform_type(tile_id)
 
         tile_id_lists[(zoom_level, transform_method)].add(tile_id)
 
