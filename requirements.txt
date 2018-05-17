@@ -1,4 +1,4 @@
--e git+https://github.com/nvictus/pybbi.git@master#egg=pybbi
+-e git+https://github.com/nvictus/pybbi.git@v0.1.1#egg=pybbi
 bumpversion==0.5.3
 CacheControl==0.12.4
 cooler==0.7.10
