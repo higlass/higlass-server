@@ -595,7 +595,8 @@ def get_frag_by_loc_from_imtiles(
     got_info = False
 
     for locus in loci:
-        id = locus[-1]
+        id = locus[-2]
+        local_id = locus[-1]
 
         if not no_cache:
             im_snip = None
@@ -647,6 +648,14 @@ def get_frag_by_loc_from_imtiles(
                     'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
                     (zoom_level, y, x)
                 ).fetchone()[0])))
+
+        if local_id is not None:
+            preload_file, snip_id = local_id.split('.')
+            preload_db = sqlite3.connect(preload_file)
+            im_snip = preload_db.execute(
+                'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
+                (zoom_level, y, x)
+            ).fetchone()[0]
 
         im_snip = get_frag_from_image_tiles(
             tiles,
@@ -892,7 +901,7 @@ def collect_frags(
     fragments = []
 
     for locus in loci:
-        last_loc = len(locus) - 2
+        last_loc = len(locus) - 3
         fragments.append(get_frag(
             c,
             resolution,

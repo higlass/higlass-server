@@ -431,13 +431,13 @@ def tiles(request):
 
         # see if the tile is cached
         tile_value = None
-        try:
-            tile_value = rdb.get(tile_id)
-        except Exception as ex:
-            # there was an error accessing the cache server
-            # log the error and carry forward fetching the tile
-            # from the original data
-            logger.error(ex)
+        # try:
+        #     tile_value = rdb.get(tile_id)
+        # except Exception as ex:
+        #     # there was an error accessing the cache server
+        #     # log the error and carry forward fetching the tile
+        #     # from the original data
+        #     logger.error(ex)
 
         # tile_value = None
 

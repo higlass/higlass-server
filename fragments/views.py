@@ -146,6 +146,14 @@ GET_FRAG_PARAMS = {
             'fragments.'
         )
     },
+    'dtype': {
+        'short': 'dt',
+        'dtype': 'str',
+        'default': 'cooler',
+        'help': (
+            'Type of snippet. Can either be `cooler` or `image`. '
+        )
+    },
 }
 
 
@@ -207,7 +215,7 @@ def get_fragments_by_loci(request):
     4: start2         dataset
     5: end2           zoomLevel
     6: dataset        dim*
-    7: zoomOutLevel
+    7: zoomOutLevel   id*
     8: dim*
 
     *) Optional
@@ -228,9 +236,17 @@ def get_fragments_by_loci(request):
     max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
+    dtype = params['dtype']
 
-    tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
+    is_image = dtype == 'image'
+
+    tileset_idx = (
+        4 if (len(loci) and len(loci[0]) < 8) or is_image else 6
+    )
     zoom_level_idx = tileset_idx + 1
+    snippet_id_idx = (
+        7 if is_image and len(loci) and len(loci[0]) == 8 else None
+    )
 
     filetype = None
     new_filetype = None
@@ -244,6 +260,9 @@ def get_fragments_by_loci(request):
     loci_ids = []
     try:
         for locus in loci:
+            if not is_image:
+                locus = locus[:-1]
+
             tileset_file = ''
 
             if locus[tileset_idx]:
@@ -302,8 +321,10 @@ def get_fragments_by_loci(request):
 
             locus_id = '.'.join(map(str, locus))
 
+            local_id = locus[snippet_id_idx] if is_image else None
+
             loci_lists[tileset_file][locus[zoom_level_idx]].append(
-                locus[0:tileset_idx] + [i, inset_dim, locus_id]
+                locus[0:tileset_idx] + [i, inset_dim, locus_id, local_id]
             )
             loci_ids.append(locus_id)
 
@@ -349,7 +370,8 @@ def get_fragments_by_loci(request):
         str(aggregation_method) +
         str(max_previews) +
         str(encoding) +
-        str(representatives)
+        str(representatives) +
+        str(dtype)
     )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
