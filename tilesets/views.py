@@ -27,6 +27,7 @@ import tilesets.multivec_tiles as tmt
 import hgtiles.cooler as hgco
 import hgtiles.bigwig as hgbi
 import hgtiles.multivec as hgmu
+import hgtiles.time_interval as hgti
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
@@ -567,6 +568,10 @@ def tileset_info(request):
             )
         elif tileset_object.filetype == 'cooler':
             tileset_infos[tileset_uuid] = hgco.tileset_info(
+                    tut.get_datapath(tileset_object.datafile.url)
+            )
+        elif tileset_object.filetype == 'time-interval-json':
+            tileset_infos[tileset_uuid] = hgti.tileset_info(
                     tut.get_datapath(tileset_object.datafile.url)
             )
         else:
