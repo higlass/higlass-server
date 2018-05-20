@@ -48,16 +48,11 @@ def get_cached_datapath(relpath):
 
         # check to make sure the destination directory exists
         dest_dir = op.dirname(cached_path)
-        print("dest_dir:", dest_dir)
 
         if not op.exists(dest_dir):
             os.makedirs(dest_dir)
 
-        print("moving:", cached_path)
-        print("stat:", os.stat(tmp))
         shutil.move(tmp, cached_path)
-        print("stat:", os.stat(cached_path))
-        print('abspath:', op.abspath(cached_path))
 
     return cached_path
 
