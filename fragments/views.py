@@ -13,6 +13,7 @@ except:
 
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
+from io import BytesIO
 from os import path
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
@@ -32,7 +33,9 @@ from fragments.utils import (
     get_rep_frags,
     rel_loci_2_obj,
     np_to_png,
-    write_png
+    write_png,
+    grey_to_rgb,
+    blob_to_zip
 )
 from higlass_server.utils import getRdb
 
@@ -517,11 +520,20 @@ def get_fragments_by_loci(request):
     # Cache results for 30 minutes
     rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
 
-    if encoding == 'image' and len(matrices) == 1:
-        im = Image.fromarray(np.uint8(matrices[0]))
-        response = HttpResponse(content_type='image/png')
-        im.save(response, format='png')
-        return response
+    if encoding == 'image':
+        if len(matrices) == 1:
+            return HttpResponse(
+                np_to_png(grey_to_rgb(matrices[0], to_rgba=True)),
+                content_type='image/png'
+            )
+        else:
+            ims = []
+            for i, matrix in enumerate(matrices):
+                ims.append({
+                    'name': '{}.png'.format(i),
+                    'bytes': np_to_png(grey_to_rgb(matrix, to_rgba=True))
+                })
+            return blob_to_zip(ims, to_resp=True)
 
     return JsonResponse(results)
 

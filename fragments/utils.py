@@ -13,11 +13,14 @@ import math
 
 from numba import jit
 from random import random
-from io import BytesIO
+from io import BytesIO, StringIO
 from PIL import Image
 from sklearn.cluster import KMeans
 from scipy.ndimage.interpolation import zoom
 from cachecontrol import CacheControl
+from zipfile import ZipFile
+
+from django.http import HttpResponse
 
 from geotiles.utils import get_tile_pos_from_lng_lat
 
@@ -32,6 +35,39 @@ logger = logging.getLogger(__name__)
 
 
 # Methods
+
+def grey_to_rgb(arr, to_rgba=False):
+    if to_rgba:
+        rgb = np.zeros(arr.shape + (4,))
+        rgb[:, :, 3] = 255
+    else:
+        rgb = np.zeros(arr.shape + (3,))
+
+    rgb[:, :, 0] = 255 - arr * 255
+    rgb[:, :, 1] = rgb[:,:,0]
+    rgb[:, :, 2] = rgb[:,:,0]
+
+    return rgb
+
+
+def blob_to_zip(blobs, to_resp=False):
+    b = BytesIO()
+
+    zf = ZipFile(b, 'w')
+
+    for blob in blobs:
+        zf.writestr(blob['name'], blob['bytes'])
+
+    zf.close()
+
+    if to_resp:
+        resp = HttpResponse(b.getvalue(), content_type='application/zip')
+        resp['Content-Disposition'] = 'attachment; filename=snippets.zip'
+
+        return resp
+
+    return b.getvalue()
+
 
 def np_to_png(arr, comp=5):
     sz = arr.shape
