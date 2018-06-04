@@ -1074,8 +1074,6 @@ def get_frag(
     end_bin1 += padding1
     end_bin2 += padding2
 
-    print(start1, start_bin1, end1, end_bin1, resolution)
-
     # Get the size of the region
     dim1 = end_bin1 - start_bin1
     dim2 = end_bin2 - start_bin2
@@ -1244,8 +1242,6 @@ def get_frag(
     if not scaled:
         # Recover low quality bins
         frag[low_quality_bins] = -1
-
-    print(frag[0, 0:10])
 
     return frag
 
