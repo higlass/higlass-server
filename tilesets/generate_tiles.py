@@ -49,17 +49,12 @@ def get_cached_datapath(relpath):
         shutil.copyfile(orig_path, tmp)
 
         # check to make sure the destination directory exists
-        dest_dir = os.path.dirname(cached_path)
-        print("dest_dir:", dest_dir)
+        dest_dir = op.dirname(cached_path)
 
         if not os.path.exists(dest_dir):
             os.makedirs(dest_dir)
 
-        print("moving:", cached_path)
-        print("stat:", os.stat(tmp))
         shutil.move(tmp, cached_path)
-        print("stat:", os.stat(cached_path))
-        print('abspath:', os.path.abspath(cached_path))
 
     return cached_path
 
@@ -571,7 +566,7 @@ def bin_tiles_by_zoom_level_and_transform(tile_ids):
         tile_position = list(map(int, tile_id_parts[1:4]))
         zoom_level = tile_position[0]
 
-        transform_method = get_transform_type(tile_id)
+        transform_method = hgco.get_transform_type(tile_id)
 
         tile_id_lists[(zoom_level, transform_method)].add(tile_id)
 
