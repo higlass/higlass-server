@@ -21,7 +21,7 @@ from zipfile import ZipFile
 
 from django.http import HttpResponse
 
-from geotiles.utils import get_tile_pos_from_lng_lat
+from hgtiles.geo import get_tile_pos_from_lng_lat
 
 from higlass_server.utils import getRdb
 
