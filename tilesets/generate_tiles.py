@@ -4,6 +4,7 @@ import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
 import hgtiles.cooler as hgco
+import hgtiles.geo as hggo
 import hgtiles.imtiles as hgim
 import h5py
 import itertools as it
@@ -345,7 +346,7 @@ def generate_beddb_tiles(tileset, tile_ids):
 
     return generated_tiles
 
-def generate_bed2ddb_tiles(tileset, tile_ids):
+def generate_bed2ddb_tiles(tileset, tile_ids, retriever=cdt.get_2d_tiles):
     '''
     Generate tiles from a bed2db file.
 
@@ -389,7 +390,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        tile_data_by_position = cdt.get_2d_tiles(
+        tile_data_by_position = retriever(
                 cached_datapath,
                 zoom_level,
                 minx, miny,
@@ -581,8 +582,10 @@ def generate_tiles(tileset_tile_ids):
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2ddb':
+    elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
         return generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'geodb':
+        return generate_bed2ddb_tiles(tileset, tile_ids, hggo.get_tiles)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
