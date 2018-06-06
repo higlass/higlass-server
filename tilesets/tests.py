@@ -46,7 +46,7 @@ def add_file(filename):
 
     if not op.exists(target_file):
         import shutil
-        shutil.copyfile(filename, 
+        shutil.copyfile(filename,
                 target_file)
 
     django_file = op.join('uploads', filename)
@@ -144,7 +144,7 @@ class MultivecTests(dt.TestCase):
         '''
 
         ret = self.client.get('/api/v1/tiles/?d=a.11.0')
-        content = json.loads(ret.content)
+        content = json.loads(ret.content.decode('utf-8'))
         r = base64.decodestring(content['a.11.0']['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
@@ -714,7 +714,7 @@ class CoolerTest(dt.TestCase):
         tile_id = 'aa.4.5.5'
         ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
         content = json.loads(ret.content.decode('utf-8'));
-        data = content[tile_id] 
+        data = content[tile_id]
 
     def test_tile_symmetry(self):
         '''

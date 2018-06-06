@@ -23,7 +23,8 @@ def getRdb():
         try:
             rdb = redis.Redis(
                 host=hss.REDIS_HOST,
-                port=hss.REDIS_PORT)
+                port=hss.REDIS_PORT
+            )
 
             # Test server connection
             rdb.ping()
