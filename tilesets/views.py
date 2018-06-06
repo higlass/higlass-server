@@ -28,6 +28,8 @@ import hgtiles.cooler as hgco
 import hgtiles.bigwig as hgbi
 import hgtiles.multivec as hgmu
 import hgtiles.time_interval as hgti
+import hgtiles.geo as hggo
+import hgtiles.imtiles as hgim
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
@@ -173,7 +175,7 @@ def sizes(request):
 
         return response(err_msg, status=err_status)
 
-    # Try to load the chromosome sizes and return them as a list of 
+    # Try to load the chromosome sizes and return them as a list of
     # (name, size) tuples
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
@@ -389,6 +391,10 @@ def tiles(request):
     res = p.map(parallelize, hargs)
     '''
 
+    # Return the raw data if only one tile is requested. This currently only
+    # works for `imtiles`
+    raw = request.GET.get('raw', False)
+
     tileids_by_tileset = col.defaultdict(set)
     generated_tiles = []
 
@@ -424,7 +430,7 @@ def tiles(request):
             # log the error and carry forward fetching the tile
             # from the original data
             logger.error(ex)
-            
+
         #tile_value = None
 
         if tile_value is not None:
@@ -437,7 +443,7 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid]) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
     #pool = mp.Pool(6)
 
@@ -476,6 +482,11 @@ def tiles(request):
 
         if original_tile_id in tileids_to_fetch:
             tiles_to_return[original_tile_id] = tile_value
+
+    if len(generated_tiles) == 1 and raw and 'image' in generated_tiles[0][1]:
+        return HttpResponse(
+            generated_tiles[0][1]['image'], content_type='image/jpeg'
+        )
 
     return JsonResponse(tiles_to_return, safe=False)
 
@@ -520,6 +531,17 @@ def tileset_info(request):
 
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
+
+        if tileset_uuid == 'osm-image':
+            tileset_infos[tileset_uuid] = {
+                'min_x': 0,
+                'max_height': 134217728,
+                'min_y': 0,
+                'max_y': 134217728,
+                'max_zoom': 19,
+                'tile_size': 256
+            }
+            continue
 
         if tileset_object is None:
             tileset_infos[tileset_uuid] = {
@@ -573,6 +595,17 @@ def tileset_info(request):
         elif tileset_object.filetype == 'time-interval-json':
             tileset_infos[tileset_uuid] = hgti.tileset_info(
                     tut.get_datapath(tileset_object.datafile.url)
+            )
+        elif (
+            tileset_object.filetype == '2dannodb' or
+            tileset_object.filetype == 'imtiles'
+        ):
+            tileset_infos[tileset_uuid] = hgim.get_tileset_info(
+                tut.get_datapath(tileset_object.datafile.url)
+            )
+        elif tileset_object.filetype == 'geodb':
+            tileset_infos[tileset_uuid] = hggo.tileset_info(
+                tut.get_datapath(tileset_object.datafile.url)
             )
         else:
             # Unknown filetype
