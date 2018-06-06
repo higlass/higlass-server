@@ -1218,6 +1218,8 @@ def get_frag(
         min_val = np.min(frag)
         frag -= min_val
 
+    ignored_idx = None
+
     # Remove diagonals
     if ignore_diags > 0 and diags_start_row is not None:
         if width == height:
@@ -1232,8 +1234,10 @@ def get_frag(
 
             for i in range(ignore_diags):
 
+                # First set all cells to be ignored to `-1` so that we can
+                # easily query for them later.
                 if i == 0:
-                    frag[scaled_idx] = 0
+                    frag[scaled_idx] = -1
                 else:
                     dist_to_diag = scaled_row - i
                     dist_neg = min(0, dist_to_diag)
@@ -1242,7 +1246,7 @@ def get_frag(
                     # Above diagonal
                     frag[
                         ((scaled_idx[0] - i)[off:], (scaled_idx[1])[off:])
-                    ] = 0
+                    ] = -1
 
                     # Extra cutoff at the bottom right
                     frag[
@@ -1256,12 +1260,18 @@ def get_frag(
                                 scaled_idx[1][-1] + i + 1 + dist_neg
                             )
                         )
-                    ] = 0
+                    ] = -1
 
                     # Below diagonal
                     frag[
                         ((scaled_idx[0] + i)[:-i], (scaled_idx[1])[:-i])
-                    ] = 0
+                    ] = -1
+
+            # Save the final selection of ignored cells for fast access
+            # later and set those values to `0` now.
+            ignored_idx = np.where(frag == -1)
+            frag[ignored_idx] = 0
+
         else:
             logger.warn(
                 'Ignoring the diagonal only supported for squared features'
@@ -1274,6 +1284,10 @@ def get_frag(
     # Normalize by maximum
     if not no_normalize and max_val > 0:
         frag /= max_val
+
+    # Set the ignored diagonal to the maximum
+    if ignored_idx:
+        frag[ignored_idx] = 1.0
 
     if not scaled:
         # Recover low quality bins
