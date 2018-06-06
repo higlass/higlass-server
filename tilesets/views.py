@@ -604,7 +604,7 @@ def tileset_info(request):
                 tut.get_datapath(tileset_object.datafile.url)
             )
         elif tileset_object.filetype == 'geodb':
-            tileset_infos[tileset_uuid] = hggo.get_tileset_info(
+            tileset_infos[tileset_uuid] = hggo.tileset_info(
                 tut.get_datapath(tileset_object.datafile.url)
             )
         else:
