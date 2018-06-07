@@ -7,13 +7,151 @@ import h5py
 import logging
 import numpy as np
 import pandas as pd
+import sqlite3
+import requests
+import math
 
+from random import random
+from io import BytesIO, StringIO
+from PIL import Image
+from sklearn.cluster import KMeans
 from scipy.ndimage.interpolation import zoom
+from cachecontrol import CacheControl
+from zipfile import ZipFile
+
+from django.http import HttpResponse
+
+from hgtiles.geo import get_tile_pos_from_lng_lat
+
+from higlass_server.utils import getRdb
+
+import zlib
+import struct
+
+rdb = getRdb()
 
 logger = logging.getLogger(__name__)
 
 
 # Methods
+
+def grey_to_rgb(arr, to_rgba=False):
+    if to_rgba:
+        rgb = np.zeros(arr.shape + (4,))
+        rgb[:, :, 3] = 255
+    else:
+        rgb = np.zeros(arr.shape + (3,))
+
+    rgb[:, :, 0] = 255 - arr * 255
+    rgb[:, :, 1] = rgb[:,:,0]
+    rgb[:, :, 2] = rgb[:,:,0]
+
+    return rgb
+
+
+def blob_to_zip(blobs, to_resp=False):
+    b = BytesIO()
+
+    zf = ZipFile(b, 'w')
+
+    for blob in blobs:
+        zf.writestr(blob['name'], blob['bytes'])
+
+    zf.close()
+
+    if to_resp:
+        resp = HttpResponse(b.getvalue(), content_type='application/zip')
+        resp['Content-Disposition'] = 'attachment; filename=snippets.zip'
+
+        return resp
+
+    return b.getvalue()
+
+
+def np_to_png(arr, comp=5):
+    sz = arr.shape
+
+    # Add alpha values
+    if arr.shape[2] == 3:
+        out = np.ones(
+            (sz[0], sz[1], sz[2] + 1)
+        )
+        out[:, :, 3] = 255
+        out[:, :, 0:3] = arr
+    else:
+        out = arr
+
+    return write_png(
+        np.flipud(out).astype('uint8').flatten('C').tobytes(),
+        sz[1],
+        sz[0],
+        comp
+    )
+
+
+def png_pack(png_tag, data):
+    chunk_head = png_tag + data
+    return (struct.pack("!I", len(data)) +
+            chunk_head +
+            struct.pack("!I", 0xFFFFFFFF & zlib.crc32(chunk_head)))
+
+
+def write_png(buf, width, height, comp=9):
+    """ buf: must be bytes or a bytearray in Python3.x,
+        a regular string in Python2.x.
+    """
+
+    # reverse the vertical line order and add null bytes at the start
+    width_byte_4 = width * 4
+    raw_data = b''.join(
+        b'\x00' + buf[span:span + width_byte_4]
+        for span in np.arange((height - 1) * width_byte_4, -1, - width_byte_4)
+    )
+
+    return b''.join([
+        b'\x89PNG\r\n\x1a\n',
+        png_pack(b'IHDR', struct.pack("!2I5B", width, height, 8, 6, 0, 0, 0)),
+        png_pack(b'IDAT', zlib.compress(raw_data, comp)),
+        png_pack(b'IEND', b'')])
+
+
+def get_params(request, param_def):
+    """Get query params of a request
+
+    Retrieve query params of a request given the parameter definition file. A
+    parameter definition looks like
+    ```
+    '<PARAMETER FULL NAME>': {
+        'short': '<PARAMETER SHORT NAME>',
+        'dtype': '<PARAMETER DATA TYPE>',
+        'help': '<PARAMETER HELP MESSAGE>'
+    }
+    ```
+
+    Arguments:
+        request {request} -- Request object
+        param_def {dict} -- [description]
+
+    Returns:
+        dict -- Dictionary of parameter name<>values pairs
+    """
+    p = {}
+    dtype = {
+        'int': int,
+        'float': float,
+        'bool': bool,
+        'str': str,
+    }
+
+    for key in param_def.keys():
+
+        p[key] = request.GET.get(param_def[key]['short'])
+        p[key] = p[key] if p[key] else request.GET.get(key)
+        p[key] = p[key] if p[key] else param_def[key]['default']
+        p[key] = dtype[param_def[key]['dtype']](p[key])
+
+    return p
+
 
 def get_chrom_names_cumul_len(c):
     '''
@@ -94,18 +232,18 @@ def get_cooler(f, zoomout_level=0):
     c = None
 
     try:
-        if 'resolutions' in f:
-            zoom_levels = np.array(list(f['resolutions'].keys()), dtype=int)
+        # Check for new fancy way of storing resolutions
+        f = f['resolutions'] if 'resolutions' in f else f
 
-            max_zoom = np.max(zoom_levels)
-            min_zoom = np.min(zoom_levels)
+        zoom_levels = np.array(list(f.keys()), dtype=int)
 
-            zoom_level = max_zoom - max(zoomout_level, 0)
+        max_zoom = np.max(zoom_levels)
+        min_zoom = np.min(zoom_levels)
 
-            if (zoom_level >= min_zoom and zoom_level <= max_zoom):
-                c = cooler.Cooler(f['resolutions'][str(zoom_level)])
-            else:
-                c = cooler.Cooler(f['0'])
+        zoom_level = max_zoom - max(zoomout_level, 0)
+
+        if (zoom_level >= min_zoom and zoom_level <= max_zoom):
+            c = cooler.Cooler(f[str(zoom_level)])
         else:
             c = cooler.Cooler(f['0'])
 
@@ -122,7 +260,7 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
-def get_frag_by_loc(
+def get_frag_by_loc_from_cool(
     cooler_file,
     loci,
     dim,
@@ -131,7 +269,8 @@ def get_frag_by_loc(
     padding=None,
     percentile=100.0,
     ignore_diags=0,
-    no_normalize=False
+    no_normalize=False,
+    aggregate=False,
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
@@ -151,10 +290,545 @@ def get_frag_by_loc(
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
-            no_normalize=no_normalize
+            no_normalize=no_normalize,
+            aggregate=aggregate
         )
 
     return fragments
+
+
+def get_scale_frags_to_same_size(frags, loci_ids, out_size=-1, no_cache=False):
+    """Scale fragments to same size
+
+    [description]
+
+    Arguments:
+        frags {list} -- List of numpy arrays representing the fragments
+
+    Returns:
+        np.array -- Numpy array of scaled fragments
+    """
+    # Use the smallest dim
+    dim_x = np.inf
+    dim_y = np.inf
+    is_image = False
+
+    largest_frag_idx = -1
+    largest_frag_size = 0
+    smallest_frag_idx = -1
+    smallest_frag_size = np.inf
+
+    for i, frag in enumerate(frags):
+        is_image = is_image or frag.ndim == 3
+
+        if is_image:
+            f_dim_y, f_dim_x, _ = frag.shape  # from PIL.Image
+        else:
+            f_dim_x, f_dim_y = frag.shape
+
+        size = f_dim_x * f_dim_y
+
+        if size > largest_frag_size:
+            largest_frag_idx = i
+            largest_frag_size = size
+
+        if size < smallest_frag_size:
+            smallest_frag_idx = i
+            smallest_frag_size = size
+
+        dim_x = min(dim_x, f_dim_x)
+        dim_y = min(dim_y, f_dim_y)
+
+    if out_size != -1 and not no_cache:
+        dim_x = out_size
+        dim_y = out_size
+
+    if is_image:
+        out = np.zeros([len(frags), dim_y, dim_x, 3])
+    else:
+        out = np.zeros([len(frags), dim_x, dim_y])
+
+    for i, frag in enumerate(frags):
+        id = loci_ids[i] + '.' + '.'.join(map(str, out.shape[1:]))
+
+        if not no_cache:
+            frag_ds = None
+            try:
+                frag_ds = np.load(BytesIO(rdb.get('im_snip_ds_%s' % id)))
+                if frag_ds is not None:
+                    out[i] = frag_ds
+                    continue
+            except:
+                pass
+
+        if is_image:
+            f_dim_y, f_dim_x, _ = frag.shape  # from PIL.Image
+            scaledFrag = np.zeros((dim_y, dim_x, 3), float)
+        else:
+            f_dim_x, f_dim_y = frag.shape
+            scaledFrag = np.zeros((dim_x, dim_y), float)
+
+        # Downsample
+        # if f_dim_x > dim_x or f_dim_y > dim_y:
+
+        # stupid zoom doesn't accept the final shape. Carefully crafting
+        # the multipliers to make sure that it will work.
+        zoomMultipliers = np.array(scaledFrag.shape) / np.array(frag.shape)
+        frag = zoom(frag, zoomMultipliers, order=1)
+
+        # frag = scaledFrag + zoomArray(frag,
+        #     frag, scaledFrag.shape, order=1
+        # )
+
+        if not no_cache:
+            with BytesIO() as b:
+                np.save(b, frag)
+                rdb.set('im_snip_ds_%s' % id, b.getvalue(), 60 * 30)
+
+        out[i] = frag
+
+    return out, largest_frag_idx, smallest_frag_idx
+
+
+def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
+    """Get a number of representatives for each cluster
+
+    [description]
+
+    Arguments:
+        frags {list} -- List of numpy arrays representing the fragment
+        num_reps {int} -- Number of representatives
+    """
+    num_frags = len(frags)
+
+    if num_frags < 5:
+        sizes = np.zeros([num_frags])
+
+        for i, frag in enumerate(frags):
+            sizes[i] = np.prod(frag.shape[0:2])
+
+        idx = np.argsort(sizes).astype(np.uint8)[::-1]
+
+        return [frags[i] for i in idx], idx
+
+    out, _, _ = get_scale_frags_to_same_size(
+        frags, loci_ids, 32, no_cache
+    )
+
+    # Get largest frag based on world coords
+    largest_a = 0
+    for i, locus in enumerate(loci):
+        a = abs(locus[1] - locus[0]) * abs(locus[3] - locus[2])
+        if a > largest_a:
+            largest_a = a
+            largest_frag_idx = i
+
+    mean_frag = np.nanmean(out, axis=0)
+    diff_mean_frags = out - mean_frag
+
+    # Sum each x,y and c (channel) value up per f (fragment) and take the
+    # sqaure root to get the L2 norm
+    dist_to_mean = np.sqrt(
+        np.einsum('fxyc,fxyc->f', diff_mean_frags, diff_mean_frags)
+    )
+
+    # Get the fragment closest to the mean
+    # Get the index of the i-th smallest value i=0 == smallest value
+    closest_mean_frag_idx = np.argpartition(dist_to_mean, 0)[0]
+    if closest_mean_frag_idx == largest_frag_idx:
+        closest_mean_frag_idx = np.argpartition(dist_to_mean, 1)[1]
+
+    # Get the frag farthest away from
+    for i in range(len(dist_to_mean) - 1, -1, -1):
+        farthest_mean_frag_idx = np.argpartition(dist_to_mean, i)[i]
+        if (
+            farthest_mean_frag_idx != largest_frag_idx and
+            farthest_mean_frag_idx != closest_mean_frag_idx
+        ):
+            break
+
+    # Distance to farthest away frag
+    diff_farthest_frags = out - out[np.argmax(dist_to_mean)]
+    dist_to_farthest = np.sqrt(
+        np.einsum('fxyc,fxyc->f', diff_farthest_frags, diff_farthest_frags)
+    )
+
+    # Get the frag farthest away from the frag farthest away from the mean
+    for i in range(len(dist_to_farthest) - 1, -1, -1):
+        farthest_farthest_frag_idx = np.argpartition(dist_to_farthest, i)[i]
+        if (
+            farthest_farthest_frag_idx != largest_frag_idx and
+            farthest_farthest_frag_idx != closest_mean_frag_idx and
+            farthest_farthest_frag_idx != farthest_mean_frag_idx
+        ):
+            break
+
+    frags = [
+        frags[largest_frag_idx],
+        frags[closest_mean_frag_idx],
+        frags[farthest_mean_frag_idx],
+        frags[farthest_farthest_frag_idx]
+    ]
+
+    idx = [
+        largest_frag_idx,
+        closest_mean_frag_idx,
+        farthest_mean_frag_idx,
+        farthest_farthest_frag_idx
+    ]
+
+    return frags, idx
+
+
+def aggregate_frags(
+    frags,
+    loci_ids,
+    method='mean',
+    max_previews=8,
+):
+    """Aggregate multiple fragments into one
+
+    Arguments:
+        frags {list} -- A list of numpy arrays to be aggregated
+
+    Keyword Arguments:
+        method {str} -- Aggregation method. Available methods are
+            {'mean', 'median', 'std', 'var'}. (default: {'mean'})
+
+    Returns:
+        np.array -- Numpy array aggregated by the fragments. This array
+            represents the image aggregation.
+        np.array -- Numpy arrat aggregated along the Y axis. This array
+            represents the 1D previews.
+    """
+    out, _, _ = get_scale_frags_to_same_size(frags, loci_ids, -1, True)
+
+    if max_previews > 0:
+        if len(frags) > max_previews:
+            clusters = KMeans(n_clusters=max_previews, random_state=0).fit(
+                np.reshape(out, (out.shape[0], -1))
+            )
+            previews = np.zeros((max_previews,) + out.shape[2:])
+
+        else:
+            previews = np.zeros((len(frags),) + out.shape[2:])
+
+    previews_2d = []
+
+    if method == 'median':
+        aggregate = np.nanmedian(out, axis=0)
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanmedian(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )[0]
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
+
+    elif method == 'std':
+        aggregate = np.nanstd(out, axis=0)
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanstd(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )[0]
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
+
+    elif method == 'var':
+        aggregate = np.nanvar(out, axis=0)
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                previews[i] = np.nanvar(
+                    out[np.where(clusters.labels_ == i)], axis=1
+                )[0]
+        else:
+            previews = np.nanmedian(out, axis=1)
+        return aggregate, previews
+
+    elif method != 'mean':
+        print('Unknown aggregation method: {}'.format(method))
+
+    aggregate = np.nanmean(out, axis=0)
+    if max_previews > 0:
+        if len(frags) > max_previews:
+            for i in range(max_previews):
+                # Aggregated preview
+                previews[i] = np.nanmean(
+                    out[np.where(clusters.labels_ == i)[0]], axis=1
+                )[0]
+                previews_2d.append(np.nanmean(
+                    out[np.where(clusters.labels_ == i)], axis=0
+                ))
+        else:
+            previews = np.nanmedian(out, axis=1)
+            previews_2d = frags
+    else:
+        previews = None
+        previews_2d = None
+
+    return aggregate, previews, previews_2d
+
+
+def get_frag_from_image_tiles(
+    tiles,
+    tile_size,
+    tiles_x_range,
+    tiles_y_range,
+    tile_start1_id,
+    tile_start2_id,
+    from_x,
+    to_x,
+    from_y,
+    to_y
+):
+    im = (
+        tiles[0]
+        if len(tiles) == 1
+        else Image.new(
+            'RGB',
+            (tile_size * len(tiles_x_range), tile_size * len(tiles_y_range))
+        )
+    )
+
+    # Stitch them tiles together
+    if len(tiles) > 1:
+        i = 0
+        for y in range(len(tiles_y_range)):
+            for x in range(len(tiles_x_range)):
+                im.paste(tiles[i], (x * tile_size, y * tile_size))
+                i += 1
+
+    # Convert starts and ends to local tile ids
+    start1_rel = from_x - tile_start1_id * tile_size
+    end1_rel = to_x - tile_start1_id * tile_size
+    start2_rel = from_y - tile_start2_id * tile_size
+    end2_rel = to_y - tile_start2_id * tile_size
+
+    # Notice the shape: height x width x channel
+    return np.array(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
+
+
+def get_frag_by_loc_from_imtiles(
+    imtiles_file,
+    loci,
+    zoom_level=0,
+    padding=0,
+    tile_size=256,
+    no_cache=False
+):
+    db = None
+    div = 1
+    width = 0
+    height = 0
+
+    ims = []
+
+    got_info = False
+
+    for locus in loci:
+        id = locus[-1]
+
+        if not no_cache:
+            im_snip = None
+            try:
+                im_snip = np.load(BytesIO(rdb.get('im_snip_%s' % id)))
+                if im_snip is not None:
+                    ims.append(im_snip)
+                    continue
+            except:
+                pass
+
+        if not got_info:
+            db = sqlite3.connect(imtiles_file)
+            info = db.execute('SELECT * FROM tileset_info').fetchone()
+
+            max_zoom = info[6]
+            max_width = info[8]
+            max_height = info[9]
+
+            div = 2 ** (max_zoom - zoom_level)
+            width = max_width / div
+            height = max_height / div
+
+            got_info = True
+
+        start1 = round(locus[0] / div)
+        end1 = round(locus[1] / div)
+        start2 = round(locus[2] / div)
+        end2 = round(locus[3] / div)
+
+        if not is_within(start1, end1, start2, end2, width, height):
+            ims.append(None)
+            continue
+
+        # Get tile ids
+        tile_start1_id = start1 // tile_size
+        tile_end1_id = end1 // tile_size
+        tile_start2_id = start2 // tile_size
+        tile_end2_id = end2 // tile_size
+
+        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+
+        # Extract image tiles
+        tiles = []
+        for y in tiles_y_range:
+            for x in tiles_x_range:
+                tiles.append(Image.open(BytesIO(db.execute(
+                    'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
+                    (zoom_level, y, x)
+                ).fetchone()[0])))
+
+        im_snip = get_frag_from_image_tiles(
+            tiles,
+            tile_size,
+            tiles_x_range,
+            tiles_y_range,
+            tile_start1_id,
+            tile_start2_id,
+            start1,
+            end1,
+            start2,
+            end2
+        )
+
+        # Cache for 30 min
+        if not no_cache:
+            with BytesIO() as b:
+                np.save(b, im_snip)
+                rdb.set('im_snip_%s' % id, b.getvalue(), 60 * 30)
+
+        ims.append(im_snip)
+
+    if db:
+        db.close()
+
+    return ims
+
+
+def get_frag_by_loc_from_osm(
+    imtiles_file,
+    loci,
+    zoom_level=0,
+    padding=0,
+    tile_size=256,
+    no_cache=False
+):
+    width = 360
+    height = 180
+
+    ims = []
+
+    prefixes = ['a', 'b', 'c']
+    prefix_idx = math.floor(random() * len(prefixes))
+    osm_src = 'http://{}.tile.openstreetmap.org'.format(prefixes[prefix_idx])
+
+    s = CacheControl(requests.Session())
+
+    for locus in loci:
+        id = locus[-1]
+
+        if not no_cache:
+            osm_snip = None
+            try:
+                osm_snip = np.load(BytesIO(rdb.get('osm_snip_%s' % id)))
+                if osm_snip is not None:
+                    ims.append(osm_snip)
+                    continue
+            except:
+                pass
+
+        start_lng = locus[0]
+        end_lng = locus[1]
+        start_lat = locus[2]
+        end_lat = locus[3]
+
+        if not is_within(
+            start_lng + 180,
+            end_lng + 180,
+            end_lat + 90,
+            start_lat + 90,
+            width,
+            height
+        ):
+            ims.append(None)
+            continue
+
+        # Get tile ids
+        start1, start2 = get_tile_pos_from_lng_lat(
+            start_lng, start_lat, zoom_level
+        )
+        end1, end2 = get_tile_pos_from_lng_lat(
+            end_lng, end_lat, zoom_level
+        )
+
+        xPad = padding * (end1 - start1)
+        yPad = padding * (start2 - end2)
+
+        start1 -= xPad
+        end1 += xPad
+        start2 += yPad
+        end2 -= yPad
+
+        tile_start1_id = math.floor(start1)
+        tile_start2_id = math.floor(start2)
+        tile_end1_id = math.floor(end1)
+        tile_end2_id = math.floor(end2)
+
+        start1 = math.floor(start1 * tile_size)
+        start2 = math.floor(start2 * tile_size)
+        end1 = math.ceil(end1 * tile_size)
+        end2 = math.ceil(end2 * tile_size)
+
+        tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
+        tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+
+        # Extract image tiles
+        tiles = []
+        for y in tiles_y_range:
+            for x in tiles_x_range:
+                src = (
+                    '{}/{}/{}/{}.png'
+                    .format(osm_src, zoom_level, x, y)
+                )
+
+                r = s.get(src)
+
+                if r.status_code == 200:
+                    tiles.append(Image.open(
+                        BytesIO(r.content)
+                    ).convert('RGB'))
+                else:
+                    tiles.append(None)
+
+        osm_snip = get_frag_from_image_tiles(
+            tiles,
+            tile_size,
+            tiles_x_range,
+            tiles_y_range,
+            tile_start1_id,
+            tile_start2_id,
+            start1,
+            end1,
+            start2,
+            end2
+        )
+
+        if not no_cache:
+            with BytesIO() as b:
+                np.save(b, osm_snip)
+                rdb.set('osm_snip_%s' % id, b.getvalue(), 60 * 30)
+
+        ims.append(osm_snip)
+
+    return ims
+
+
+def is_within(start1, end1, start2, end2, width, height):
+    return start1 < width and end1 > 0 and start2 < height and end2 > 0
 
 
 def calc_measure_dtd(matrix, locus):
@@ -246,26 +920,25 @@ def collect_frags(
     balanced=True,
     percentile=100.0,
     ignore_diags=0,
-    no_normalize=False
+    no_normalize=False,
+    aggregate=False
 ):
-    fragments = np.zeros((len(loci), dim, dim))
+    fragments = []
 
-    k = 0
     for locus in loci:
-        fragments[k] = get_frag(
+        last_loc = len(locus) - 2
+        fragments.append(get_frag(
             c,
             resolution,
             offsets,
             *locus[:6],
-            width=dim,
+            width=locus[last_loc] if locus[last_loc] else dim,
             padding=padding,
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
             no_normalize=no_normalize
-        )
-
-        k += 1
+        ))
 
     return fragments
 
@@ -514,8 +1187,11 @@ def get_frag(
             pass
 
     # Copy pixel values onto the final array
-    frag = np.zeros(abs_dim1 * abs_dim2, dtype=np.float32)
-    frag[idx1] = values
+    frag_len = abs_dim1 * abs_dim2
+    frag = np.zeros(frag_len, dtype=np.float32)
+    # Make sure we're within the bounds
+    idx1_f = np.where(idx1 < frag_len)
+    frag[idx1[idx1_f]] = values[idx1_f]
     frag[idx2[validBins]] = values[validBins]
     frag = frag.reshape((abs_dim1, abs_dim2))
 
@@ -540,6 +1216,8 @@ def get_frag(
         min_val = np.min(frag)
         frag -= min_val
 
+    ignored_idx = None
+
     # Remove diagonals
     if ignore_diags > 0 and diags_start_row is not None:
         if width == height:
@@ -554,8 +1232,10 @@ def get_frag(
 
             for i in range(ignore_diags):
 
+                # First set all cells to be ignored to `-1` so that we can
+                # easily query for them later.
                 if i == 0:
-                    frag[scaled_idx] = 0
+                    frag[scaled_idx] = -1
                 else:
                     dist_to_diag = scaled_row - i
                     dist_neg = min(0, dist_to_diag)
@@ -564,7 +1244,7 @@ def get_frag(
                     # Above diagonal
                     frag[
                         ((scaled_idx[0] - i)[off:], (scaled_idx[1])[off:])
-                    ] = 0
+                    ] = -1
 
                     # Extra cutoff at the bottom right
                     frag[
@@ -578,12 +1258,18 @@ def get_frag(
                                 scaled_idx[1][-1] + i + 1 + dist_neg
                             )
                         )
-                    ] = 0
+                    ] = -1
 
                     # Below diagonal
                     frag[
                         ((scaled_idx[0] + i)[:-i], (scaled_idx[1])[:-i])
-                    ] = 0
+                    ] = -1
+
+            # Save the final selection of ignored cells for fast access
+            # later and set those values to `0` now.
+            ignored_idx = np.where(frag == -1)
+            frag[ignored_idx] = 0
+
         else:
             logger.warn(
                 'Ignoring the diagonal only supported for squared features'
@@ -596,6 +1282,10 @@ def get_frag(
     # Normalize by maximum
     if not no_normalize and max_val > 0:
         frag /= max_val
+
+    # Set the ignored diagonal to the maximum
+    if ignored_idx:
+        frag[ignored_idx] = 1.0
 
     if not scaled:
         # Recover low quality bins

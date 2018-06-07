@@ -4,6 +4,8 @@ import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
 import hgtiles.cooler as hgco
+import hgtiles.geo as hggo
+import hgtiles.imtiles as hgim
 import h5py
 import itertools as it
 import numpy as np
@@ -48,16 +50,11 @@ def get_cached_datapath(relpath):
 
         # check to make sure the destination directory exists
         dest_dir = op.dirname(cached_path)
-        print("dest_dir:", dest_dir)
 
         if not op.exists(dest_dir):
             os.makedirs(dest_dir)
 
-        print("moving:", cached_path)
-        print("stat:", os.stat(tmp))
         shutil.move(tmp, cached_path)
-        print("stat:", os.stat(cached_path))
-        print('abspath:', op.abspath(cached_path))
 
     return cached_path
 
@@ -156,9 +153,9 @@ def generate_bigwig_tileset_info(tileset):
 
     Returns
     -------
-    tileset_info: {'min_pos': [], 
-                    'max_pos': [], 
-                    'tile_size': 1024, 
+    tileset_info: {'min_pos': [],
+                    'max_pos': [],
+                    'tile_size': 1024,
                     'max_zoom': 7
                     }
     '''
@@ -204,7 +201,7 @@ def generate_bigwig_tiles(tileset, tile_ids):
         # this doesn't combine multiple consequetive ids, which
         # would speed things up
         dense = bwt.get_bigwig_tile_by_id(
-            tut.get_datapath(tileset.datafile.url), 
+            tut.get_datapath(tileset.datafile.url),
             zoom_level,
             tile_position[1])
 
@@ -321,7 +318,7 @@ def generate_beddb_tiles(tileset, tile_ids):
         A list of tile_id, tile_data tuples
     '''
     tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t, dimension=1) 
+    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t, dimension=1)
         for t in tile_ids_by_zoom]))
 
     generated_tiles = []
@@ -349,7 +346,7 @@ def generate_beddb_tiles(tileset, tile_ids):
 
     return generated_tiles
 
-def generate_bed2ddb_tiles(tileset, tile_ids):
+def generate_bed2ddb_tiles(tileset, tile_ids, retriever=cdt.get_2d_tiles):
     '''
     Generate tiles from a bed2db file.
 
@@ -369,7 +366,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
     generated_tiles = []
 
     tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t) 
+    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t)
         for t in tile_ids_by_zoom]))
 
     for tile_group in partitioned_tile_ids:
@@ -393,7 +390,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids):
         maxy = max([t[1] for t in tile_positions])
 
         cached_datapath = get_cached_datapath(tileset.datafile.url)
-        tile_data_by_position = cdt.get_2d_tiles(
+        tile_data_by_position = retriever(
                 cached_datapath,
                 zoom_level,
                 minx, miny,
@@ -550,7 +547,7 @@ def partition_by_adjacent_tiles(tile_ids, dimension=2):
                     tile_id_list += [tile_id]
                     added = True
                     break
-                
+
             if added:
                 break
         if not added:
@@ -579,14 +576,16 @@ def generate_tiles(tileset_tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids = tileset_tile_ids
+    tileset, tile_ids, raw = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
         return generate_beddb_tiles(tileset, tile_ids)
-    elif tileset.filetype == 'bed2ddb':
+    elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
         return generate_bed2ddb_tiles(tileset, tile_ids)
+    elif tileset.filetype == 'geodb':
+        return generate_bed2ddb_tiles(tileset, tile_ids, hggo.get_tiles)
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
@@ -598,6 +597,8 @@ def generate_tiles(tileset_tile_ids):
                 tut.get_datapath(tileset.datafile.url),
                 tile_ids,
                 tmt.get_single_tile)
+    elif tileset.filetype == 'imtiles':
+        return hgim.get_tiles(tut.get_datapath(tileset.datafile.url), tile_ids, raw)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
