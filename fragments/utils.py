@@ -629,7 +629,8 @@ def get_frag_by_loc_from_imtiles(
     got_info = False
 
     for locus in loci:
-        id = locus[-1]
+        id = locus[-2]
+        local_id = locus[-1]
 
         if not no_cache:
             im_snip = None
@@ -663,6 +664,19 @@ def get_frag_by_loc_from_imtiles(
         if not is_within(start1, end1, start2, end2, width, height):
             ims.append(None)
             continue
+
+        # Load prefetched image thumbnail of snippet if available
+        if local_id is not None:
+            preload_db = sqlite3.connect(imtiles_file)
+            q = preload_db.execute(
+                'SELECT image FROM images WHERE id=? AND z=?',
+                (local_id, zoom_level)
+            ).fetchone()
+
+            if q is not None:
+                im_snip = q[0]
+                ims.append(im_snip)
+                continue
 
         # Get tile ids
         tile_start1_id = start1 // tile_size
@@ -700,6 +714,11 @@ def get_frag_by_loc_from_imtiles(
             with BytesIO() as b:
                 np.save(b, im_snip)
                 rdb.set('im_snip_%s' % id, b.getvalue(), 60 * 30)
+
+        if local_id is not None:
+            # The snippet did not seem to have been preloaded at that zoom
+            # level. For coinsistency we convert it to png right away.
+            im_snip = np_to_png(im_snip)
 
         ims.append(im_snip)
 
@@ -926,7 +945,7 @@ def collect_frags(
     fragments = []
 
     for locus in loci:
-        last_loc = len(locus) - 2
+        last_loc = len(locus) - 3
         fragments.append(get_frag(
             c,
             resolution,

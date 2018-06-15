@@ -5,7 +5,7 @@ import json
 import logging
 import numpy as np
 import pybase64
-from PIL import Image
+from imageio import imread
 try:
     import cPickle as pickle
 except:
@@ -13,7 +13,6 @@ except:
 
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
-from io import BytesIO
 from os import path
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
@@ -149,6 +148,14 @@ GET_FRAG_PARAMS = {
             'fragments.'
         )
     },
+    'dtype': {
+        'short': 'dt',
+        'dtype': 'str',
+        'default': 'cooler',
+        'help': (
+            'Type of snippet. Can either be `cooler` or `image`. '
+        )
+    },
 }
 
 
@@ -210,7 +217,7 @@ def get_fragments_by_loci(request):
     4: start2         dataset
     5: end2           zoomLevel
     6: dataset        dim*
-    7: zoomOutLevel
+    7: zoomOutLevel   id*
     8: dim*
 
     *) Optional
@@ -231,9 +238,16 @@ def get_fragments_by_loci(request):
     max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
+    dtype = params['dtype']
 
-    tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
+    is_image = dtype == 'image'
+    tileset_idx = (
+        4 if (len(loci) and len(loci[0]) < 8) or is_image else 6
+    )
     zoom_level_idx = tileset_idx + 1
+    snippet_id_idx = (
+        7 if is_image and len(loci) and len(loci[0]) == 8 else None
+    )
 
     filetype = None
     new_filetype = None
@@ -247,6 +261,10 @@ def get_fragments_by_loci(request):
     loci_ids = []
     try:
         for locus in loci:
+            # if is_image and snippet_id_idx:
+            #     # Chop of preload id
+            #     locus = locus[:-1]
+
             tileset_file = ''
 
             if locus[tileset_idx]:
@@ -304,9 +322,10 @@ def get_fragments_by_loci(request):
             )
 
             locus_id = '.'.join(map(str, locus))
+            local_id = locus[snippet_id_idx] if snippet_id_idx else None
 
             loci_lists[tileset_file][locus[zoom_level_idx]].append(
-                locus[0:tileset_idx] + [i, inset_dim, locus_id]
+                locus[0:tileset_idx] + [i, inset_dim, locus_id, local_id]
             )
             loci_ids.append(locus_id)
 
@@ -352,7 +371,8 @@ def get_fragments_by_loci(request):
         str(aggregation_method) +
         str(max_previews) +
         str(encoding) +
-        str(representatives)
+        str(representatives) +
+        str(dtype)
     )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
@@ -389,10 +409,14 @@ def get_fragments_by_loci(request):
                         matrices[idx] = matrix
                         data_types[idx] = 'matrix'
 
-                if filetype == 'imtiles' or filetype == 'osm-image':
+                if (
+                    filetype == 'imtiles' or
+                    filetype == 'osm-image' or
+                    filetype == '2dannodb'
+                ):
                     extractor = (
                         get_frag_by_loc_from_imtiles
-                        if filetype == 'imtiles'
+                        if filetype == 'imtiles' or filetype == '2dannodb'
                         else get_frag_by_loc_from_osm
                     )
 
@@ -446,6 +470,11 @@ def get_fragments_by_loci(request):
             mat_idx = forced_rep_idx
             data_types = [data_types[0]] * len(forced_rep_idx)
         else:
+            im_cache = None
+            if isinstance(matrices[0], (bytes, bytearray)):
+                im_cache = matrices
+                matrices = [imread(im) for im in matrices]
+
             try:
                 rep_frags, rep_idx = get_rep_frags(
                     matrices, loci, loci_ids, representatives, no_cache
@@ -459,6 +488,9 @@ def get_fragments_by_loci(request):
                     'error': 'Could get representative fragments.',
                     'error_message': str(ex)
                 }, status=500)
+
+            if im_cache:
+                matrices = [im_cache[i] for i in mat_idx]
 
     if encoding != 'b64' and encoding != 'image':
         # Adjust precision and convert to list
@@ -488,7 +520,12 @@ def get_fragments_by_loci(request):
                 except:
                     pass
 
-            mat_b64 = pybase64.b64encode(np_to_png(matrix)).decode('ascii')
+            if isinstance(matrix, (bytes, bytearray)):
+                png = matrix
+            else:
+                png = np_to_png(matrix)
+
+            mat_b64 = pybase64.b64encode(png).decode('ascii')
 
             if not no_cache:
                 rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
