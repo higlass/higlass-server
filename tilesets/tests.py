@@ -987,6 +987,18 @@ class BedDBTest(dt.TestCase):
             owner=self.user1,
             uuid='bdb')
 
+
+    def test_get_info(self):
+        upload_file = open('data/984627_PM16-00568-A_SM-9J5GB.beddb', 'rb')
+        tileset1 = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='beddb',
+            datatype='bedlike',
+            owner=self.user1,
+            uuid='bdc')
+        returned_text = self.client.get('/api/v1/tileset_info/?d=bdc')
+        returned = json.loads(returned_text.content.decode('utf-8'))
+
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
         returned_text = self.client.get('/api/v1/tiles/?d={tile_id}'.format(tile_id=tile_id))
