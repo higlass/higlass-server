@@ -271,6 +271,7 @@ def get_frag_by_loc_from_cool(
     ignore_diags=0,
     no_normalize=False,
     aggregate=False,
+    log=False,
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
@@ -291,7 +292,8 @@ def get_frag_by_loc_from_cool(
             percentile=percentile,
             ignore_diags=ignore_diags,
             no_normalize=no_normalize,
-            aggregate=aggregate
+            aggregate=aggregate,
+            log=log,
         )
 
     return fragments
@@ -940,7 +942,8 @@ def collect_frags(
     percentile=100.0,
     ignore_diags=0,
     no_normalize=False,
-    aggregate=False
+    aggregate=False,
+    log=False,
 ):
     fragments = []
 
@@ -956,7 +959,8 @@ def collect_frags(
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
-            no_normalize=no_normalize
+            no_normalize=no_normalize,
+            log=log,
         ))
 
     return fragments
@@ -1048,7 +1052,8 @@ def get_frag(
     balanced: bool = True,
     percentile: float = 100.0,
     ignore_diags: int = 0,
-    no_normalize: bool = False
+    no_normalize: bool = False,
+    log: bool = False,
 ) -> np.ndarray:
     """
     Retrieves a matrix fragment.
@@ -1092,6 +1097,8 @@ def get_frag(
         no_normalize:
             If `true` the returned matrix is not normalized.
             Defaults to `False`.
+        log:
+            If `true` log transform snippet.
 
     Returns:
 
@@ -1301,6 +1308,9 @@ def get_frag(
     # Normalize by maximum
     if not no_normalize and max_val > 0:
         frag /= max_val
+
+    if log:
+        frag = np.log10((frag * 9) + 1)
 
     # Set the ignored diagonal to the maximum
     if ignored_idx:

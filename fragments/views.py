@@ -148,6 +148,14 @@ GET_FRAG_PARAMS = {
             'fragments.'
         )
     },
+    'log': {
+        'short': 'lg',
+        'dtype': 'bool',
+        'default': False,
+        'help': (
+            'Log transform snippet'
+        )
+    },
     'dtype': {
         'short': 'dt',
         'dtype': 'str',
@@ -238,6 +246,7 @@ def get_fragments_by_loci(request):
     max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
+    log = params['log']
     dtype = params['dtype']
 
     is_image = dtype == 'image'
@@ -372,6 +381,7 @@ def get_fragments_by_loci(request):
         str(max_previews) +
         str(encoding) +
         str(representatives) +
+        str(log) +
         str(dtype)
     )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
@@ -402,6 +412,7 @@ def get_fragments_by_loci(request):
                         ignore_diags=ignore_diags,
                         no_normalize=no_normalize,
                         aggregate=aggregate,
+                        log=log,
                     )
 
                     for i, matrix in enumerate(raw_matrices):
