@@ -654,12 +654,10 @@ def link_tile(request):
     if abs_filepath.find(data_root) != 0:
         # check ot make sure that the filename is contained in the AWS_BUCKET_MOUNT
         # e.g. that somebody isn't surreptitiously trying to pass in ('../../file')
-        return JsonResponse({'error': "Provided path ({}) not in the data
-                             path".format(body['filepath'])}, status=422)
+        return JsonResponse({'error': "Provided path ({}) not in the data path".format(body['filepath'])}, status=422)
     else:
         if not op.exists(abs_filepath):
-            return JsonResponse({'error': "Specified file ({}) does not
-                                 exist".format(body['filepath'])}, status=400)
+            return JsonResponse({'error': "Specified file ({}) does not exist".format(body['filepath'])}, status=400)
 
     diff_path = abs_filepath[len(media_base_path)+1:]    # +1 for the slash
 
