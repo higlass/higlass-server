@@ -897,6 +897,41 @@ class FileUploadTest(dt.TestCase):
             self.assertEqual(403, response.status_code)
 
 
+    def test_link_file(self):
+        '''
+        Linking a file assuems the file is already accessable to the system, i.e. with somthing
+        like goofys, mounting s3 buckets
+        '''
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+
+        response = c.post(
+            '/api/v1/link_tile/',
+            json.dumps({
+                'filepath': 'Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
+                'filetype': 'hitile',
+                'datatype': 'vector',
+                'uuid': 'bb',
+                'private': 'True',
+                'coordSystem': 'hg19'
+            }),
+            content_type="application/json",
+        )
+
+        if hss.UPLOAD_ENABLED:
+            self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
+
+            response = c.get('/api/v1/tilesets/')
+
+            new_uuid = response.json()['results'][0]['uuid']
+            obj = tm.Tileset.objects.get(uuid=new_uuid)
+
+            # make sure the file was actually created
+            self.assertTrue(op.exists, obj.datafile.url)
+        else:
+            self.assertEqual(403, response.status_code)
+
 class GetterTest(dt.TestCase):
     def test_get_info(self):
         filepath = 'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'

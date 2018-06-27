@@ -1,8 +1,9 @@
+Cython==0.25.2
+pyBigWig==0.3.2
 -e git+https://github.com/nvictus/pybbi.git@v0.1.1#egg=pybbi
 bumpversion==0.5.3
 CacheControl==0.12.4
 cooler==0.7.10
-Cython==0.25.2
 django-cors-headers
 django-guardian
 django-rest-swagger
