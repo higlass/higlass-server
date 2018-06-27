@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import cooler
+import bbi
 
 TILE_SIZE = 1024
 
