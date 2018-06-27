@@ -3,9 +3,7 @@ import pandas as pd
 import cooler
 #import bbi
 
-
 TILE_SIZE = 1024
-
 
 def get_quadtree_depth(chromsizes):
     tile_size_bp = TILE_SIZE
