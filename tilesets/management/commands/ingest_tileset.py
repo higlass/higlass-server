@@ -42,6 +42,8 @@ class Command(BaseCommand):
         uid = options.get('uid') or slugid.nice().decode('utf-8')
         name = options.get('name') or op.split(filename)[1]
 
+        print('uid:', uid)
+
         if options['no_upload']:
             if not op.isfile(op.join(settings.MEDIA_ROOT, filename)):
                 raise CommandError('File does not exist under media root')
