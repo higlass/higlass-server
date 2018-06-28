@@ -22,7 +22,7 @@ import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
-def add_file(filename):
+def add_file(filename, sub_dir='uploads/data'):
     '''
     Add a file to the media directory and return its
     path. If a file with the same name exists, don't
@@ -37,7 +37,7 @@ def add_file(filename):
         The path of the file in the media directory
     '''
 
-    target_dir = op.join(hss.MEDIA_ROOT, 'uploads', op.dirname(filename))
+    target_dir = op.join(hss.MEDIA_ROOT, sub_dir)
 
     if not op.exists(target_dir):
         os.makedirs(target_dir)
@@ -905,6 +905,7 @@ class FileUploadTest(dt.TestCase):
 
         c = dt.Client()
         c.login(username='user1', password='pass')
+        add_file('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', sub_dir='.')
 
         response = c.post(
             '/api/v1/link_tile/',
@@ -918,6 +919,7 @@ class FileUploadTest(dt.TestCase):
             }),
             content_type="application/json",
         )
+
 
         if hss.UPLOAD_ENABLED:
             self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)

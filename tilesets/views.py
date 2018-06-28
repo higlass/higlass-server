@@ -646,12 +646,10 @@ def link_tile(request):
     print("request:", request)
 
     media_base_path = op.realpath(hss.MEDIA_ROOT)
-    aws_base_path = op.join(hss.MEDIA_ROOT, hss.AWS_BUCKET_MOUNT_POINT)
+    abs_filepath = op.realpath(op.join(media_base_path, body['filepath']))
+    print("abs_filepath:", abs_filepath)
 
-    data_root = op.realpath(aws_base_path)
-    abs_filepath = op.realpath(op.join(aws_base_path, body['filepath']))
-
-    if abs_filepath.find(data_root) != 0:
+    if abs_filepath.find(media_base_path) != 0:
         # check ot make sure that the filename is contained in the AWS_BUCKET_MOUNT
         # e.g. that somebody isn't surreptitiously trying to pass in ('../../file')
         return JsonResponse({'error': "Provided path ({}) not in the data path".format(body['filepath'])}, status=422)
