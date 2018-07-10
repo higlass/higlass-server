@@ -53,34 +53,6 @@ curl http://localhost:8000/api/v1/tileset_info/?d=hitile-demo
 curl http://localhost:8000/api/v1/tiles/?d=hitile-demo.0.0.0
 ```
 
-## Preparing files for ingest
-
-Genomics data needs to be aggregated across a range of scales before it can be used with HiGlass.
-
-### Cooler files
-
-**TODO**: Is this still accurate?
-
-[Cooler](https://github.com/mirnylab/cooler) files store Hi-C data. They need to be decorated with aggregated
-data at multiple resolutions in order to work with `higlass-server`. This is easily accomplished by simply
-installing the `cooler` python package and running the `recursive_agg_onefile.py` script. For now this has
-to come from a clone of the official cooler repository, but this will hopefully be merged into the main branch shortly.
-
-```
-
-git clone -b develop https://github.com/pkerpedjiev/cooler.git
-cd cooler
-python setup.py install
-
-recursive_agg_onefile.py file.cooler --out output.cooler
-```
-
-### BigWig files
-
-BigWig files can be aggregated with the [Clodius](https://github.com/hms-dbmi/clodius#bigwig-files).
-
-### **TODO**: Any other types?
-
 ---
 
 ## Development
@@ -116,3 +88,7 @@ bumpversion patch
 ## Troubleshooting
 
 **pybbi installation fails on macOS**: Check out https://github.com/nvictus/pybbi/issues/2
+
+## License
+
+The code in this repository is provided under the MIT License.
