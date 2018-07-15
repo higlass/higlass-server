@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import pybase64
 from imageio import imread
+from matplotlib import cm
 try:
     import cPickle as pickle
 except:
@@ -156,6 +157,14 @@ GET_FRAG_PARAMS = {
             'Log transform snippet'
         )
     },
+    'colormap': {
+        'short': 'cm',
+        'dtype': 'str',
+        'default': '',
+        'help': (
+            'Matplotlib colormap'
+        )
+    },
     'dtype': {
         'short': 'dt',
         'dtype': 'str',
@@ -247,6 +256,7 @@ def get_fragments_by_loci(request):
     encoding = params['encoding']
     representatives = params['representatives']
     log = params['log']
+    colormap = params['colormap']
     dtype = params['dtype']
 
     is_image = dtype == 'image'
@@ -423,12 +433,13 @@ def get_fragments_by_loci(request):
                 if (
                     filetype == 'imtiles' or
                     filetype == 'osm-image' or
+                    filetype == 'geodb' or
                     filetype == '2dannodb'
                 ):
                     extractor = (
-                        get_frag_by_loc_from_imtiles
-                        if filetype == 'imtiles' or filetype == '2dannodb'
-                        else get_frag_by_loc_from_osm
+                        get_frag_by_loc_from_osm
+                        if filetype in ['osm-image', 'geodb']
+                        else get_frag_by_loc_from_imtiles
                     )
 
                     sub_ims = extractor(
@@ -503,6 +514,16 @@ def get_fragments_by_loci(request):
             if im_cache:
                 matrices = [im_cache[i] for i in mat_idx]
 
+    if (
+        colormap and
+        not isinstance(matrices[0], (bytes, bytearray))
+    ):
+        try:
+            for i, matrix in enumerate(matrices):
+                matrices[i] = getattr(cm, colormap)(matrix)
+        except Exception as e:
+            pass
+
     if encoding != 'b64' and encoding != 'image':
         # Adjust precision and convert to list
         for i, matrix in enumerate(matrices):
@@ -570,10 +591,12 @@ def get_fragments_by_loci(request):
 
     if encoding == 'image':
         if len(matrices) == 1:
-            return HttpResponse(
-                np_to_png(grey_to_rgb(matrices[0], to_rgba=True)),
-                content_type='image/png'
-            )
+            if isinstance(matrices[0], (bytes, bytearray)):
+                png = matrices[0]
+            else:
+                png = np_to_png(grey_to_rgb(matrices[0], to_rgba=True))
+
+            return HttpResponse(png, content_type='image/png')
         else:
             ims = []
             for i, matrix in enumerate(matrices):

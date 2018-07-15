@@ -36,6 +36,9 @@ logger = logging.getLogger(__name__)
 # Methods
 
 def grey_to_rgb(arr, to_rgba=False):
+    if np.ndim(arr) == 3:
+        return arr * 255
+
     if to_rgba:
         rgb = np.zeros(arr.shape + (4,))
         rgb[:, :, 3] = 255
@@ -43,8 +46,8 @@ def grey_to_rgb(arr, to_rgba=False):
         rgb = np.zeros(arr.shape + (3,))
 
     rgb[:, :, 0] = 255 - arr * 255
-    rgb[:, :, 1] = rgb[:,:,0]
-    rgb[:, :, 2] = rgb[:,:,0]
+    rgb[:, :, 1] = rgb[:, :, 0]
+    rgb[:, :, 2] = rgb[:, :, 0]
 
     return rgb
 
@@ -52,7 +55,7 @@ def grey_to_rgb(arr, to_rgba=False):
 def blob_to_zip(blobs, to_resp=False):
     b = BytesIO()
 
-    zf = ZipFile(b, 'w')
+    zf = ZipFile('out.zip', 'w')
 
     for blob in blobs:
         zf.writestr(blob['name'], blob['bytes'])
@@ -621,7 +624,7 @@ def get_frag_by_loc_from_imtiles(
     tile_size=256,
     no_cache=False
 ):
-    db = None
+    db = sqlite3.connect(imtiles_file)
     div = 1
     width = 0
     height = 0
@@ -645,7 +648,6 @@ def get_frag_by_loc_from_imtiles(
                 pass
 
         if not got_info:
-            db = sqlite3.connect(imtiles_file)
             info = db.execute('SELECT * FROM tileset_info').fetchone()
 
             max_zoom = info[6]
@@ -669,8 +671,7 @@ def get_frag_by_loc_from_imtiles(
 
         # Load prefetched image thumbnail of snippet if available
         if local_id is not None:
-            preload_db = sqlite3.connect(imtiles_file)
-            q = preload_db.execute(
+            q = db.execute(
                 'SELECT image FROM images WHERE id=? AND z=?',
                 (local_id, zoom_level)
             ).fetchone()
@@ -724,8 +725,7 @@ def get_frag_by_loc_from_imtiles(
 
         ims.append(im_snip)
 
-    if db:
-        db.close()
+    db.close()
 
     return ims
 
@@ -738,6 +738,8 @@ def get_frag_by_loc_from_osm(
     tile_size=256,
     no_cache=False
 ):
+    db = sqlite3.connect(imtiles_file)
+
     width = 360
     height = 180
 
@@ -750,7 +752,8 @@ def get_frag_by_loc_from_osm(
     s = CacheControl(requests.Session())
 
     for locus in loci:
-        id = locus[-1]
+        id = locus[-2]
+        local_id = locus[-1]
 
         if not no_cache:
             osm_snip = None
@@ -777,6 +780,18 @@ def get_frag_by_loc_from_osm(
         ):
             ims.append(None)
             continue
+
+        # Load prefetched image thumbnail of snippet if available
+        if local_id is not None:
+            q = db.execute(
+                'SELECT image FROM images WHERE id=? AND z=?',
+                (local_id, zoom_level)
+            ).fetchone()
+
+            if q is not None:
+                osm_snip = q[0]
+                ims.append(osm_snip)
+                continue
 
         # Get tile ids
         start1, start2 = get_tile_pos_from_lng_lat(
@@ -843,7 +858,14 @@ def get_frag_by_loc_from_osm(
                 np.save(b, osm_snip)
                 rdb.set('osm_snip_%s' % id, b.getvalue(), 60 * 30)
 
+        if local_id is not None:
+            # The snippet did not seem to have been preloaded at this zoom
+            # level. For coinsistency we convert it to png right away.
+            osm_snip = np_to_png(osm_snip)
+
         ims.append(osm_snip)
+
+    db.close()
 
     return ims
 
