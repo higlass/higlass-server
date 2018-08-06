@@ -620,6 +620,7 @@ def tileset_info(request):
             }
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
+        tileset_infos[tileset_uuid]['datatype'] = tileset_object.datatype
         tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
