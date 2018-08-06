@@ -3,6 +3,7 @@ from django.core.files import File
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu
+import os
 import os.path as op
 from django.conf import settings
 
@@ -49,7 +50,10 @@ class Command(BaseCommand):
                 raise CommandError('File does not exist under media root')
             django_file = filename
         else:
-            django_file = File(open(filename, 'rb'))
+            if os.path.islink(filename):
+                django_file = File(open(os.readlink(filename),'rb'))
+            else:
+                django_file = File(open(filename,'rb'))
 
             # remove the filepath of the filename
             django_file.name = op.split(django_file.name)[1]
