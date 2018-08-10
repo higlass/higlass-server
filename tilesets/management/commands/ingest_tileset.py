@@ -46,7 +46,8 @@ class Command(BaseCommand):
         print('uid:', uid)
 
         if options['no_upload']:
-            if not op.isfile(op.join(settings.MEDIA_ROOT, filename)):
+            if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
+                not op.islink(op.join(settings.MEDIA_ROOT, filename))):
                 raise CommandError('File does not exist under media root')
             django_file = filename
         else:

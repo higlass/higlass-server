@@ -512,7 +512,6 @@ class BigWigTest(dt.TestCase):
     def test_get_tileset_info(self):
         c1 = dt.Client()
         ret = json.loads(c1.get('/api/v1/tileset_info/?d=bw').content.decode('utf-8'))
-        print("ret:", ret)
 
     def test_get_tiles(self):
         '''

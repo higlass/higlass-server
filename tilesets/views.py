@@ -195,7 +195,6 @@ def sizes(request):
     except Exception as ex:
         logger.exception(ex)
         err_msg = str(ex)
-        print('err_msg:', err_msg)
         err_status = 500
 
         if is_json:
@@ -531,7 +530,6 @@ def tileset_info(request):
                 chromsizes = tm.Tileset.objects.get(uuid=request.GET['ci'])
                 data = tcs.chromsizes_array_to_series(
                         tcs.get_tsv_chromsizes(tut.get_datapath(chromsizes.datafile.url)))
-                print('data:', data)
             except Exception as ex:
                 pass
 
@@ -644,11 +642,9 @@ def link_tile(request):
         JsonResponse: A response containing the uuid of the newly added tileset
     '''
     body = json.loads(request.body.decode('utf8'))
-    print("request:", request)
 
     media_base_path = op.realpath(hss.MEDIA_ROOT)
     abs_filepath = op.realpath(op.join(media_base_path, body['filepath']))
-    print("abs_filepath:", abs_filepath)
 
     if abs_filepath.find(media_base_path) != 0:
         # check ot make sure that the filename is contained in the AWS_BUCKET_MOUNT
