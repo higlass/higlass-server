@@ -93,7 +93,12 @@ if 'SITE_URL' in os.environ:
 # this specifies where uploaded files will be place
 # (e.g. BASE_DIR/media/uplaods/file.x)
 MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if 'HIGLASS_MEDIA_ROOT' in os.environ:
+    MEDIA_ROOT = os.environ['HIGLASS_MEDIA_ROOT']
+else:
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
 
 LOGGING = {
