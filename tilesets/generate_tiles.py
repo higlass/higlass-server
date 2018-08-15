@@ -14,11 +14,10 @@ import shutil
 import time
 import tempfile
 import tilesets.multivec_tiles as tmt
-import tilesets.utils as tut
 
 import higlass_server.settings as hss
 
-def get_cached_datapath(relpath):
+def get_cached_datapath(path):
     '''
     Check if we need to cache this file or if we have a cached copy
 
@@ -35,10 +34,10 @@ def get_cached_datapath(relpath):
     '''
     if hss.CACHE_DIR is None:
         # no caching requested
-        return tut.get_datapath(relpath)
+        return path
 
-    orig_path = tut.get_datapath(relpath)
-    cached_path = op.join(hss.CACHE_DIR, relpath)
+    orig_path = path
+    cached_path = op.join(hss.CACHE_DIR, path)
 
     if op.exists(cached_path):
         # this file has already been cached
@@ -159,7 +158,7 @@ def generate_bigwig_tileset_info(tileset):
                     'max_zoom': 7
                     }
     '''
-    chromsizes = bwt.get_chromsizes(tut.get_datapath(tileset.datafile.url))
+    chromsizes = bwt.get_chromsizes(tileset.datafile.path)
     max_zoom = bwt.get_quadtree_depth(chromsizes)
     tile_size = 1024
 
@@ -201,7 +200,7 @@ def generate_bigwig_tiles(tileset, tile_ids):
         # this doesn't combine multiple consequetive ids, which
         # would speed things up
         dense = bwt.get_bigwig_tile_by_id(
-            tut.get_datapath(tileset.datafile.url),
+            tileset.datafile.path,
             zoom_level,
             tile_position[1])
 
@@ -261,7 +260,7 @@ def generate_hitile_tiles(tileset, tile_ids):
 
         dense = hdft.get_data(
             h5py.File(
-                tut.get_datapath(tileset.datafile.url)
+                tileset.datafile.path
             ),
             tile_position[0],
             tile_position[1]
@@ -336,7 +335,7 @@ def generate_beddb_tiles(tileset, tile_ids):
 
         t1 = time.time()
         tile_data_by_position = cdt.get_tiles(
-            get_cached_datapath(tileset.datafile.url),
+            get_cached_datapath(tileset.datafile.path),
             zoom_level,
             minx,
             maxx - minx + 1
@@ -389,7 +388,7 @@ def generate_bed2ddb_tiles(tileset, tile_ids, retriever=cdt.get_2d_tiles):
         miny = min([t[1] for t in tile_positions])
         maxy = max([t[1] for t in tile_positions])
 
-        cached_datapath = get_cached_datapath(tileset.datafile.url)
+        cached_datapath = get_cached_datapath(tileset.datafile.path)
         tile_data_by_position = retriever(
                 cached_datapath,
                 zoom_level,
@@ -428,7 +427,7 @@ def generate_hibed_tiles(tileset, tile_ids):
         tile_position = list(map(int, tile_id_parts[1:3]))
         dense = hdft.get_discrete_data(
             h5py.File(
-                tut.get_datapath(tileset.datafile.url)
+                tileset.datafile.path
             ),
             tile_position[0],
             tile_position[1]
@@ -589,16 +588,16 @@ def generate_tiles(tileset_tile_ids):
     elif tileset.filetype == 'hibed':
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
-        return hgco.generate_tiles(tut.get_datapath(tileset.datafile.url), tile_ids)
+        return hgco.generate_tiles(tileset.datafile.path, tile_ids)
     elif tileset.filetype == 'bigwig':
         return generate_bigwig_tiles(tileset, tile_ids)
     elif tileset.filetype == 'multivec':
         return generate_1d_tiles(
-                tut.get_datapath(tileset.datafile.url),
+                tileset.datafile.path,
                 tile_ids,
                 tmt.get_single_tile)
     elif tileset.filetype == 'imtiles':
-        return hgim.get_tiles(tut.get_datapath(tileset.datafile.url), tile_ids, raw)
+        return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     else:
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 

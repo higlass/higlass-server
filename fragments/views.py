@@ -18,7 +18,6 @@ from os import path
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
-from tilesets.utils import get_datapath
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,
@@ -260,9 +259,7 @@ def get_fragments_by_loci(request):
                         tileset = Tileset.objects.get(
                             uuid=locus[tileset_idx]
                         )
-                        tileset_file = get_datapath(
-                            tileset.datafile.url
-                        )
+                        tileset_file = tileset.datafile.path
                         ts_cache[locus[tileset_idx]] = {
                             "obj": tileset,
                             "path": tileset_file
@@ -550,9 +547,7 @@ def fragments_by_chr(request):
             cooler_file = path.join('data', cooler_file)
         else:
             try:
-                cooler_file = get_datapath(
-                    Tileset.objects.get(uuid=cooler_file).datafile.url
-                )
+                cooler_file = Tileset.objects.get(uuid=cooler_file).datafile.path
             except AttributeError:
                 return JsonResponse({
                     'error': 'Cooler file not in database',

@@ -892,7 +892,7 @@ class FileUploadTest(dt.TestCase):
             obj = tm.Tileset.objects.get(uuid='bb')
 
             # make sure the file was actually created
-            self.assertTrue(op.exists, obj.datafile.url)
+            self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
 
@@ -930,7 +930,7 @@ class FileUploadTest(dt.TestCase):
             obj = tm.Tileset.objects.get(uuid=new_uuid)
 
             # make sure the file was actually created
-            self.assertTrue(op.exists, obj.datafile.url)
+            self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
 
@@ -1139,8 +1139,8 @@ class TilesetsViewSetTest(dt.TestCase):
         r = base64.decodestring(returned[list(returned.keys())[0]]['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
-        with h5py.File(self.cooler.datafile.url) as f:
-            tileset_info = hgco.tileset_info(self.cooler.datafile.url)
+        with h5py.File(self.cooler.datafile.path) as f:
+            tileset_info = hgco.tileset_info(self.cooler.datafile.path)
             tileset_file = f
 
             mat = [tileset_file, tileset_info]
