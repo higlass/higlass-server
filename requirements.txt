@@ -22,4 +22,4 @@ slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
 hgtiles>=0.2.1
-imageio=2.3.0
+imageio==2.3.0
