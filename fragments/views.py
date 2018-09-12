@@ -274,6 +274,7 @@ def get_fragments_by_loci(request):
     previews_2d = []
     ts_cache = {}
     mat_idx = None
+    ts_secondary = {}
 
     i = 0
     loci_lists = {}
@@ -294,18 +295,35 @@ def get_fragments_by_loci(request):
                     tileset_file = path.join('data', locus[tileset_idx])
                 else:
                     try:
+                        # One can specify 2 tilesets, a primary and a secondary
+                        # tileset. The secondary tileset is only needed when
+                        # dealing with preloaded annotation dbs. In that case
+                        # the secondary tileset refers to the original tileset
+                        # such that fragments can be cut out on the fly if
+                        # needed (not all zoom levels might have been preloaded)
+                        tilesets = locus[tileset_idx].split(',')
                         tileset = Tileset.objects.get(
-                            uuid=locus[tileset_idx]
+                            uuid=tilesets[0]
                         )
                         tileset_file = get_datapath(
                             tileset.datafile.url
                         )
+
+                        tileset_file_secondary = None
+                        if len(tilesets) > 1 and len(tilesets[1]) > 0:
+                            tileset_file_secondary = get_datapath(
+                                Tileset.objects.get(
+                                    uuid=tilesets[1]
+                                ).datafile.url
+                            )
+
                         ts_cache[locus[tileset_idx]] = {
                             "obj": tileset,
                             "path": tileset_file
                         }
+                        ts_secondary[tileset_file] = tileset_file_secondary
 
-                    except AttributeError:
+                    except AttributeError as e:
                         return JsonResponse({
                             'error': 'Tileset ({}) does not exist'.format(
                                 locus[tileset_idx]
@@ -444,6 +462,7 @@ def get_fragments_by_loci(request):
 
                     sub_ims = extractor(
                         imtiles_file=dataset,
+                        imtiles_file_secondary=ts_secondary[dataset],
                         loci=loci_lists[dataset][zoomout_level],
                         zoom_level=zoomout_level,
                         padding=float(padding),

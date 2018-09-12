@@ -622,9 +622,16 @@ def get_frag_by_loc_from_imtiles(
     zoom_level=0,
     padding=0,
     tile_size=256,
-    no_cache=False
+    no_cache=False,
+    imtiles_file_secondary=None,
 ):
-    db = sqlite3.connect(imtiles_file)
+    db_primary = sqlite3.connect(imtiles_file)
+    db_secondary = (
+        sqlite3.connect(imtiles_file_secondary)
+        if imtiles_file_secondary
+        else sqlite3.connect(imtiles_file)
+    )
+
     div = 1
     width = 0
     height = 0
@@ -648,7 +655,7 @@ def get_frag_by_loc_from_imtiles(
                 pass
 
         if not got_info:
-            info = db.execute('SELECT * FROM tileset_info').fetchone()
+            info = db_primary.execute('SELECT * FROM tileset_info').fetchone()
 
             max_zoom = info[6]
             max_width = info[8]
@@ -669,17 +676,22 @@ def get_frag_by_loc_from_imtiles(
             ims.append(None)
             continue
 
-        # Load prefetched image thumbnail of snippet if available
+        # Get preloaded image thumbnail of snippet if available
         if local_id is not None:
-            q = db.execute(
-                'SELECT image FROM images WHERE id=? AND z=?',
-                (local_id, zoom_level)
-            ).fetchone()
+            try:
+                q = db_primary.execute(
+                    'SELECT image FROM images WHERE id=? AND z=?',
+                    (local_id, zoom_level)
+                ).fetchone()
 
-            if q is not None:
-                im_snip = q[0]
-                ims.append(im_snip)
-                continue
+                if q is not None:
+                    im_snip = q[0]
+                    ims.append(im_snip)
+                    continue
+            except sqlite3.OperationalError:
+                # Maybe the inset track's source is not the preloaded annotation
+                # file but an original image tileset. Hence, lets try to load
+                pass
 
         # Get tile ids
         tile_start1_id = start1 // tile_size
@@ -694,10 +706,14 @@ def get_frag_by_loc_from_imtiles(
         tiles = []
         for y in tiles_y_range:
             for x in tiles_x_range:
-                tiles.append(Image.open(BytesIO(db.execute(
-                    'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
-                    (zoom_level, y, x)
-                ).fetchone()[0])))
+                try:
+                    tiles.append(Image.open(BytesIO(db_secondary.execute(
+                        'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
+                        (zoom_level, y, x)
+                    ).fetchone()[0])))
+                except sqlite3.OperationalError:
+                    ims.append(None)
+                    continue
 
         im_snip = get_frag_from_image_tiles(
             tiles,
@@ -720,12 +736,13 @@ def get_frag_by_loc_from_imtiles(
 
         if local_id is not None:
             # The snippet did not seem to have been preloaded at that zoom
-            # level. For coinsistency we convert it to png right away.
+            # level. For consistency we convert it to png right away.
             im_snip = np_to_png(im_snip)
 
         ims.append(im_snip)
 
-    db.close()
+    db_primary.close()
+    db_secondary.close()
 
     return ims
 
@@ -736,8 +753,11 @@ def get_frag_by_loc_from_osm(
     zoom_level=0,
     padding=0,
     tile_size=256,
-    no_cache=False
+    no_cache=False,
+    imtiles_file_secondary=None,
 ):
+    # `imtiles_file_secondary` is not needed but we need the parameter for
+    # compatibility reasons
     db = sqlite3.connect(imtiles_file)
 
     width = 360
