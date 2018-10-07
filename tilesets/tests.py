@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import django.contrib.auth.models as dcam
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
-import django.contrib.auth.models as dcam
+import django.core.management as dcm
+import django.core.management.base as dcmb
 import django.db as db
 
 import base64
@@ -100,6 +102,58 @@ class BedfileTests(dt.TestCase):
 
         ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
 '''
+
+
+class IngestTests(dt.TestCase):
+    def test_ingest_bigwig(self):
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector')
+
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_1",
+        )
+
+        # this should succeed when the others fail
+        dcm.call_command('ingest_tileset', 
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+            filetype='bigwig', datatype='vector')
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector', coordSystem='a')
+
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_2",
+        )
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector')
+
+        # dcm.call_command('ingest_tileset', filename = 'data/chromSizes.tsv', filetype='chromsizes-tsv', datatype='chromsizes')
+        #dcm.call_command('ingest_tileset', filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', filetype='bigwig', datatype='vector')
+
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
