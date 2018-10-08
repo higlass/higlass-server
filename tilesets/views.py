@@ -575,7 +575,9 @@ def tileset_info(request):
                 "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == 'bigwig':
-            tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+            tileset_infos[tileset_uuid] = hgbi.tileset_info(
+                    tileset_object.datafile.bwpath
+                )
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = hgmu.tileset_info(
                     tileset_object.datafile.path)

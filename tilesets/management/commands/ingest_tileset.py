@@ -48,7 +48,8 @@ def check_for_chromsizes(filename, coord_system):
         # we haven't found chromsizes matching the coordsystem
         # go through every chromsizes file and see if we have a match
         for chrom_info_tileset in tm.Tileset.objects.filter(datatype='chromsizes'):
-            chromsizes_set = set([tuple(t) for t in tcs.get_tsv_chromsizes(chrom_info_tileset.datafile.path)])
+            chromsizes_set = set([tuple(t) for 
+                t in tcs.get_tsv_chromsizes(chrom_info_tileset.datafile.path)])
 
             matches += [(len(set.intersection(chromsizes_set, tsinfo_chromsizes)),
                 chrom_info_tileset)]
@@ -56,10 +57,15 @@ def check_for_chromsizes(filename, coord_system):
             # print("chrom_info_tileset:", chromsizes_set)
             #print("intersection:", len(set.intersection(chromsizes_set, tsinfo_chromsizes)))
         #print("coord_system:", coord_system)
+    else:
+        # a set of chromsizes was provided
+        chromsizes_set = set([tuple(t) for 
+            t in tcs.get_tsv_chromsizes(chrom_info_tileset.datafile.path)])
+        matches += [(len(set.intersection(chromsizes_set, tsinfo_chromsizes)),
+            chrom_info_tileset)]
         
     # matches that overlap some chromsizes with the bigwig file
     overlap_matches = [m for m in matches if m[0] > 0]
-    print("overlap_matches:", overlap_matches)
 
     if len(overlap_matches) == 0:
         raise CommandError("No chromsizes available which match the chromosomes in this bigwig")
@@ -68,18 +74,23 @@ def check_for_chromsizes(filename, coord_system):
         raise CommandError("Multiple matching coordSystems:", 
                 ["({} [{}])".format(t[1].coordSystem, t[0]) for t in overlap_matches])
 
-    if coord_system is not None and len(coord_system) > 0 and overlap_matches[0][1].coordSystem != coord_system:
-        raise CommandError("Matching chromosome sizes (coordSystem: {}) do not match the specified coordinate sytem ({}). Either omit the coordSystem or specify a matching one.".format(overlap_matches[0][1].coordSystem, coord_system))
+    if (coord_system is not None 
+            and len(coord_system) > 0 
+            and overlap_matches[0][1].coordSystem != coord_system):
+        raise CommandError("Matching chromosome sizes (coordSystem: {}) do not "
+        + "match the specified coordinate sytem ({}). " 
+        + "Either omit the coordSystem or specify a matching one."
+        .format(overlap_matches[0][1].coordSystem, coord_system))
 
-    if coord_system is not None and len(coord_system) > 0 and overlap_matches[0][1].coordSystem == coord_system:
-        print("Using coordinates for coordinate system: {}", coord_system)
+    if (coord_system is not None 
+            and len(coord_system) > 0 
+            and overlap_matches[0][1].coordSystem == coord_system):
+        print("Using coordinates for coordinate system: {}".format(coord_system))
 
     if coord_system is None or len(coord_system) == 0:
         print("No coordinate system specified, but we found matching chromsizes. Using coordinate system {}".format(overlap_matches[0][1].coordSystem))
         
-    
-            
-    return overlap_matches[0]
+    return overlap_matches[0][1].coordSystem
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
@@ -116,13 +127,12 @@ class Command(BaseCommand):
         uid = options.get('uid') or slugid.nice().decode('utf-8')
         name = options.get('name') or op.split(filename)[1]
 
-        print('uid:', uid)
-
         if 'filetype' not in options:
             raise CommandError('Filetype has to be specified')
         
         if options['filetype'].lower() == 'bigwig':
-            check_for_chromsizes(options['filename'], options['coordSystem'])
+            coordSystem = check_for_chromsizes(options['filename'], options['coordSystem'])
+            print("coordSystem", coordSystem)
 
         if options['no_upload']:
             if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and

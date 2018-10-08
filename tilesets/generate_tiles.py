@@ -3,6 +3,7 @@ import tilesets.bigwig_tiles as bwt
 import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
+import hgtiles.bigwig as hgbi
 import hgtiles.cooler as hgco
 import hgtiles.geo as hggo
 import hgtiles.imtiles as hgim
@@ -13,6 +14,8 @@ import os
 import shutil
 import time
 import tempfile
+import tilesets.models as tm
+import tilesets.chromsizes  as tcs
 import tilesets.multivec_tiles as tmt
 
 import higlass_server.settings as hss
@@ -140,100 +143,32 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
 
     return generated_tiles
 
-
-def generate_bigwig_tileset_info(tileset):
+def get_chromsizes(tileset):
     '''
-    Get the tileset info for a bigWig file
+    Get a set of chromsizes matching the coordSystem of this 
+    tileset.
 
-    Parameters
+    Parameters 
     ----------
-    tileset: tilesets.models.Tileset object
-        The tileset that the tile ids should be retrieved from
+    tileset: A tileset DJango model object
 
-    Returns
+    Returns 
     -------
-    tileset_info: {'min_pos': [],
-                    'max_pos': [],
-                    'tile_size': 1024,
-                    'max_zoom': 7
-                    }
+    chromsizes: [[chrom, sizes]]
+        A set of chromsizes to be used with this bigWig file.
+        None if no chromsizes tileset with this coordSystem 
+        exists or if two exist with this coordSystem.
     '''
-    chromsizes = bwt.get_chromsizes(tileset.datafile.path)
-    max_zoom = bwt.get_quadtree_depth(chromsizes)
-    tile_size = 1024
+    if tileset.coordSystem is None or len(tileset.coordSystem) == None:
+        return None
 
-    tileset_info = {
-        'min_pos': [0],
-        'max_pos': [tile_size * 2 ** max_zoom],
-        'max_width': tile_size * 2 ** max_zoom,
-        'tile_size': tile_size,
-        'max_zoom': max_zoom
-    }
+    try:
+        chrom_info_tileset = tm.Tileset.objects.get(coordSystem=tileset.coordSystem,
+                datatype='chromsizes')
+    except:
+        return None
 
-    return tileset_info
-
-
-def generate_bigwig_tiles(tileset, tile_ids):
-    '''
-    Generate tiles from a bigwig file.
-
-    Parameters
-    ----------
-    tileset: tilesets.models.Tileset object
-        The tileset that the tile ids should be retrieved from
-    tile_ids: [str,...]
-        A list of tile_ids (e.g. xyx.0.0) identifying the tiles
-        to be retrieved
-
-    Returns
-    -------
-    tile_list: [(tile_id, tile_data),...]
-        A list of tile_id, tile_data tuples
-    '''
-    generated_tiles = []
-
-    for tile_id in tile_ids:
-        tile_id_parts = tile_id.split('.')
-        tile_position = list(map(int, tile_id_parts[1:3]))
-        zoom_level = tile_position[0]
-
-        # this doesn't combine multiple consequetive ids, which
-        # would speed things up
-        dense = bwt.get_bigwig_tile_by_id(
-            tileset.datafile.path,
-            zoom_level,
-            tile_position[1])
-
-        if len(dense):
-            max_dense = max(dense)
-            min_dense = min(dense)
-        else:
-            max_dense = 0
-            min_dense = 0
-
-        min_f16 = np.finfo('float16').min
-        max_f16 = np.finfo('float16').max
-
-        has_nan = len([d for d in dense if np.isnan(d)]) > 0
-
-        if (
-            not has_nan and
-            max_dense > min_f16 and max_dense < max_f16 and
-            min_dense > min_f16 and min_dense < max_f16
-        ):
-            tile_value = {
-                'dense': base64.b64encode(dense.astype('float16')).decode('utf-8'),
-                'dtype': 'float16'
-            }
-        else:
-            tile_value = {
-                'dense': base64.b64encode(dense.astype('float32')).decode('utf-8'),
-                'dtype': 'float32'
-            }
-
-        generated_tiles += [(tile_id, tile_value)]
-
-    return generated_tiles
+    return tcs.get_tsv_chromsizes(chrom_info_tileset.datafile.path)
 
 def generate_hitile_tiles(tileset, tile_ids):
     '''
@@ -590,7 +525,8 @@ def generate_tiles(tileset_tile_ids):
     elif tileset.filetype == 'cooler':
         return hgco.generate_tiles(tileset.datafile.path, tile_ids)
     elif tileset.filetype == 'bigwig':
-        return generate_bigwig_tiles(tileset, tile_ids)
+        chromsizes = get_chromsizes(tileset)
+        return hgbi.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
     elif tileset.filetype == 'multivec':
         return generate_1d_tiles(
                 tileset.datafile.path,
