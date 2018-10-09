@@ -68,19 +68,25 @@ def check_for_chromsizes(filename, coord_system):
     overlap_matches = [m for m in matches if m[0] > 0]
 
     if len(overlap_matches) == 0:
-        raise CommandError("No chromsizes available which match the chromosomes in this bigwig")
+        raise CommandError("No chromsizes available which match the chromosomes in this bigwig"
+                + "See http://docs.higlass.io/data_preparation.html#bigwig-files "
+                + "for more information"
+                )
     
     if len(overlap_matches) > 1:
-        raise CommandError("Multiple matching coordSystems:", 
+        raise CommandError("Multiple matching coordSystems:"
+                + "See http://docs.higlass.io/data_preparation.html#bigwig-files "
+                + "for more information",
                 ["({} [{}])".format(t[1].coordSystem, t[0]) for t in overlap_matches])
 
     if (coord_system is not None 
             and len(coord_system) > 0 
             and overlap_matches[0][1].coordSystem != coord_system):
         raise CommandError("Matching chromosome sizes (coordSystem: {}) do not "
-        + "match the specified coordinate sytem ({}). " 
-        + "Either omit the coordSystem or specify a matching one."
-        .format(overlap_matches[0][1].coordSystem, coord_system))
+            + "match the specified coordinate sytem ({}). " 
+            + "Either omit the coordSystem or specify a matching one."
+            + "See http://docs.higlass.io/data_preparation.html#bigwig-files "
+            + "for more information".format(overlap_matches[0][1].coordSystem, coord_system))
 
     if (coord_system is not None 
             and len(coord_system) > 0 
@@ -88,7 +94,9 @@ def check_for_chromsizes(filename, coord_system):
         print("Using coordinates for coordinate system: {}".format(coord_system))
 
     if coord_system is None or len(coord_system) == 0:
-        print("No coordinate system specified, but we found matching chromsizes. Using coordinate system {}".format(overlap_matches[0][1].coordSystem))
+        print("No coordinate system specified, but we found matching "
+            + "chromsizes. Using coordinate system {}."
+            .format(overlap_matches[0][1].coordSystem))
         
     return overlap_matches[0][1].coordSystem
 
@@ -132,7 +140,6 @@ class Command(BaseCommand):
         
         if options['filetype'].lower() == 'bigwig':
             coordSystem = check_for_chromsizes(options['filename'], options['coordSystem'])
-            print("coordSystem", coordSystem)
 
         if options['no_upload']:
             if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and

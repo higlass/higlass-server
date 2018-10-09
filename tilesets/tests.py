@@ -175,8 +175,23 @@ class IngestTests(dt.TestCase):
             uid='a',
             coordSystem='hg19_r')
 
-        ret = self.client.get('/api/v1/tiles/?d=a.0.0')
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        tileset_info = json.loads(ret.content)
+        assert(tileset_info['a']['chromsizes'][0][0] == 'chrM')
 
+        ret = self.client.get('/api/v1/tiles/?d=a.22.0')
+        tile = json.loads(ret.content)['a.22.0']
+        
+        ret = self.client.get('/api/v1/tiles/?d=a.22.17')
+        tile = json.loads(ret.content)['a.22.17']
+        assert(tile['min_value'] == 'NaN')
+        
+        ret = self.client.get('/api/v1/tiles/?d=a.22.117')
+        tile = json.loads(ret.content)['a.22.117']
+        assert(tile['min_value'] == 'NaN')
+
+        #print("tile:", tile)
+        
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
