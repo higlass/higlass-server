@@ -576,10 +576,12 @@ def tileset_info(request):
             }
         elif tileset_object.filetype == 'bigwig':
             chromsizes = tgt.get_chromsizes(tileset_object)
-            tileset_infos[tileset_uuid] = hgbi.tileset_info(
+            tsinfo = hgbi.tileset_info(
                     tileset_object.datafile.path,
-                    chromsizes
+                    [c,int(s) for c,s in chromsizes]
                 )
+            #print('tsinfo:', tsinfo)
+            tileset_infos[tileset_uuid] = tsinfo
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = hgmu.tileset_info(
                     tileset_object.datafile.path)
