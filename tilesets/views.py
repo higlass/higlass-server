@@ -578,9 +578,11 @@ def tileset_info(request):
             chromsizes = tgt.get_chromsizes(tileset_object)
             tsinfo = hgbi.tileset_info(
                     tileset_object.datafile.path,
-                    [c,int(s) for c,s in chromsizes]
+                    chromsizes
                 )
             #print('tsinfo:', tsinfo)
+            if 'chromsizes' in tsinfo:
+                tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
             tileset_infos[tileset_uuid] = tsinfo
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = hgmu.tileset_info(
