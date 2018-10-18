@@ -36,7 +36,6 @@ import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
-import tilesets.utils as tut
 
 import os.path as op
 
@@ -182,13 +181,13 @@ def sizes(request):
     # (name, size) tuples
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
-            data = hgbi.chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = hgbi.chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
-            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_cooler_chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'chromsizes-tsv':
-            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_tsv_chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'multivec':
-            data = tcs.get_multivec_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_multivec_chromsizes(chrom_sizes.datafile.path)
         else:
             data = '';
 
@@ -264,7 +263,7 @@ def suggest(request):
         raise rfe.NotFound('Suggestion source file not found')
 
     result_dict = tsu.get_gene_suggestions(
-        tut.get_datapath(tileset.datafile.url), text
+        tileset.datafile.path, text
     )
 
     return JsonResponse(result_dict, safe=False)
@@ -529,7 +528,7 @@ def tileset_info(request):
             try:
                 chromsizes = tm.Tileset.objects.get(uuid=request.GET['ci'])
                 data = tcs.chromsizes_array_to_series(
-                        tcs.get_tsv_chromsizes(tut.get_datapath(chromsizes.datafile.url)))
+                        tcs.get_tsv_chromsizes(chromsizes.datafile.path))
             except Exception as ex:
                 pass
 
@@ -563,7 +562,7 @@ def tileset_info(request):
             tileset_object.filetype == 'hibed'
         ):
             tileset_info = hdft.get_tileset_info(
-                h5py.File(tut.get_datapath(tileset_object.datafile.url), 'r'))
+                h5py.File(tileset_object.datafile.path, 'r'))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [int(tileset_info['min_pos'])],
                 "max_pos": [int(tileset_info['max_pos'])],
@@ -576,40 +575,48 @@ def tileset_info(request):
                 "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == 'bigwig':
-            tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+            chromsizes = tgt.get_chromsizes(tileset_object)
+            tsinfo = hgbi.tileset_info(
+                    tileset_object.datafile.path,
+                    chromsizes
+                )
+            #print('tsinfo:', tsinfo)
+            if 'chromsizes' in tsinfo:
+                tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
+            tileset_infos[tileset_uuid] = tsinfo
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = hgmu.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url))
+                    tileset_object.datafile.path)
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         elif tileset_object.filetype == 'beddb':
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'cooler':
             tileset_infos[tileset_uuid] = hgco.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url)
+                    tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'time-interval-json':
             tileset_infos[tileset_uuid] = hgti.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url)
+                    tileset_object.datafile.path
             )
         elif (
             tileset_object.filetype == '2dannodb' or
             tileset_object.filetype == 'imtiles'
         ):
             tileset_infos[tileset_uuid] = hgim.get_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'geodb':
             tileset_infos[tileset_uuid] = hggo.tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         else:
             # Unknown filetype

@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import django.contrib.auth.models as dcam
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
-import django.contrib.auth.models as dcam
+import django.core.management as dcm
+import django.core.management.base as dcmb
 import django.db as db
 
 import base64
@@ -100,6 +102,96 @@ class BedfileTests(dt.TestCase):
 
         ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
 '''
+
+
+class IngestTests(dt.TestCase):
+    def test_ingest_bigwig(self):
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector')
+
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_1",
+        )
+
+        # this should succeed when the others fail
+        dcm.call_command('ingest_tileset', 
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+            filetype='bigwig', datatype='vector')
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector', coordSystem='a')
+
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_2",
+        )
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset', 
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+                filetype='bigwig', datatype='vector')
+
+        # dcm.call_command('ingest_tileset', filename = 'data/chromSizes.tsv', filetype='chromsizes-tsv', datatype='chromsizes')
+        #dcm.call_command('ingest_tileset', filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', filetype='bigwig', datatype='vector')
+
+    def test_ingest_reordered_bigwig(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes_hg19_reordered.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_r",
+        )
+
+        dcm.call_command('ingest_tileset', 
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', 
+            filetype='bigwig', datatype='vector', 
+            uid='a',
+            coordSystem='hg19_r')
+
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        tileset_info = json.loads(ret.content)
+        assert(tileset_info['a']['chromsizes'][0][0] == 'chrM')
+
+        ret = self.client.get('/api/v1/tiles/?d=a.22.0')
+        tile = json.loads(ret.content)['a.22.0']
+        
+        ret = self.client.get('/api/v1/tiles/?d=a.22.17')
+        tile = json.loads(ret.content)['a.22.17']
+        assert(tile['min_value'] == 'NaN')
+        
+        ret = self.client.get('/api/v1/tiles/?d=a.22.117')
+        tile = json.loads(ret.content)['a.22.117']
+        assert(tile['min_value'] == 'NaN')
+
+        #print("tile:", tile)
+        
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
@@ -735,7 +827,7 @@ class CoolerTest(dt.TestCase):
 
         import base64
         r = base64.decodestring(contents['aa.0.0.0']['dense'].encode('utf-8'))
-        q = np.frombuffer(r, dtype=np.float16)
+        q = np.frombuffer(r, dtype=np.float32)
 
         q = q.reshape((256,256))
 
@@ -892,7 +984,7 @@ class FileUploadTest(dt.TestCase):
             obj = tm.Tileset.objects.get(uuid='bb')
 
             # make sure the file was actually created
-            self.assertTrue(op.exists, obj.datafile.url)
+            self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
 
@@ -930,7 +1022,7 @@ class FileUploadTest(dt.TestCase):
             obj = tm.Tileset.objects.get(uuid=new_uuid)
 
             # make sure the file was actually created
-            self.assertTrue(op.exists, obj.datafile.url)
+            self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
 
@@ -1137,10 +1229,10 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
         r = base64.decodestring(returned[list(returned.keys())[0]]['dense'].encode('utf-8'))
-        q = np.frombuffer(r, dtype=np.float16)
+        q = np.frombuffer(r, dtype=np.float32)
 
-        with h5py.File(self.cooler.datafile.url) as f:
-            tileset_info = hgco.tileset_info(self.cooler.datafile.url)
+        with h5py.File(self.cooler.datafile.path) as f:
+            tileset_info = hgco.tileset_info(self.cooler.datafile.path)
             tileset_file = f
 
             mat = [tileset_file, tileset_info]
