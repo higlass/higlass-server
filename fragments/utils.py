@@ -612,6 +612,10 @@ def get_frag_from_image_tiles(
     start2_rel = from_y - tile_start2_id * tile_size
     end2_rel = to_y - tile_start2_id * tile_size
 
+    # Make sure that image snippets are smaller or equal to 1024px
+    assert(end1_rel - start1_rel <= 1024)
+    assert(end2_rel - start2_rel <= 1024)
+
     # Notice the shape: height x width x channel
     return np.array(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
 
@@ -701,6 +705,10 @@ def get_frag_by_loc_from_imtiles(
 
         tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
         tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+
+        # Make sure that no more than 6 standard tiles (256px) are loaded.
+        assert(tile_size * len(tiles_x_range) < 1536)
+        assert(tile_size * len(tiles_y_range) < 1536)
 
         # Extract image tiles
         tiles = []
@@ -841,6 +849,10 @@ def get_frag_by_loc_from_osm(
 
         tiles_x_range = range(tile_start1_id, tile_end1_id + 1)
         tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
+
+        # Make sure that no more than 6 standard tiles (256px) are loaded.
+        assert(tile_size * len(tiles_x_range) < 1536)
+        assert(tile_size * len(tiles_y_range) < 1536)
 
         # Extract image tiles
         tiles = []
@@ -1205,6 +1217,10 @@ def get_frag(
     if abs_dim2 < height:
         end_bin2 += height - abs_dim2
         abs_dim2 = height
+
+    # Maximum width / height is 512
+    assert(abs_dim1 <= 512)
+    assert(abs_dim2 <= 512)
 
     # Finally, adjust to negative values.
     # Since relative bin IDs are adjusted by the start this will lead to a
