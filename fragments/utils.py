@@ -1154,8 +1154,8 @@ def get_frag(
         abs_dim2 = height
 
     # Maximum width / height is 512
-    if abs_dim1 > hss.SNIPPET_HIC_MAX_DATA_DIM: raise SnippetTooLarge()
-    if abs_dim2 > hss.SNIPPET_HIC_MAX_DATA_DIM: raise SnippetTooLarge()
+    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
+    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
 
     # Finally, adjust to negative values.
     # Since relative bin IDs are adjusted by the start this will lead to a

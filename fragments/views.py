@@ -238,6 +238,7 @@ def get_fragments_by_loci(request):
     encoding = params['encoding']
     representatives = params['representatives']
 
+    # Check if requesting a snippet from a `.cool` cooler file
     is_cool = len(loci) and len(loci[0]) > 7
     tileset_idx = 6 if is_cool else 4
     zoom_level_idx = tileset_idx + 1
@@ -305,7 +306,7 @@ def get_fragments_by_loci(request):
             out_dim = inset_dim | dims
 
             # Make sure out dim (in pixel) is not too large
-            if is_cool and out_dim > hss.SNIPPET_HIC_MAX_OUT_DIM:
+            if is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM:
                 raise SnippetTooLarge()
             if not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM:
                 raise SnippetTooLarge()
@@ -324,7 +325,7 @@ def get_fragments_by_loci(request):
             # Get max abs dim in base pairs
             max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
 
-            # Find clostest zoom level if `zoomout_level < 0`
+            # Find closest zoom level if `zoomout_level < 0`
             zoomout_level = (
                 locus[zoom_level_idx]
                 if locus[zoom_level_idx] >= 0
@@ -442,12 +443,6 @@ def get_fragments_by_loci(request):
 
                         data_types[idx] = 'matrix'
 
-    except SnippetTooLarge as ex:
-        raise
-        return JsonResponse({
-            'error': 'Requested fragment too large. Max is 1024x1024! Behave!',
-            'error_message': str(ex)
-        }, status=400)
     except Exception as ex:
         raise
         return JsonResponse({
