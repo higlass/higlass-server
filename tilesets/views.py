@@ -24,17 +24,18 @@ import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.multivec_tiles as tmt
 
-import hgtiles.bedfile as hgbe
 import hgtiles.cooler as hgco
 import hgtiles.bigwig as hgbi
 import hgtiles.multivec as hgmu
+import hgtiles.time_interval as hgti
+import hgtiles.geo as hggo
+import hgtiles.imtiles as hgim
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
-import tilesets.utils as tut
 
 import os.path as op
 
@@ -67,13 +68,16 @@ logger = logging.getLogger(__name__)
 
 rdb = getRdb()
 
+
 class UserList(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
 
+
 class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = tss.UserSerializer
+
 
 @api_view(['GET'])
 def uids_by_filename(request):
@@ -173,24 +177,23 @@ def sizes(request):
 
         return response(err_msg, status=err_status)
 
-    # Try to load the chromosome sizes and return them as a list of 
+    # Try to load the chromosome sizes and return them as a list of
     # (name, size) tuples
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
-            data = hgbi.chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = hgbi.chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
-            data = tcs.get_cooler_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_cooler_chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'chromsizes-tsv':
-            data = tcs.get_tsv_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_tsv_chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'multivec':
-            data = tcs.get_multivec_chromsizes(tut.get_datapath(chrom_sizes.datafile.url))
+            data = tcs.get_multivec_chromsizes(chrom_sizes.datafile.path)
         else:
             data = '';
 
     except Exception as ex:
         logger.exception(ex)
         err_msg = str(ex)
-        print('err_msg:', err_msg)
         err_status = 500
 
         if is_json:
@@ -260,7 +263,7 @@ def suggest(request):
         raise rfe.NotFound('Suggestion source file not found')
 
     result_dict = tsu.get_gene_suggestions(
-        tut.get_datapath(tileset.datafile.url), text
+        tileset.datafile.path, text
     )
 
     return JsonResponse(result_dict, safe=False)
@@ -340,6 +343,7 @@ def viewconfs(request):
 
     return JsonResponse(json.loads(obj.viewconf))
 
+
 def add_transform_type(tile_id):
     '''
     Add a transform type to a cooler tile id if it's not already
@@ -362,6 +366,7 @@ def add_transform_type(tile_id):
     transform_type = hgco.get_transform_type(tile_id)
     new_tile_id = ".".join([tileset_uuid] + tile_position + [transform_type])
     return new_tile_id
+
 
 @api_view(['GET'])
 def tiles(request):
@@ -388,6 +393,10 @@ def tiles(request):
     p = mp.Pool(4)
     res = p.map(parallelize, hargs)
     '''
+
+    # Return the raw data if only one tile is requested. This currently only
+    # works for `imtiles`
+    raw = request.GET.get('raw', False)
 
     tileids_by_tileset = col.defaultdict(set)
     generated_tiles = []
@@ -424,7 +433,7 @@ def tiles(request):
             # log the error and carry forward fetching the tile
             # from the original data
             logger.error(ex)
-            
+
         #tile_value = None
 
         if tile_value is not None:
@@ -437,7 +446,7 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid]) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
     #pool = mp.Pool(6)
 
@@ -477,7 +486,13 @@ def tiles(request):
         if original_tile_id in tileids_to_fetch:
             tiles_to_return[original_tile_id] = tile_value
 
+    if len(generated_tiles) == 1 and raw and 'image' in generated_tiles[0][1]:
+        return HttpResponse(
+            generated_tiles[0][1]['image'], content_type='image/jpeg'
+        )
+
     return JsonResponse(tiles_to_return, safe=False)
+
 
 @api_view(['GET'])
 def tileset_info(request):
@@ -513,13 +528,23 @@ def tileset_info(request):
             try:
                 chromsizes = tm.Tileset.objects.get(uuid=request.GET['ci'])
                 data = tcs.chromsizes_array_to_series(
-                        tcs.get_tsv_chromsizes(tut.get_datapath(chromsizes.datafile.url)))
-                print('data:', data)
+                        tcs.get_tsv_chromsizes(chromsizes.datafile.path))
             except Exception as ex:
                 pass
 
     for tileset_uuid in tileset_uuids:
         tileset_object = queryset.filter(uuid=tileset_uuid).first()
+
+        if tileset_uuid == 'osm-image':
+            tileset_infos[tileset_uuid] = {
+                'min_x': 0,
+                'max_height': 134217728,
+                'min_y': 0,
+                'max_y': 134217728,
+                'max_zoom': 19,
+                'tile_size': 256
+            }
+            continue
 
         if tileset_object is None:
             tileset_infos[tileset_uuid] = {
@@ -537,7 +562,7 @@ def tileset_info(request):
             tileset_object.filetype == 'hibed'
         ):
             tileset_info = hdft.get_tileset_info(
-                h5py.File(tut.get_datapath(tileset_object.datafile.url), 'r'))
+                h5py.File(tileset_object.datafile.path, 'r'))
             tileset_infos[tileset_uuid] = {
                 "min_pos": [int(tileset_info['min_pos'])],
                 "max_pos": [int(tileset_info['max_pos'])],
@@ -549,29 +574,49 @@ def tileset_info(request):
                 "tile_size": int(tileset_info['tile_size']),
                 "max_zoom": int(tileset_info['max_zoom'])
             }
-        elif tileset_object.filetype == 'bedfile':
-            tileset_infos[tileset_uuid] = hgbe.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url))
         elif tileset_object.filetype == 'bigwig':
-            tileset_infos[tileset_uuid] = tgt.generate_bigwig_tileset_info(tileset_object)
+            chromsizes = tgt.get_chromsizes(tileset_object)
+            tsinfo = hgbi.tileset_info(
+                    tileset_object.datafile.path,
+                    chromsizes
+                )
+            #print('tsinfo:', tsinfo)
+            if 'chromsizes' in tsinfo:
+                tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
+            tileset_infos[tileset_uuid] = tsinfo
         elif tileset_object.filetype == 'multivec':
             tileset_infos[tileset_uuid] = hgmu.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url))
+                    tileset_object.datafile.path)
         elif tileset_object.filetype == "elastic_search":
             response = urllib.urlopen(
                 tileset_object.datafile + "/tileset_info")
             tileset_infos[tileset_uuid] = json.loads(response.read())
         elif tileset_object.filetype == 'beddb':
             tileset_infos[tileset_uuid] = cdt.get_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'bed2ddb':
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
-                tut.get_datapath(tileset_object.datafile.url)
+                tileset_object.datafile.path
             )
         elif tileset_object.filetype == 'cooler':
             tileset_infos[tileset_uuid] = hgco.tileset_info(
-                    tut.get_datapath(tileset_object.datafile.url)
+                    tileset_object.datafile.path
+            )
+        elif tileset_object.filetype == 'time-interval-json':
+            tileset_infos[tileset_uuid] = hgti.tileset_info(
+                    tileset_object.datafile.path
+            )
+        elif (
+            tileset_object.filetype == '2dannodb' or
+            tileset_object.filetype == 'imtiles'
+        ):
+            tileset_infos[tileset_uuid] = hgim.get_tileset_info(
+                tileset_object.datafile.path
+            )
+        elif tileset_object.filetype == 'geodb':
+            tileset_infos[tileset_uuid] = hggo.tileset_info(
+                tileset_object.datafile.path
             )
         else:
             # Unknown filetype
@@ -580,11 +625,58 @@ def tileset_info(request):
             }
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
+        tileset_infos[tileset_uuid]['datatype'] = tileset_object.datatype
         tileset_infos[tileset_uuid]['coordSystem'] = tileset_object.coordSystem
         tileset_infos[tileset_uuid]['coordSystem2'] =\
             tileset_object.coordSystem2
 
     return JsonResponse(tileset_infos)
+
+
+@api_view(['POST'])
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+def link_tile(request):
+    '''
+    A file has been uploaded to S3. Finish the upload here by adding the file
+    to the database.
+
+    The request should contain the location that file was uploaded to.
+
+    Parameters:
+        request: The HTTP request associated with this POST action
+
+    Returns:
+        JsonResponse: A response containing the uuid of the newly added tileset
+    '''
+    body = json.loads(request.body.decode('utf8'))
+
+    media_base_path = op.realpath(hss.MEDIA_ROOT)
+    abs_filepath = op.realpath(op.join(media_base_path, body['filepath']))
+
+    if abs_filepath.find(media_base_path) != 0:
+        # check ot make sure that the filename is contained in the AWS_BUCKET_MOUNT
+        # e.g. that somebody isn't surreptitiously trying to pass in ('../../file')
+        return JsonResponse({'error': "Provided path ({}) not in the data path".format(body['filepath'])}, status=422)
+    else:
+        if not op.exists(abs_filepath):
+            return JsonResponse({'error': "Specified file ({}) does not exist".format(body['filepath'])}, status=400)
+
+    diff_path = abs_filepath[len(media_base_path)+1:]    # +1 for the slash
+
+    tile_data = body.copy()
+    tile_data.pop('filepath')
+    # print("user:", request.user)
+    try:
+        obj = tm.Tileset.objects.create(
+            datafile=diff_path,
+            name=op.basename(body['filepath']),
+            owner=request.user,
+            **tile_data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=422)
+
+
+    return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
 
 @method_decorator(gzip_page, name='dispatch')

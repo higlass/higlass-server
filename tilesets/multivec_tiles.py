@@ -74,7 +74,7 @@ def get_tileset_info(filename):
       'shape': shape
     }
 
-    print("hi:", list(f['resolutions'][str(resolutions[0])].attrs.keys()))
+    # print("hi:", list(f['resolutions'][str(resolutions[0])].attrs.keys()))
     if 'row_infos' in f['resolutions'][str(resolutions[0])].attrs:
         row_infos = f['resolutions'][str(resolutions[0])].attrs['row_infos']
         tileset_info['row_infos'] = [r.decode('utf8') for r in row_infos]
@@ -126,7 +126,7 @@ def get_single_tile(filename, tile_pos):
     f.close()
     t3 = time.time()
 
-    print("single time time: {:.2f} (tileset info: {:.2f}, open time: {:.2f})".format(t3 - t1, t15 - t1, t2 - t15))
+    # print("single time time: {:.2f} (tileset info: {:.2f}, open time: {:.2f})".format(t3 - t1, t15 - t1, t2 - t15))
 
     return dense.T
 
@@ -159,10 +159,10 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
         the values for the portion of the genome that is visible.
     '''
     binsize = resolution
-    print('binsize:', binsize)
-    print('start_pos:', start_pos, 'end_pos:', end_pos)
-    print("length:", end_pos - start_pos)
-    print('shape:', shape)
+    # print('binsize:', binsize)
+    # print('start_pos:', start_pos, 'end_pos:', end_pos)
+    # print("length:", end_pos - start_pos)
+    # print('shape:', shape)
 
     t0 = time.time()
     arrays = []
@@ -192,9 +192,9 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
             start_pos = start // binsize
             end_pos = end // binsize
 
-            print('current_data_position:', current_data_position)
-            print('current_binned_data_position:', current_binned_data_position)
-            print('binsize:', binsize, 'resolution:', resolution)
+            # print('current_data_position:', current_data_position)
+            # print('current_binned_data_position:', current_binned_data_position)
+            # print('binsize:', binsize, 'resolution:', resolution)
 
             if start_pos == end_pos:
                 if current_data_position - current_binned_data_position > 0:
@@ -209,7 +209,7 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
             if chrom not in f['resolutions'][str(resolution)]['values']:
                 continue
             
-            print('values:', f['resolutions'][str(resolution)]['values'][chrom][:])
+            # print('values:', f['resolutions'][str(resolution)]['values'][chrom][:])
             x = f['resolutions'][str(resolution)]['values'][chrom][start_pos:end_pos]
             current_binned_data_position += binsize * (end_pos - start_pos)
 
@@ -222,7 +222,7 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
 
             if len(x):
                 num_added += 1
-                print('num_added:', num_added, 'x:', sum(x[0]))
+                # print('num_added:', num_added, 'x:', sum(x[0]))
 
             t2 = time.time()
 
@@ -237,7 +237,7 @@ def get_tile(f, chromsizes, resolution, start_pos, end_pos, shape):
         arrays.append(x)
 
     # print("arrays:", arrays[0])
-    print("total_length:", total_length)
+    # print("total_length:", total_length)
     t3 = time.time()
     # print("total fetch time:", t3 - t0)
 
