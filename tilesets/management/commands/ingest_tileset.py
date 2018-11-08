@@ -11,6 +11,47 @@ import os.path as op
 import tilesets.chromsizes  as tcs
 from django.conf import settings
 
+    
+def ingest(options):
+    filename = options['filename']
+    datatype = options['datatype']
+    filetype = options['filetype']
+    coordSystem = options['coordSystem']
+    coordSystem2 = options['coordSystem2']
+    # coord = options['coord']
+    uid = options.get('uid') or slugid.nice().decode('utf-8')
+    name = options.get('name') or op.split(filename)[1]
+    
+    if 'filetype' not in options:
+        raise CommandError('Filetype has to be specified')
+    
+    if options['filetype'].lower() == 'bigwig':
+        coordSystem = check_for_chromsizes(options['filename'], options['coordSystem'])
+
+    if options['no_upload']:
+        if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
+            not op.islink(op.join(settings.MEDIA_ROOT, filename))):
+            raise CommandError('File does not exist under media root')
+        django_file = filename
+    else:
+        if os.path.islink(filename):
+            django_file = File(open(os.readlink(filename),'rb'))
+        else:
+            django_file = File(open(filename,'rb'))
+
+        # remove the filepath of the filename
+        django_file.name = op.split(django_file.name)[1]
+
+    tm.Tileset.objects.create(
+        datafile=django_file,
+        filetype=filetype,
+        datatype=datatype,
+        coordSystem=coordSystem,
+        coordSystem2=coordSystem2,
+        owner=None,
+        uuid=uid,
+        name=name)
+        
 def chromsizes_match(chromsizes1, chromsizes2):
     pass  
 
@@ -126,41 +167,4 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        filename = options['filename']
-        datatype = options['datatype']
-        filetype = options['filetype']
-        coordSystem = options['coordSystem']
-        coordSystem2 = options['coordSystem2']
-        # coord = options['coord']
-        uid = options.get('uid') or slugid.nice().decode('utf-8')
-        name = options.get('name') or op.split(filename)[1]
-
-        if 'filetype' not in options:
-            raise CommandError('Filetype has to be specified')
-        
-        if options['filetype'].lower() == 'bigwig':
-            coordSystem = check_for_chromsizes(options['filename'], options['coordSystem'])
-
-        if options['no_upload']:
-            if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
-                not op.islink(op.join(settings.MEDIA_ROOT, filename))):
-                raise CommandError('File does not exist under media root')
-            django_file = filename
-        else:
-            if os.path.islink(filename):
-                django_file = File(open(os.readlink(filename),'rb'))
-            else:
-                django_file = File(open(filename,'rb'))
-
-            # remove the filepath of the filename
-            django_file.name = op.split(django_file.name)[1]
-
-        tm.Tileset.objects.create(
-            datafile=django_file,
-            filetype=filetype,
-            datatype=datatype,
-            coordSystem=coordSystem,
-            coordSystem2=coordSystem2,
-            owner=None,
-            uuid=uid,
-            name=name)
+        ingest(options)
