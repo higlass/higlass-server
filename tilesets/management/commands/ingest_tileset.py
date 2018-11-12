@@ -115,6 +115,7 @@ class Command(BaseCommand):
         # parser.add_argument('--coord', default='hg19', type=str)
         parser.add_argument('--uid', type=str)
         parser.add_argument('--name', type=str)
+        parser.add_argument('--group', type=str, default='')
 
         # Named (optional) arguments
         parser.add_argument(
@@ -162,5 +163,6 @@ class Command(BaseCommand):
             coordSystem=coordSystem,
             coordSystem2=coordSystem2,
             owner=None,
+            group=group,
             uuid=uid,
             name=name)
