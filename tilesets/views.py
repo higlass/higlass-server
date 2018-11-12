@@ -650,7 +650,7 @@ def link_tile(request):
         JsonResponse: A response containing the uuid of the newly added tileset
     '''
     body = json.loads(request.body.decode('utf8'))
-       
+
 
 
     media_base_path = op.realpath(hss.MEDIA_ROOT)
@@ -695,7 +695,7 @@ def ingest_tileset_url(request):
             filetype: A filetype for the tileset
             datatype: A datatype for the tileset
             uid: A unique identifier for the tileset
-            coordSystem:             
+            coordSystem:
 
     Returns:
         HttpResponse code for the request, 200 if the action is successful
@@ -717,10 +717,11 @@ def ingest_tileset_url(request):
             'error': 'Specified url ({}) is not valid.'.format(url)
         })
         return JsonResponse(error, 400)
-    
-    
+
+
     media_base_path = op.realpath(hss.MEDIA_ROOT)
     destination_path = op.join(media_base_path, filename)
+    logger.debug('Destination %s' % destination_path)
 
     # ensure this space is not already reserved
     if op.exists(destination_path):
@@ -728,11 +729,9 @@ def ingest_tileset_url(request):
             'error': 'Speicifed file ({}) already exists.'.format(filename)
         })
 
-    # get the file and move it to the temp directory
-    url_file = urllib.URLopener()
-    url_file.retrieve(url, destination_path)
-
     try:
+        # get the file and move it to the media directory
+        urllib.request.urlretrieve(url, destination_path)
         # ingest the file by calling the ingest_tileset command
         ingest(({
             filename,
@@ -749,7 +748,7 @@ def ingest_tileset_url(request):
         }), 500)
 
     return JsonResponse({'Success'}, 200)
-    
+
 
 
 

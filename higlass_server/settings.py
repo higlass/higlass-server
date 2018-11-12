@@ -139,7 +139,7 @@ LOGGING = {
         },
         'tilesets': {
             'handlers': ['file'],
-            'level': get_setting('LOG_LEVEL_TILESETS', 'WARNING'),
+            'level': get_setting('LOG_LEVEL_TILESETS', 'DEBUG'),
         },
     }
 }
