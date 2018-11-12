@@ -743,6 +743,7 @@ def ingest_tileset_url(request):
             uid
         }))
     except Exception as e:
+        logger.error('Problem ingesting file: %s' % e)
         return JsonResponse(({
             'error': str(e)
         }), 500)
