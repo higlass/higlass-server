@@ -32,7 +32,8 @@ class TilesetSerializer(serializers.ModelSerializer):
             'name',
             'coordSystem',
             'coordSystem2',
-            'created'
+            'created',
+            'group'
         )
 
 
@@ -48,5 +49,6 @@ class UserFacingTilesetSerializer(TilesetSerializer):
             'name',
             'coordSystem',
             'coordSystem2',
-            'created'
+            'created',
+            'group'
         )

@@ -21,10 +21,12 @@ class ViewConf(models.Model):
         '''
         return "Viewconf [uuid: " + self.uuid + ']'
 
+def create_uuid():
+    return slugid.nice().decode('utf-8')
 
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    uuid = models.CharField(max_length=100, unique=True, default=lambda: slugid.nice().decode('utf-8'))
+    uuid = models.CharField(max_length=100, unique=True, default=create_uuid)
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
