@@ -29,7 +29,8 @@ class Tileset(models.Model):
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
     datatype = models.TextField(default='unknown')
-
+    group = models.TextField(default='')
+    
     coordSystem = models.TextField()
     coordSystem2 = models.TextField(default='')
 
