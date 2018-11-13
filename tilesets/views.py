@@ -732,7 +732,7 @@ def ingest_tileset_url(request):
         # get the file and move it to the media directory
         urllib.request.urlretrieve(url, destination_path)
         # ingest the file by calling the ingest_tileset command
-        ingest(**body)
+        ingest(no_upload=True, **body)
     except Exception as e:
         logger.error('Problem ingesting file: %s' % e)
         return JsonResponse(({

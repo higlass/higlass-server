@@ -12,7 +12,7 @@ import tilesets.chromsizes  as tcs
 from django.conf import settings
 
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem=None, coordSystem2=None, uid=None, name=None, **options):
+def ingest(filename=None, datatype=None, filetype=None, coordSystem=None, coordSystem2=None, uid=None, name=None, no_upload=False):
     uid = uid or slugid.nice().decode('utf-8')
     name = name or op.split(filename)[1]
 
@@ -22,7 +22,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem=None, coordS
     if filetype.lower() == 'bigwig':
         coordSystem = check_for_chromsizes(filename, coordSystem)
 
-    if options['no_upload']:
+    if no_upload:
         if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
             not op.islink(op.join(settings.MEDIA_ROOT, filename))):
             raise CommandError('File does not exist under media root')
