@@ -484,7 +484,7 @@ def tiles(request):
     
 @api_view(['POST', 'DELETE'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-#@permission_classes((IsAuthenticated,))
+@permission_classes((IsAuthenticated,))
 def tileset(request):
     '''
     Delete or modify tileset with given uuid.
