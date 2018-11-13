@@ -39,6 +39,7 @@ import tilesets.suggestions as tsu
 from tilesets.management.commands.ingest_tileset import ingest
 
 import os.path as op
+import os
 
 import rest_framework.exceptions as rfe
 import rest_framework.parsers as rfp
@@ -726,6 +727,8 @@ def ingest_tileset_url(request):
         })
 
     try:
+        if not op.exists(media_base_path):
+            os.makedirs(media_base_path)
         # get the file and move it to the media directory
         urllib.request.urlretrieve(url, destination_path)
         # ingest the file by calling the ingest_tileset command
