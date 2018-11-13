@@ -700,21 +700,13 @@ def ingest_tileset_url(request):
     Returns:
         HttpResponse code for the request, 200 if the action is successful
     '''
-    logger.warn('Request Body %s' % request.body)
-    logger.warn('Request Body %s' % json.loads(request.body.decode('utf8')))
     body = json.loads(request.body.decode('utf8'))
 
-    url = body['fileurl']
-    uid = body['uid']
-    name = body['name']
-    filename = body['filename']
-    datatype = body['datatype']
-    filetype = body['filetype']
-    coordSystem = body['coordSystem']
-    coordSystem2 = body['coordSystem2']
+    url = body.get('fileurl', None)
+    filename = body.get('filename', None)
 
     # validate the url to ensure we didn't get garbage
-    is_url = True #todo: replace with regex
+    is_url = url != None #todo: replace with regex
 
     if not is_url:
         error = ({
@@ -737,15 +729,7 @@ def ingest_tileset_url(request):
         # get the file and move it to the media directory
         urllib.request.urlretrieve(url, destination_path)
         # ingest the file by calling the ingest_tileset command
-        ingest(({
-            filename,
-            datatype,
-            filetype,
-            coordSystem,
-            coordSystem2,
-            name,
-            uid
-        }))
+        ingest(**body)
     except Exception as e:
         logger.error('Problem ingesting file: %s' % e)
         return JsonResponse(({
