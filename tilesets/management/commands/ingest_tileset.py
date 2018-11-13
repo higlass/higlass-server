@@ -12,7 +12,7 @@ import tilesets.chromsizes  as tcs
 from django.conf import settings
 
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem=None, coordSystem2=None, uid=None, name=None, no_upload=False):
+def ingest(filename=None, datatype=None, filetype=None, coordSystem=None, coordSystem2=None, uid=None, name=None, no_upload=False, **options):
     uid = uid or slugid.nice().decode('utf-8')
     name = name or op.split(filename)[1]
 
