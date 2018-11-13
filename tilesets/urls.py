@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^viewconf', views.viewconfs),
     url(r'^uids_by_filename', views.uids_by_filename),
     url(r'^tiles/$', views.tiles),
+    url(r'^tileset/$', views.tileset),
     url(r'^tileset_info/$', views.tileset_info),
     url(r'^suggest/$', views.suggest),
     url(r'^', include(router.urls)),

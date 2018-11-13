@@ -36,6 +36,7 @@ import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 import tilesets.utils as tut
 
+import os
 import os.path as op
 
 import rest_framework.exceptions as rfe
@@ -57,8 +58,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.gzip import gzip_page
 from rest_framework import generics
 from rest_framework import viewsets
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 from fragments.drf_disable_csrf import CsrfExemptSessionAuthentication
 
 from higlass_server.utils import getRdb
@@ -478,6 +480,54 @@ def tiles(request):
             tiles_to_return[original_tile_id] = tile_value
 
     return JsonResponse(tiles_to_return, safe=False)
+    
+    
+@api_view(['DELETE'])
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+@permission_classes((IsAuthenticated,))
+def tileset(request):
+    '''
+    Delete tileset with given uuid.
+    
+    Args:
+        request (django.http.HTTPRequest): The request object
+            containing tileset uuid in the 'd' parameter.
+    Return:
+        django.http.JsonResponse: A JSON object containing
+            the tileset uuid or an error message detailing 
+            what step of the deletion failed.
+    '''
+    if request.method == 'DELETE':
+        if 'd' not in request.GET:
+            return JsonResponse({
+                'error': 'Tileset uuid not specified'
+            }, status=400)
+        tileset_uuid = request.GET['d']
+        instance = tm.Tileset.objects.get(uuid=tileset_uuid)
+        if not instance:
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} does not exist'.format(tileset_uuid)
+            }, status=400)
+        filename = instance.datafile.name
+        filepath = op.join(hss.MEDIA_ROOT, filename)
+        if not op.isfile(filepath):
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} does not have file at path {}'.format(tileset_uuid, filepath)
+            }, status=404)
+        try:
+            os.remove(filepath)
+        except OSError:
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} could not have file removed at path {}'.format(tileset_uuid, filepath)
+            }, status=400)
+        try:
+              instance.delete()
+        except ProtectedError:
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} could not be deleted'.format(tileset_uuid)
+            }, status=400)
+        return JsonResponse({'uuid': tileset_uuid})
+
 
 @api_view(['GET'])
 def tileset_info(request):
