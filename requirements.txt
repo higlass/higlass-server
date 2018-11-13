@@ -1,5 +1,5 @@
 -e git+https://github.com/mirnylab/cooler.git@master#egg=cooler
--e git+https://github.com/nvictus/pybbi.git@master#egg=pybbi
+pybbi==0.2.0
 pyBigWig==0.3.2
 Cython==0.27.2
 CacheControl==0.12.4
