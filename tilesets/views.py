@@ -757,6 +757,11 @@ def ingest_tileset_url(request):
 class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
 
+    logger.debug('hello, debug')
+    logger.info('hello, info')
+    logger.warn('hello, warn')
+    logger.error('hello, error')
+
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
 
