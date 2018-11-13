@@ -482,22 +482,63 @@ def tiles(request):
     return JsonResponse(tiles_to_return, safe=False)
     
     
-@api_view(['DELETE'])
+@api_view(['POST', 'DELETE'])
 @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-@permission_classes((IsAuthenticated,))
+#@permission_classes((IsAuthenticated,))
 def tileset(request):
     '''
-    Delete tileset with given uuid.
+    Delete or modify tileset with given uuid.
     
     Args:
+        POST
         request (django.http.HTTPRequest): The request object
-            containing tileset uuid in the 'd' parameter.
+            containing the uuid (uuid=abcd1234) that identifies the
+            tileset, with additional (optional) parameters that update 
+            the identified object (name, at this time).
+
+        DELETE
+        request (django.http.HTTPRequest): The request object
+            containing the uuid (d=abcd1234) that identifies the
+            tileset.
+                        
     Return:
         django.http.JsonResponse: A JSON object containing
             the tileset uuid or an error message detailing 
-            what step of the deletion failed.
+            what step of the deletion or modification failed.
     '''
-    if request.method == 'DELETE':
+    
+    if request.method == 'POST':
+        tileset_wrapper = json.loads(request.body.decode('utf-8'))
+        tileset_uuid = tileset_wrapper.get('uuid')
+        tileset_name = tileset_wrapper.get('name')
+        if not tileset_uuid:
+            return JsonResponse({
+                'error': 'Tileset uuid not specified'
+            }, status=400)
+        instance = tm.Tileset.objects.get(uuid=tileset_uuid)
+        if not instance:
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} does not exist'.format(tileset_uuid)
+            }, status=400)
+        try:
+            instance_modified = False
+
+            # only change tileset name if specified, and if it is 
+            # different from the current instance name
+            if tileset_name and tileset_name != instance.name:
+                instance.name = tileset_name
+                instance_modified = True
+
+            # if any changes were applied, persist them
+            if instance_modified:
+                instance.save()
+        except ProtectedError:
+            return JsonResponse({
+                'error': 'Tileset instance for uuid {} could not be modified'.format(tileset_uuid)
+            }, status=400)
+        return JsonResponse({'uuid': tileset_uuid})
+
+    elif request.method == 'DELETE':
         if 'd' not in request.GET:
             return JsonResponse({
                 'error': 'Tileset uuid not specified'

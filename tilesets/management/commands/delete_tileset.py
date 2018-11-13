@@ -5,7 +5,7 @@ import os
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('--uuid', type=str)
+        parser.add_argument('--uuid', type=str, required=True)
         
     def handle(self, *args, **options):
         uuid = options.get('uuid')
