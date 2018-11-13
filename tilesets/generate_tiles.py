@@ -468,7 +468,7 @@ def generate_tiles(tileset_tile_ids):
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
-        return hgbe.tiles(tileset, tile_ids)
+        return hgbe.tiles(tileset.datafile.path, tile_ids)
     elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
         return generate_bed2ddb_tiles(tileset, tile_ids)
     elif tileset.filetype == 'geodb':
