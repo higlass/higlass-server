@@ -700,14 +700,18 @@ def ingest_tileset_url(request):
     Returns:
         HttpResponse code for the request, 200 if the action is successful
     '''
-    url = request.body['fileurl']
-    uid = request.body['uid']
-    name = request.body['name']
-    filename = request.body['filename']
-    datatype = request.body['datatype']
-    filetype = request.body['filetype']
-    coordSystem = request.body['coordSystem']
-    coordSystem2 = request.body['coordSystem2']
+    logger.warn('Request Body %s' % request.body)
+    logger.warn('Request Body %s' % json.loads(request.body.decode('utf8')))
+    body = json.loads(request.body.decode('utf8'))
+
+    url = body['fileurl']
+    uid = body['uid']
+    name = body['name']
+    filename = body['filename']
+    datatype = body['datatype']
+    filetype = body['filetype']
+    coordSystem = body['coordSystem']
+    coordSystem2 = body['coordSystem2']
 
     # validate the url to ensure we didn't get garbage
     is_url = True #todo: replace with regex
