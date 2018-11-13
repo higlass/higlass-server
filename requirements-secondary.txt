@@ -1,2 +1,1 @@
 clodius==0.9.3
-hgtiles==0.2.17
