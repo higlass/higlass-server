@@ -81,6 +81,34 @@ class FragmentsTest(dt.TestCase):
         self.assertTrue('error' in ret)
         self.assertTrue('error_message' in ret)
 
+    def test_too_large_request(self):
+        data = {
+            "loci": [
+                [
+                    "1",
+                    1000000000,
+                    2000000000,
+                    "1",
+                    1000000000,
+                    2000000000,
+                    "c1",
+                    0
+                ]
+            ]
+        }
+
+        response = self.client.post(
+            '/api/v1/fragments_by_loci/?dims=1025',
+            json.dumps(data),
+            content_type="application/json"
+        )
+
+        ret = json.loads(str(response.content, encoding='utf8'))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('error' in ret)
+        self.assertTrue('error_message' in ret)
+
     def test_both_body_data_types(self):
         loci = [
             [

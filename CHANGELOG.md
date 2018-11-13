@@ -1,3 +1,15 @@
+v1.7.3 (2018-07-12)
+
+- Return datatype along with tileset info
+
+v1.7.0
+
+- Merged all of Fritz's changes
+
+v1.6.0 (2018-05-07)
+
+- Start factoring out hgtiles code
+
 v1.5.3 (2018-01-
 
 - Refactored the chromsizes code to be more modular
