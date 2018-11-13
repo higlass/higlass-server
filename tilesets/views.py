@@ -682,7 +682,7 @@ def link_tile(request):
     return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
 @api_view(['POST'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+# @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def ingest_tileset_url(request):
     '''
     Ingest a tileset from a url downloaded file, uploading it to the media directory
@@ -721,7 +721,7 @@ def ingest_tileset_url(request):
 
     media_base_path = op.realpath(hss.MEDIA_ROOT)
     destination_path = op.join(media_base_path, filename)
-    logger.debug('Destination %s' % destination_path)
+    logger.warn('Destination %s' % destination_path)
 
     # ensure this space is not already reserved
     if op.exists(destination_path):
@@ -756,11 +756,6 @@ def ingest_tileset_url(request):
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
     """Tilesets"""
-
-    logger.debug('hello, debug')
-    logger.info('hello, info')
-    logger.warn('hello, warn')
-    logger.error('hello, error')
 
     queryset = tm.Tileset.objects.all()
     serializer_class = tss.TilesetSerializer
