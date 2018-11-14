@@ -748,7 +748,7 @@ def ingest_tileset_url(request):
             'error': str(e)
         }), 500)
 
-    return JsonResponse({}, 200)
+    return HttpResponse("Success", content_type="text/plain")
 
 
 
