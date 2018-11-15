@@ -4,7 +4,7 @@
 
 # Typical usage:
 #
-# git clone https://github.com/hms-dbmi/higlass-server.git
+# git clone https://github.com/higlass/higlass-server.git
 # docker build --cache-from higlass-server-image --tag higlass-server-image docker-context
 # docker run -dit --name higlass-server-container --volume `pwd`:/home/higlass/higlass-server higlass-server-image
 # docker exec higlass-server-container python manage.py migrate
@@ -25,7 +25,7 @@ ENV PATH="/home/higlass/miniconda/bin:${PATH}"
 RUN conda install --yes python=2.7.12 cython==0.25.2 numpy=1.11.2
 
 # This is not run with bash: Otherwise, the <( ) syntax would be useful here.
-ENV GITHUB=https://raw.githubusercontent.com/hms-dbmi/higlass-server/master
+ENV GITHUB=https://raw.githubusercontent.com/higlass/higlass-server/master
 RUN wget $GITHUB/requirements.txt           && pip install -r requirements.txt
 RUN wget $GITHUB/requirements-secondary.txt && pip install -r requirements-secondary.txt
 

@@ -14,6 +14,8 @@ import collections as col
 
 import django.db.models as dbm
 import django.db.models.functions as dbmf
+import django.core.exceptions as dce
+import django.http as dh
 
 import guardian.utils as gu
 
@@ -37,6 +39,7 @@ import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 
+import os
 import os.path as op
 
 import rest_framework.exceptions as rfe
@@ -388,7 +391,7 @@ def tiles(request):
     # create a set so that we don't fetch the same tile multiple times
     tileids_to_fetch = set(request.GET.getlist("d"))
     # with ProcessPoolExecutor() as executor:
-    # 	  res = executor.map(parallelize, hargs)
+    #       res = executor.map(parallelize, hargs)
     '''
     p = mp.Pool(4)
     res = p.map(parallelize, hargs)
@@ -692,8 +695,72 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         permission_classes = (tsp.UserPermissionReadOnly,)
 
     lookup_field = 'uuid'
-    parser_classes = (rfp.MultiPartParser,)
-
+    parser_classes = (rfp.JSONParser, rfp.MultiPartParser,)
+    
+    def update(self, request, *args, **kwargs):
+        '''Modify properties of a tileset instance
+        '''
+        uuid = self.kwargs['uuid']
+        if not uuid:
+            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+        try:
+            instance = self.get_object()
+            instance_dirty = False
+            name = request.data['name']
+            if name and name != instance.name:
+                instance.name = name
+                instance_dirty = True
+            if instance_dirty:
+                instance.save()
+        except dh.Http404:
+            return JsonResponse({'uuid': uuid}, status=404)
+        except dbm.ProtectedError as dbpe:
+            return JsonResponse({'msg': 'unable to modify tileset instance: ' + str(dbpe)}, status=500)
+        return HttpResponse(status=204)
+            
+    def destroy(self, request, *args, **kwargs):
+        '''Delete a tileset instance and underlying media upload
+        '''
+        uuid = self.kwargs['uuid']
+        if not uuid:
+            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            filename = instance.datafile.name
+            filepath = op.join(hss.MEDIA_ROOT, filename)
+            if not op.isfile(filepath):
+                return JsonResponse({'msg': 'unable to locate tileset media file for deletion: ' + filepath}, status=500)
+            os.remove(filepath)
+        except dh.Http404:
+            return JsonResponse({'uuid': uuid}, status=404)
+        except dbm.ProtectedError as dbpe:
+            return JsonResponse({'msg': 'unable to delete tileset instance: ' + str(dbpe)}, status=500)
+        except OSError:
+            return JsonResponse({'msg': 'unable to delete tileset media file: ' + filepath}, status=500)
+        return HttpResponse(status=204)
+        
+    def retrieve(self, request, *args, **kwargs):
+        '''Retrieve a serialized JSON object made from a subset of properties of a tileset instance
+        '''
+        uuid = self.kwargs['uuid']
+        if not uuid:
+            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+        try:
+            instance = tm.Tileset.objects.get(uuid=uuid)
+        except dce.ObjectDoesNotExist as dne:
+            return JsonResponse({'msg': 'unable to retrieve tileset instance: ' + str(dne)}, status=500)
+        return JsonResponse({
+            'name' : instance.name,
+            'filetype' : instance.filetype,
+            'created' : instance.created,
+            'uuid' : instance.uuid,
+            'datatype' : instance.datatype,
+            'coordSystem' : instance.coordSystem,
+            'coordSystem2' : instance.coordSystem2,
+            'private' : instance.private
+        })
+            
     def list(self, request, *args, **kwargs):
         '''List the available tilesets
 
