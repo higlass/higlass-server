@@ -702,7 +702,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'uuid is undefined'}, status=400)
         try:
             instance = self.get_object()
             instance_dirty = False
@@ -715,7 +715,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         except dh.Http404:
             return JsonResponse({'uuid': uuid}, status=404)
         except dbm.ProtectedError as dbpe:
-            return JsonResponse({'msg': 'unable to modify tileset instance: ' + str(dbpe)}, status=500)
+            return JsonResponse({'error': 'unable to modify tileset instance: ' + str(dbpe)}, status=500)
         return HttpResponse(status=204)
             
     def destroy(self, request, *args, **kwargs):
@@ -723,21 +723,21 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'uuid is undefined'}, status=400)
         try:
             instance = self.get_object()
             self.perform_destroy(instance)
             filename = instance.datafile.name
             filepath = op.join(hss.MEDIA_ROOT, filename)
             if not op.isfile(filepath):
-                return JsonResponse({'msg': 'unable to locate tileset media file for deletion: ' + filepath}, status=500)
+                return JsonResponse({'error': 'unable to locate tileset media file for deletion: ' + filepath}, status=500)
             os.remove(filepath)
         except dh.Http404:
             return JsonResponse({'uuid': uuid}, status=404)
         except dbm.ProtectedError as dbpe:
-            return JsonResponse({'msg': 'unable to delete tileset instance: ' + str(dbpe)}, status=500)
+            return JsonResponse({'error': 'unable to delete tileset instance: ' + str(dbpe)}, status=500)
         except OSError:
-            return JsonResponse({'msg': 'unable to delete tileset media file: ' + filepath}, status=500)
+            return JsonResponse({'error': 'unable to delete tileset media file: ' + filepath}, status=500)
         return HttpResponse(status=204)
         
     def retrieve(self, request, *args, **kwargs):
@@ -745,11 +745,11 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'msg': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'uuid is undefined'}, status=400)
         try:
             instance = tm.Tileset.objects.get(uuid=uuid)
         except dce.ObjectDoesNotExist as dne:
-            return JsonResponse({'msg': 'unable to retrieve tileset instance: ' + str(dne)}, status=500)
+            return JsonResponse({'error': 'unable to retrieve tileset instance: ' + str(dne)}, status=500)
         return JsonResponse({
             'name' : instance.name,
             'filetype' : instance.filetype,
