@@ -49,4 +49,4 @@ class Tileset(models.Model):
         Get a string representation of this model. Hopefully useful for the
         admin interface.
         '''
-        return "Tileset [name: " + self.name + '] [ft: ' + self.filetype + ']'
+        return "Tileset [uid: {uid}] [name: {name}] [ft: {ft}]".format(name=self.name, ft=self.filetype, uid=self.uuid)

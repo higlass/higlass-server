@@ -36,7 +36,8 @@ import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
-from tilesets.management.commands.ingest_tileset import ingest
+from tilesets.management.commands.ingest_tileset import ingest as ingest_tileset_to_db
+from tilesets.management.commands.remove_tileset import remove as remove_tileset_from_db
 
 import os.path as op
 import os
@@ -683,8 +684,7 @@ def link_tile(request):
     return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
 @api_view(['POST'])
-# @authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
-def ingest_tileset_url(request):
+def ingest_tileset(request):
     '''
     Ingest a tileset from a url downloaded file, uploading it to the media directory
     and registering it with the database.
@@ -697,6 +697,7 @@ def ingest_tileset_url(request):
             datatype: A datatype for the tileset
             uid: A unique identifier for the tileset
             coordSystem:
+            coordSystem2:
 
     Returns:
         HttpResponse code for the request, 200 if the action is successful
@@ -732,7 +733,7 @@ def ingest_tileset_url(request):
         # get the file and move it to the media directory
         urllib.request.urlretrieve(url, destination_path)
         # ingest the file by calling the ingest_tileset command
-        ingest(
+        ingest_tileset_to_db(
             filename=filename,
             datatype=body.get('datatype', None),
             filetype=body.get('filetype', None),
@@ -750,7 +751,25 @@ def ingest_tileset_url(request):
 
     return HttpResponse("Success", content_type="text/plain")
 
+@api_view(['DELETE'])
+def remove_tilesets(request):
+    '''
+    Remove one or more tilesets by uid.
 
+    Parameters:
+        request: The HTTP request associate with this delete action
+            uids: a list of uids of tilesets to be removed. Only those matching the list will be deleted.
+
+    Returns:
+        HttpResponse code for the request, 200 if the action is successful
+    '''
+    body = json.loads(request.body.decode('utf8'))
+
+    count = 0
+    for uid in body.get('uids', []):
+        count += remove_tileset_from_db(uid)
+
+    return JsonResponse({'deleted': count}, status=200)
 
 
 @method_decorator(gzip_page, name='dispatch')

@@ -21,7 +21,8 @@ urlpatterns = [
     url(r'^suggest/$', views.suggest),
     url(r'^', include(router.urls)),
     url(r'^link_tile/$', views.link_tile),
-    url(r'^ingest_tileset_url/$', views.ingest_tileset_url),
+    url(r'^ingest_tileset_by_url/$', views.ingest_tileset),
+    url(r'^remove_tilesets_by_uid/$', views.remove_tilesets),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^chrom-sizes/$', views.sizes),
     url(r'^available-chrom-sizes/$', views.available_chrom_sizes)
