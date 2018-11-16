@@ -340,7 +340,6 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
-        
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
