@@ -522,8 +522,8 @@ class PermissionsTest(dt.TestCase):
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
             
             # user1 should be able to rename or modify their tileset
-            resp = c1.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
-            assert(resp.status_code == 204)
+            resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 200)
             
             # apply GET on uuid to ensure that tileset has the newly modified name
             #resp = c1.get("/api/v1/tilesets/")
