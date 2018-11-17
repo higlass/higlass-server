@@ -709,14 +709,14 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             filename = instance.datafile.name
             filepath = op.join(hss.MEDIA_ROOT, filename)
             if not op.isfile(filepath):
-                return JsonResponse({'error': 'unable to locate tileset media file for deletion: ' + filepath}, status=500)
+                return JsonResponse({'error': 'Unable to locate tileset media file for deletion: {}'.format(filepath)}, status=500)
             os.remove(filepath)
         except dh.Http404:
-            return JsonResponse({'uuid': uuid}, status=404)
+            return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
         except dbm.ProtectedError as dbpe:
-            return JsonResponse({'error': 'unable to delete tileset instance: ' + str(dbpe)}, status=500)
+            return JsonResponse({'error': 'Unable to delete tileset instance: {}'.format(str(dbpe))}, status=500)
         except OSError:
-            return JsonResponse({'error': 'unable to delete tileset media file: ' + filepath}, status=500)
+            return JsonResponse({'error': 'Unable to delete tileset media file: {}'.format(filepath)}, status=500)
         return HttpResponse(status=204)
         
     def retrieve(self, request, *args, **kwargs):
@@ -724,21 +724,17 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'error': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'The uuid parameter is undefined'}, status=400)
         try:
-            instance = tm.Tileset.objects.get(uuid=uuid)
+            queryset = tm.Tileset.objects.all().filter(uuid=uuid)
         except dce.ObjectDoesNotExist as dne:
-            return JsonResponse({'error': 'unable to retrieve tileset instance: ' + str(dne)}, status=500)
-        return JsonResponse({
-            'name' : instance.name,
-            'filetype' : instance.filetype,
-            'created' : instance.created,
-            'uuid' : instance.uuid,
-            'datatype' : instance.datatype,
-            'coordSystem' : instance.coordSystem,
-            'coordSystem2' : instance.coordSystem2,
-            'private' : instance.private
-        })
+            return JsonResponse({'error': 'Unable to retrieve tileset instance: {}'.format(str(dne))}, status=500)
+        serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        try:
+            instance = serializer.data[0]
+        except IndexError as ie:
+            return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
+        return JsonResponse(instance)
             
     def list(self, request, *args, **kwargs):
         '''List the available tilesets

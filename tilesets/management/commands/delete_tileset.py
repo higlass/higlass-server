@@ -14,17 +14,17 @@ class Command(BaseCommand):
         # search for Django object, remove associated file and record
         instance = tm.Tileset.objects.get(uuid=uuid)
         if not instance:
-          raise CommandError('Instance for specified uuid [%s] was not found' % (uuid))
+            raise CommandError('Instance for specified uuid ({}) was not found'.format(uuid))
         else:
-          filename = instance.datafile.name
-          filepath = os.path.join(settings.MEDIA_ROOT, filename)
-          if not os.path.isfile(filepath):
-              raise CommandError('File does not exist under media root')
-          try:
-              os.remove(filepath)
-          except OSError:
-              raise CommandError('File under media root could not be removed')
-          try:
-              instance.delete()
-          except ProtectedError:
-              raise CommandError('Instance for specified uuid [%s] could not be deleted' % (uuid))
+            filename = instance.datafile.name
+            filepath = os.path.join(settings.MEDIA_ROOT, filename)
+            if not os.path.isfile(filepath):
+                raise CommandError('File does not exist under media root')
+            try:
+                os.remove(filepath)
+            except OSError:
+                raise CommandError('File under media root could not be removed')
+            try:
+                instance.delete()
+            except ProtectedError:
+                raise CommandError('Instance for specified uuid ({}) could not be deleted'.format(uuid))

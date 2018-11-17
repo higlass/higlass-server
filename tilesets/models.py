@@ -19,7 +19,7 @@ class ViewConf(models.Model):
         Get a string representation of this model. Hopefully useful for the
         admin interface.
         '''
-        return 'Viewconf [uuid: ' + self.uuid + ']'
+        return "Viewconf [uuid: {}]".format(self.uuid)
 
 
 class Tileset(models.Model):
@@ -50,4 +50,4 @@ class Tileset(models.Model):
         Get a string representation of this model. Hopefully useful for the
         admin interface.
         '''
-        return 'Tileset [name: ' + self.name + '] [ft: ' + self.filetype + '] [uuid: ' + self.uuid + ']'
+        return "Tileset [name: {}] [ft: {}] [uuid: {}]".format(self.name, self.filetype, self.uuid)

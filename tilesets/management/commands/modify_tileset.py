@@ -16,19 +16,19 @@ class Command(BaseCommand):
         # search for Django object, modify associated record
         instance = tm.Tileset.objects.get(uuid=uuid)
         if not instance:
-          raise CommandError('Instance for specified uuid [%s] was not found' % (uuid))
+            raise CommandError('Instance for specified uuid ({}) was not found'.format(uuid))
         else:
-          try:
-              instance_dirty = False
-              
-              # only change tileset name if specified, and if it is 
-              # different from the current instance name
-              if name and name != instance.name:
-                  instance.name = name
-                  instance_dirty = True
-                  
-              # if any changes were applied, persist them
-              if instance_dirty:
-                  instance.save()
-          except ProtectedError:
-              raise CommandError('Instance for specified uuid [%s] could not be modified' % (uuid))
+            try:
+                instance_dirty = False
+                
+                # only change tileset name if specified, and if it is 
+                # different from the current instance name
+                if name and name != instance.name:
+                    instance.name = name
+                    instance_dirty = True
+                    
+                # if any changes were applied, persist them
+                if instance_dirty:
+                    instance.save()
+            except ProtectedError:
+                raise CommandError('Instance for specified uuid ({}) could not be modified'.format(uuid))
