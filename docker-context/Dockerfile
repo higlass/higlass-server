@@ -1,32 +1,49 @@
-# This Dockerfile makes it easy to get a basic development environment,
-# but it should not be used for production: It is bloated, and
-# dependencies are not pinned.
+FROM continuumio/miniconda3:4.3.14
 
-# Typical usage:
-#
-# git clone https://github.com/higlass/higlass-server.git
-# docker build --cache-from higlass-server-image --tag higlass-server-image docker-context
-# docker run -dit --name higlass-server-container --volume `pwd`:/home/higlass/higlass-server higlass-server-image
-# docker exec higlass-server-container python manage.py migrate
-# docker exec -it higlass-server-container /bin/bash
+RUN apt-get update && apt-get install -y \
+        gcc=4:4.9.2-2 \
+        nginx-full \
+        supervisor \
+        unzip=6.0-16+deb8u2 \
+        uwsgi-plugin-python3 \
+        zlib1g-dev=1:1.2.8.dfsg-2+b1 \
+        libcurl4-openssl-dev \
+        g++ \
+        vim \
+        build-essential \
+        libssl-dev \
+        libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM ubuntu
+RUN conda install --yes cython==0.25.2 numpy=1.12.0
+RUN conda install --yes --channel bioconda pysam htslib=1.3.2
+RUN pip install uwsgi==2.0.14
 
-RUN apt-get update
-RUN apt-get -y install libatlas-dev libatlas-base-dev liblapack-dev gfortran wget bzip2 git libz-dev curl
-RUN useradd --create-home --shell /bin/bash higlass
+WORKDIR /higlass-server
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+COPY requirements-secondary.txt ./
+RUN pip install -r requirements-secondary.txt
 
-USER higlass
-WORKDIR /home/higlass
+COPY docker-context/nginx.conf /etc/nginx/
+COPY docker-context/hgserver_nginx.conf /etc/nginx/sites-enabled/
+RUN rm /etc/nginx/sites-*/default && grep 'listen' /etc/nginx/sites-*/*
 
-RUN wget http://repo.continuum.io/miniconda/Miniconda2-4.2.12-Linux-x86_64.sh -O miniconda.sh
-RUN bash miniconda.sh -b -p /home/higlass/miniconda
-ENV PATH="/home/higlass/miniconda/bin:${PATH}"
-RUN conda install --yes python=2.7.12 cython==0.25.2 numpy=1.11.2
+COPY docker-context/uwsgi_params ./
+COPY docker-context/default-viewconf-fixture.xml ./
 
-# This is not run with bash: Otherwise, the <( ) syntax would be useful here.
-ENV GITHUB=https://raw.githubusercontent.com/higlass/higlass-server/master
-RUN wget $GITHUB/requirements.txt           && pip install -r requirements.txt
-RUN wget $GITHUB/requirements-secondary.txt && pip install -r requirements-secondary.txt
+COPY docker-context/supervisord.conf ./
+COPY docker-context/uwsgi.ini ./
 
-WORKDIR higlass-server
+EXPOSE 80
+
+ENV HIGLASS_SERVER_BASE_DIR /data
+VOLUME /data
+
+ARG WORKERS=2
+ENV WORKERS ${WORKERS}
+RUN echo "WORKERS: $WORKERS"
+
+COPY . .
+
+CMD ["supervisord", "-n", "-c", "/higlass-server/supervisord.conf"]
