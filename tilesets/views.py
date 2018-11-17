@@ -696,27 +696,6 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     lookup_field = 'uuid'
     parser_classes = (rfp.JSONParser, rfp.MultiPartParser,)
-    
-    def update(self, request, *args, **kwargs):
-        '''Modify properties of a tileset instance
-        '''
-        uuid = self.kwargs['uuid']
-        if not uuid:
-            return JsonResponse({'error': 'uuid is undefined'}, status=400)
-        try:
-            instance = self.get_object()
-            instance_dirty = False
-            name = request.data['name']
-            if name and name != instance.name:
-                instance.name = name
-                instance_dirty = True
-            if instance_dirty:
-                instance.save()
-        except dh.Http404:
-            return JsonResponse({'uuid': uuid}, status=404)
-        except dbm.ProtectedError as dbpe:
-            return JsonResponse({'error': 'unable to modify tileset instance: ' + str(dbpe)}, status=500)
-        return HttpResponse(status=204)
             
     def destroy(self, request, *args, **kwargs):
         '''Delete a tileset instance and underlying media upload
