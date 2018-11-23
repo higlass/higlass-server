@@ -24,12 +24,12 @@ import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.multivec_tiles as tmt
 
-import hgtiles.cooler as hgco
-import hgtiles.bigwig as hgbi
-import hgtiles.multivec as hgmu
-import hgtiles.time_interval as hgti
-import hgtiles.geo as hggo
-import hgtiles.imtiles as hgim
+import clodius.tiles.cooler as hgco
+import clodius.tiles.bigwig as hgbi
+import clodius.tiles.multivec as hgmu
+import clodius.tiles.time_interval as hgti
+import clodius.tiles.geo as hggo
+import clodius.tiles.imtiles as hgim
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
