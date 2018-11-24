@@ -10,7 +10,7 @@ import django.db as db
 import base64
 import django.test as dt
 import h5py
-import hgtiles.cooler as hgco
+import clodius.tiles.cooler as hgco
 import json
 import logging
 import os
