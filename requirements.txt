@@ -1,4 +1,3 @@
-Cython==0.25.2
 pybbi==0.2.0
 bumpversion==0.5.3
 CacheControl==0.12.4

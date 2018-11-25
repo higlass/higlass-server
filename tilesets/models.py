@@ -27,8 +27,8 @@ def generate_slug():
 
 class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    
     uuid = models.CharField(max_length=100, unique=True, default=generate_slug)
+    
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
