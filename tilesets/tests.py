@@ -10,7 +10,7 @@ import django.db as db
 import base64
 import django.test as dt
 import h5py
-import hgtiles.cooler as hgco
+import clodius.tiles.cooler as hgco
 import json
 import logging
 import os
@@ -176,18 +176,18 @@ class IngestTests(dt.TestCase):
             coordSystem='hg19_r')
 
         ret = self.client.get('/api/v1/tileset_info/?d=a')
-        tileset_info = json.loads(ret.content)
+        tileset_info = json.loads(ret.content.decode('utf-8'))
         assert(tileset_info['a']['chromsizes'][0][0] == 'chrM')
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.0')
-        tile = json.loads(ret.content)['a.22.0']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.0']
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.17')
-        tile = json.loads(ret.content)['a.22.17']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.17']
         assert(tile['min_value'] == 'NaN')
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.117')
-        tile = json.loads(ret.content)['a.22.117']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.117']
         assert(tile['min_value'] == 'NaN')
 
         #print("tile:", tile)
@@ -340,7 +340,6 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
-
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
@@ -513,10 +512,24 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
+            
+            # user2 should not be able to rename the tileset created by user1
+            resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 403)
 
             # tileset should still be there
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
+            
+            # user1 should be able to rename or modify their tileset
+            resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 200)
+            
+            # apply GET on uuid to ensure that tileset has the newly modified name
+            #resp = c1.get("/api/v1/tilesets/")
+            #assert(json.loads(resp.content.decode('utf-8'))['results'][0]['name'] == 'newname')
+            resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
+            assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
 
             # user1 should be able to delete his/her own tileset
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
@@ -1258,7 +1271,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
     def test_create_with_anonymous_user(self):
         """
-        Don't allow the creation of datasets by anonymouse users.
+        Don't allow the creation of datasets by anonymous users.
         """
         with self.assertRaises(ValueError):
             upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')

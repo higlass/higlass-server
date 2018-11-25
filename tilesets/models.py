@@ -19,15 +19,17 @@ class ViewConf(models.Model):
         Get a string representation of this model. Hopefully useful for the
         admin interface.
         '''
-        return "Viewconf [uuid: " + self.uuid + ']'
+        return "Viewconf [uuid: {}]".format(self.uuid)
 
-def create_uuid():
+def generate_slug():
     return slugid.nice().decode('utf-8')
 
 class Tileset(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    uuid = models.CharField(max_length=100, unique=True, default=create_uuid)
-    # processed_file = models.TextField()
+    created = models.DateTimeField(auto_now_add=True
+    
+    uuid = models.CharField(max_length=100, unique=True, default=generate_slug)
+
+                                   # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
     datatype = models.TextField(default='unknown')
@@ -45,11 +47,11 @@ class Tileset(models.Model):
 
     class Meta:
         ordering = ('created',)
-        permissions = (('view_tileset', "View tileset"),)
+        permissions = (('view_tileset', 'View tileset'),)
 
     def __str__(self):
         '''
         Get a string representation of this model. Hopefully useful for the
         admin interface.
         '''
-        return "Tileset [name: " + self.name + '] [ft: ' + self.filetype + ']'
+        return "Tileset [name: {}] [ft: {}] [uuid: {}]".format(self.name, self.filetype, self.uuid)

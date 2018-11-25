@@ -14,6 +14,8 @@ import collections as col
 
 import django.db.models as dbm
 import django.db.models.functions as dbmf
+import django.core.exceptions as dce
+import django.http as dh
 
 import guardian.utils as gu
 
@@ -24,12 +26,12 @@ import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 import tilesets.multivec_tiles as tmt
 
-import hgtiles.cooler as hgco
-import hgtiles.bigwig as hgbi
-import hgtiles.multivec as hgmu
-import hgtiles.time_interval as hgti
-import hgtiles.geo as hggo
-import hgtiles.imtiles as hgim
+import clodius.tiles.cooler as hgco
+import clodius.tiles.bigwig as hgbi
+import clodius.tiles.multivec as hgmu
+import clodius.tiles.time_interval as hgti
+import clodius.tiles.geo as hggo
+import clodius.tiles.imtiles as hgim
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
@@ -37,6 +39,7 @@ import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 
+import os
 import os.path as op
 
 import rest_framework.exceptions as rfe
@@ -388,7 +391,7 @@ def tiles(request):
     # create a set so that we don't fetch the same tile multiple times
     tileids_to_fetch = set(request.GET.getlist("d"))
     # with ProcessPoolExecutor() as executor:
-    # 	  res = executor.map(parallelize, hargs)
+    #       res = executor.map(parallelize, hargs)
     '''
     p = mp.Pool(4)
     res = p.map(parallelize, hargs)
@@ -692,8 +695,47 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         permission_classes = (tsp.UserPermissionReadOnly,)
 
     lookup_field = 'uuid'
-    parser_classes = (rfp.MultiPartParser,)
-
+    parser_classes = (rfp.JSONParser, rfp.MultiPartParser,)
+            
+    def destroy(self, request, *args, **kwargs):
+        '''Delete a tileset instance and underlying media upload
+        '''
+        uuid = self.kwargs['uuid']
+        if not uuid:
+            return JsonResponse({'error': 'uuid is undefined'}, status=400)
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            filename = instance.datafile.name
+            filepath = op.join(hss.MEDIA_ROOT, filename)
+            if not op.isfile(filepath):
+                return JsonResponse({'error': 'Unable to locate tileset media file for deletion: {}'.format(filepath)}, status=500)
+            os.remove(filepath)
+        except dh.Http404:
+            return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
+        except dbm.ProtectedError as dbpe:
+            return JsonResponse({'error': 'Unable to delete tileset instance: {}'.format(str(dbpe))}, status=500)
+        except OSError:
+            return JsonResponse({'error': 'Unable to delete tileset media file: {}'.format(filepath)}, status=500)
+        return HttpResponse(status=204)
+        
+    def retrieve(self, request, *args, **kwargs):
+        '''Retrieve a serialized JSON object made from a subset of properties of a tileset instance
+        '''
+        uuid = self.kwargs['uuid']
+        if not uuid:
+            return JsonResponse({'error': 'The uuid parameter is undefined'}, status=400)
+        try:
+            queryset = tm.Tileset.objects.all().filter(uuid=uuid)
+        except dce.ObjectDoesNotExist as dne:
+            return JsonResponse({'error': 'Unable to retrieve tileset instance: {}'.format(str(dne))}, status=500)
+        serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        try:
+            instance = serializer.data[0]
+        except IndexError as ie:
+            return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
+        return JsonResponse(instance)
+            
     def list(self, request, *args, **kwargs):
         '''List the available tilesets
 

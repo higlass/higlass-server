@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 import django.core.exceptions as dce
 from django.core.files import File
 
-import hgtiles.bigwig as hgbi
+import clodius.tiles.bigwig as hgbi
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu

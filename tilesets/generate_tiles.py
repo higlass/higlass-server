@@ -3,11 +3,13 @@ import tilesets.bigwig_tiles as bwt
 import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
-import hgtiles.beddb as hgbe
-import hgtiles.bigwig as hgbi
-import hgtiles.cooler as hgco
-import hgtiles.geo as hggo
-import hgtiles.imtiles as hgim
+
+import clodius.tiles.beddb as hgbe
+import clodius.tiles.bigwig as hgbi
+import clodius.tiles.cooler as hgco
+import clodius.tiles.geo as hggo
+import clodius.tiles.imtiles as hgim
+
 import h5py
 import itertools as it
 import numpy as np
