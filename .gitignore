@@ -26,3 +26,4 @@ static/
 hgs-static/
 
 config.json
+package-lock.json
