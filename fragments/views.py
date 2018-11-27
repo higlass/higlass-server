@@ -32,7 +32,7 @@ from fragments.utils import (
     get_rep_frags,
     rel_loci_2_obj,
     np_to_png,
-    write_png,
+    # write_png,
     grey_to_rgb,
     blob_to_zip
 )
@@ -220,7 +220,7 @@ def get_fragments_by_loci(request):
 
     try:
         forced_rep_idx = request.data.get('representativeIndices', None)
-    except Exception as e:
+    except Exception:
         forced_rep_idx = None
         pass
 
@@ -300,7 +300,8 @@ def get_fragments_by_loci(request):
                         # dealing with preloaded annotation dbs. In that case
                         # the secondary tileset refers to the original tileset
                         # such that fragments can be cut out on the fly if
-                        # needed (not all zoom levels might have been preloaded)
+                        # needed (not all zoom levels might have been
+                        # preloaded)
                         tilesets = locus[tileset_idx].split(',')
                         tileset = Tileset.objects.get(
                             uuid=tilesets[0]
@@ -320,7 +321,7 @@ def get_fragments_by_loci(request):
                         }
                         ts_secondary[tileset_file] = tileset_file_secondary
 
-                    except AttributeError as e:
+                    except AttributeError:
                         return JsonResponse({
                             'error': 'Tileset ({}) does not exist'.format(
                                 locus[tileset_idx]
@@ -543,7 +544,7 @@ def get_fragments_by_loci(request):
         try:
             for i, matrix in enumerate(matrices):
                 matrices[i] = getattr(cm, colormap)(matrix)
-        except Exception as e:
+        except Exception:
             pass
 
     if encoding != 'b64' and encoding != 'image':
@@ -643,7 +644,9 @@ def fragments_by_chr(request):
             cooler_file = path.join('data', cooler_file)
         else:
             try:
-                cooler_file = Tileset.objects.get(uuid=cooler_file).datafile.path
+                cooler_file = Tileset.objects.get(
+                    uuid=cooler_file
+                ).datafile.path
             except AttributeError:
                 return JsonResponse({
                     'error': 'Cooler file not in database',
@@ -726,7 +729,7 @@ def fragments_by_chr(request):
 
     # Get fragments
     try:
-        matrices = get_frag_by_loc(
+        matrices = get_frag_by_loc_from_cool(
             cooler_file,
             loci_rel_chroms,
             zoomout_level=zoomout_level
