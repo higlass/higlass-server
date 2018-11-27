@@ -264,6 +264,17 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
+def get_base_bin_size(cooler_file):
+    with h5py.File(cooler_file, 'r') as f:
+        for k in f.keys():
+            print('zoomlevel', k, 'binsize', f[k].attrs['bin-size'])
+        return min(f[k].attrs['bin-size'] for k in f.keys())
+
+
+def get_clostest_zoomout_level(base_bin_size, in_dim, out_dim):
+    return math.floor(math.log2(in_dim / (out_dim * base_bin_size)))
+
+
 def get_frag_by_loc_from_cool(
     cooler_file,
     loci,

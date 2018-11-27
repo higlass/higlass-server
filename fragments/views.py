@@ -24,6 +24,8 @@ from fragments.utils import (
     calc_measure_noise,
     calc_measure_sharpness,
     aggregate_frags,
+    get_base_bin_size,
+    get_clostest_zoomout_level,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
@@ -279,6 +281,7 @@ def get_fragments_by_loci(request):
     i = 0
     loci_lists = {}
     loci_ids = []
+    base_bin_sizes = {}
     try:
         for locus in loci:
             # if is_image and snippet_id_idx:
@@ -341,8 +344,45 @@ def get_fragments_by_loci(request):
                     'error': 'Tileset not specified',
                 }, status=400)
 
+            # Determine file type
+            if new_filetype is None:
+                new_filetype = (
+                    tileset.filetype
+                    if tileset
+                    else tileset_file[tileset_file.rfind('.') + 1:]
+                )
+
+            if filetype is None:
+                filetype = new_filetype
+
+            if filetype != new_filetype:
+                return JsonResponse({
+                    'error': (
+                        'Multiple file types per query are not supported yet.'
+                    )
+                }, status=400)
+
             if tileset_file not in loci_lists:
                 loci_lists[tileset_file] = {}
+
+            # Determine clostest zoomout level if zoomout level is set ot `-1`
+            if locus[zoom_level_idx] == -1:
+                if tileset_file not in base_bin_sizes:
+                    if filetype == 'cooler' or filetype == 'cool':
+                        base_bin_sizes[tileset_file] = get_base_bin_size(
+                            tileset_file
+                        )
+                    else:
+                        base_bin_sizes[tileset_file] = 1.0
+
+                if is_image:
+                    in_dim = max(locus[1] - locus[0], locus[3] - locus[2])
+                else:
+                    in_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+
+                locus[zoom_level_idx] = get_clostest_zoomout_level(
+                    base_bin_sizes[tileset_file], in_dim, dims
+                )
 
             if locus[zoom_level_idx] not in loci_lists[tileset_file]:
                 loci_lists[tileset_file][locus[zoom_level_idx]] = []
@@ -363,23 +403,6 @@ def get_fragments_by_loci(request):
                 locus[0:tileset_idx] + [i, inset_dim, locus_id, local_id]
             )
             loci_ids.append(locus_id)
-
-            if new_filetype is None:
-                new_filetype = (
-                    tileset.filetype
-                    if tileset
-                    else tileset_file[tileset_file.rfind('.') + 1:]
-                )
-
-            if filetype is None:
-                filetype = new_filetype
-
-            if filetype != new_filetype:
-                return JsonResponse({
-                    'error': (
-                        'Multiple file types per query are not supported yet.'
-                    )
-                }, status=400)
 
             i += 1
 
