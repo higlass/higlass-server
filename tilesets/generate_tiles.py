@@ -3,11 +3,13 @@ import tilesets.bigwig_tiles as bwt
 import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
-import hgtiles.beddb as hgbe
-import hgtiles.bigwig as hgbi
-import hgtiles.cooler as hgco
-import hgtiles.geo as hggo
-import hgtiles.imtiles as hgim
+
+import clodius.tiles.beddb as hgbe
+import clodius.tiles.bigwig as hgbi
+import clodius.tiles.cooler as hgco
+import clodius.tiles.geo as hggo
+import clodius.tiles.imtiles as hgim
+
 import h5py
 import itertools as it
 import numpy as np
@@ -20,6 +22,24 @@ import tilesets.chromsizes  as tcs
 import tilesets.multivec_tiles as tmt
 
 import higlass_server.settings as hss
+
+def get_tileset_datatype(tileset):
+    '''
+    Extract the filetype for the tileset
+
+    This should be encoded in one of the tags. If there are multiple
+    "datatype" tags, use the most recent one.
+    '''
+    if tileset.datatype is not None and len(tileset.datatype) > 0:
+        return tileset.datatype
+
+    for tag in tileset.tags.all():
+        parts = tag.name.split(':')
+        if parts[0] == 'datatype':
+            return parts[1]
+
+    # fall back to the filetype attribute of the tileset
+    return tileset.datatype
 
 def get_cached_datapath(path):
     '''

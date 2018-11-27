@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 import django.core.exceptions as dce
 from django.core.files import File
 
-import hgtiles.bigwig as hgbi
+import clodius.tiles.bigwig as hgbi
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu
@@ -126,7 +126,7 @@ class Command(BaseCommand):
         # parser.add_argument('--coord', default='hg19', type=str)
         parser.add_argument('--uid', type=str)
         parser.add_argument('--name', type=str)
-        parser.add_argument('--group', type=str, default='')
+        parser.add_argument('--project-name', type=str, default='')
 
         # Named (optional) arguments
         parser.add_argument(
@@ -146,7 +146,7 @@ class Command(BaseCommand):
         # coord = options['coord']
         uid = options.get('uid') or slugid.nice().decode('utf-8')
         name = options.get('name') or op.split(filename)[1]
-        group = options['group']
+        project_name = options['project_name']
 
         if 'filetype' not in options:
             raise CommandError('Filetype has to be specified')
@@ -169,6 +169,13 @@ class Command(BaseCommand):
             # remove the filepath of the filename
             django_file.name = op.split(django_file.name)[1]
 
+        try:
+            project_obj = tm.Project.objects.get(name=project_name)
+        except dce.ObjectDoesNotExist:
+            project_obj = tm.Project.objects.create(
+                name=project_name
+            )
+
         tm.Tileset.objects.create(
             datafile=django_file,
             filetype=filetype,
@@ -176,6 +183,6 @@ class Command(BaseCommand):
             coordSystem=coordSystem,
             coordSystem2=coordSystem2,
             owner=None,
-            group=group,
+            project=project_obj,
             uuid=uid,
             name=name)

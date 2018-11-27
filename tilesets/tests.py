@@ -10,7 +10,7 @@ import django.db as db
 import base64
 import django.test as dt
 import h5py
-import hgtiles.cooler as hgco
+import clodius.tiles.cooler as hgco
 import json
 import logging
 import os
@@ -54,39 +54,147 @@ def add_file(filename, sub_dir='uploads/data'):
     django_file = op.join('uploads', filename)
 
     return django_file
-
-    # move the file to the media directory
-    # and give it some unique identifier
-    '''
-    upload_file = open('data/chromSizes.tsv', 'rb')
-    self.chroms = tm.Tileset.objects.create(
-        datafile=dcfu.SimpleUploadedFile(
-            upload_file.name, upload_file.read()
-        ),
-        filetype='bam',
-        datatype='chromsizes',
-        coordSystem="hg19",
-        owner=self.user1,
-        uuid='cs-hg19'
-    )
-    '''
-
-'''
-class BedfileTests(dt.TestCase):
-    def test_get_tileset_info(self):
-        self.user1 = dcam.User.objects.create_user(
+        
+    def test_list_tilesets(self):
+        user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
-        upload_file = open('data/bedfile.bed', 'rb')
-        mv = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(
-                upload_file.name, upload_file.read()
-            ),
-            filetype='bedfile',
-            datatype='bedlike',
-            coordSystem="hg38",
-            owner=self.user1,
-            uuid='a'
+        self.client.login(username='user1', password='pass')
+
+        # create a project
+        ret = self.client.post(
+                '/api/v1/projects/',
+                '{"name": "test project", "owner": "user1", "private": "true" }',
+                content_type='application/json'
+                )
+        assert(ret.status_code==201)
+        private_project = json.loads(ret.content)
+
+        # create a project
+        ret = self.client.post(
+                '/api/v1/projects/',
+                '{"name": "public project", "owner": "user1", "private": "false" }',
+                content_type='application/json'
+                )
+        assert(ret.status_code==201)
+        public_project = json.loads(ret.content)
+        print('public_project', public_project)
+
+        ret = self.client.post(
+            '/api/v1/tilesets/',
+            {
+                'datafile': 'one_file',
+                'filetype': 'a',
+                'datatype': '2',
+                'private': 'True',
+                'coordSystem': 'hg19',
+                'uid': 'bb',
+                'project': private_project['uuid']
+
+            }
+        )
+
+        assert(ret.status_code==201)
+        
+        # create another tileset which isn't associated with this
+        # project
+        ret = self.client.post(
+            '/api/v1/tilesets/',
+            {
+                'datafile': 'two_file',
+                'filetype': 'a',
+                'datatype': '2',
+                'private': 'True',
+                'coordSystem': 'hg19',
+                'uid': 'aa',
+                'project': public_project['uuid'],
+            }
+        )
+
+        assert(ret.status_code==201)
+
+        ret = self.client.get(
+                '/api/v1/list_tilesets/?ui={}'.format(private_project['uuid']))
+        val = json.loads(ret.content)
+
+        print("ret.content:",ret.content)
+        # it should just return the one dataset
+        assert(val['count'] == 1)
+
+        # should return all datasets
+        ret = self.client.get(
+                '/api/v1/list_tilesets/?')
+        val = json.loads(ret.content)
+
+        print("ret:", ret.content)
+        assert(val['count'] == 2)
+        # list all the projects
+
+        ret = self.client.get(
+                '/api/v1/list_tilesets/?ac=test')
+        val = json.loads(ret.content)
+
+        # should only return the tileset in test project
+        print("ret:", ret.content)
+        assert(val['count'] == 1)
+        # list all the projects
+
+        ret = self.client.get(
+                '/api/v1/list_tilesets/?ac=user1')
+        val = json.loads(ret.content)
+
+        # should only return the tileset in test project
+        print("ret:", ret.content)
+        assert(val['count'] == 2)
+
+        self.client.logout()
+
+        ret = self.client.get(
+                '/api/v1/list_tilesets/?')
+        val = json.loads(ret.content)
+
+        # the tileset in the private project should no longer be visible
+        print("ret:", ret.content)
+        assert(val['count'] == 1)
+
+    def test_create(self):
+        user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        self.client.login(username='user1', password='pass')
+
+        ret = self.client.post(
+                '/api/v1/projects/',
+                '{"name": "test project", "owner": "user1" }',
+                content_type='application/json'
+                )
+
+        print("ret:", ret.content)
+        assert(ret.status_code == 201)
+
+        ts1 = tm.Tileset.objects.create(
+                name='blah')
+        project = json.loads(ret.content)
+        print("project", project['uuid'])
+
+        '''
+        ret = self.client.patch(
+                '/api/v1/projects/{}/'.format(project["uuid"]),
+                content_type='application/json'
+                )
+
+        print("ret:", ret.content)
+
+        print("ts1:", ts1.uuid)
+        ret = self.client.patch(
+                '/api/v1/projects/{}/'.format(project["uuid"]),
+        '''
+
+class IngestTests(dt.TestCase):
+
+    def test_ingest_with_project(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
         )
         upload_file = open('data/chromSizes.tsv', 'rb')
         mv = tm.Tileset.objects.create(
@@ -95,16 +203,15 @@ class BedfileTests(dt.TestCase):
             ),
             filetype='chromsizes-tsv',
             datatype='chromsizes',
-            coordSystem="hg19",
             owner=self.user1,
-            uuid='b'
+            coordSystem="hg19_1",
         )
+        
+        dcm.call_command('ingest_tileset',
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+            filetype='bigwig', datatype='vector',
+            project_name="some_file")
 
-        ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
-'''
-
-
-class IngestTests(dt.TestCase):
     def test_ingest_bigwig(self):
         with self.assertRaises(dcmb.CommandError):
             dcm.call_command('ingest_tileset',
@@ -176,18 +283,18 @@ class IngestTests(dt.TestCase):
             coordSystem='hg19_r')
 
         ret = self.client.get('/api/v1/tileset_info/?d=a')
-        tileset_info = json.loads(ret.content)
+        tileset_info = json.loads(ret.content.decode('utf-8'))
         assert(tileset_info['a']['chromsizes'][0][0] == 'chrM')
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.0')
-        tile = json.loads(ret.content)['a.22.0']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.0']
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.17')
-        tile = json.loads(ret.content)['a.22.17']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.17']
         assert(tile['min_value'] == 'NaN')
 
         ret = self.client.get('/api/v1/tiles/?d=a.22.117')
-        tile = json.loads(ret.content)['a.22.117']
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.117']
         assert(tile['min_value'] == 'NaN')
 
         #print("tile:", tile)
@@ -340,7 +447,6 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
-
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
@@ -513,10 +619,24 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
+            
+            # user2 should not be able to rename the tileset created by user1
+            resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 403)
 
             # tileset should still be there
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
+            
+            # user1 should be able to rename or modify their tileset
+            resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 200)
+            
+            # apply GET on uuid to ensure that tileset has the newly modified name
+            #resp = c1.get("/api/v1/tilesets/")
+            #assert(json.loads(resp.content.decode('utf-8'))['results'][0]['name'] == 'newname')
+            resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
+            assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
 
             # user1 should be able to delete his/her own tileset
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
@@ -1258,7 +1378,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
     def test_create_with_anonymous_user(self):
         """
-        Don't allow the creation of datasets by anonymouse users.
+        Don't allow the creation of datasets by anonymous users.
         """
         with self.assertRaises(ValueError):
             upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')
