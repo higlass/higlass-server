@@ -1,14 +1,16 @@
 from __future__ import print_function
 
+import django.contrib.auth.models as dcam
 import django.core.files as dcf
 import django.core.files.uploadedfile as dcfu
-import django.contrib.auth.models as dcam
+import django.core.management as dcm
+import django.core.management.base as dcmb
 import django.db as db
 
 import base64
 import django.test as dt
 import h5py
-import hgtiles.cooler as hgco
+import clodius.tiles.cooler as hgco
 import json
 import logging
 import os
@@ -22,7 +24,7 @@ import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
-def add_file(filename):
+def add_file(filename, sub_dir='uploads/data'):
     '''
     Add a file to the media directory and return its
     path. If a file with the same name exists, don't
@@ -37,7 +39,7 @@ def add_file(filename):
         The path of the file in the media directory
     '''
 
-    target_dir = op.join(hss.MEDIA_ROOT, 'uploads', op.dirname(filename))
+    target_dir = op.join(hss.MEDIA_ROOT, sub_dir)
 
     if not op.exists(target_dir):
         os.makedirs(target_dir)
@@ -46,7 +48,7 @@ def add_file(filename):
 
     if not op.exists(target_file):
         import shutil
-        shutil.copyfile(filename, 
+        shutil.copyfile(filename,
                 target_file)
 
     django_file = op.join('uploads', filename)
@@ -101,6 +103,96 @@ class BedfileTests(dt.TestCase):
         ret = self.client.get('/api/v1/tileset_info/?d=a&ci=b')
 '''
 
+
+class IngestTests(dt.TestCase):
+    def test_ingest_bigwig(self):
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset',
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+                filetype='bigwig', datatype='vector')
+
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_1",
+        )
+
+        # this should succeed when the others fail
+        dcm.call_command('ingest_tileset',
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+            filetype='bigwig', datatype='vector')
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset',
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+                filetype='bigwig', datatype='vector', coordSystem='a')
+
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_2",
+        )
+
+        with self.assertRaises(dcmb.CommandError):
+            dcm.call_command('ingest_tileset',
+                filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+                filetype='bigwig', datatype='vector')
+
+        # dcm.call_command('ingest_tileset', filename = 'data/chromSizes.tsv', filetype='chromsizes-tsv', datatype='chromsizes')
+        #dcm.call_command('ingest_tileset', filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig', filetype='bigwig', datatype='vector')
+
+    def test_ingest_reordered_bigwig(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes_hg19_reordered.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg19_r",
+        )
+
+        dcm.call_command('ingest_tileset',
+            filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
+            filetype='bigwig', datatype='vector',
+            uid='a',
+            coordSystem='hg19_r')
+
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        tileset_info = json.loads(ret.content.decode('utf-8'))
+        assert(tileset_info['a']['chromsizes'][0][0] == 'chrM')
+
+        ret = self.client.get('/api/v1/tiles/?d=a.22.0')
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.0']
+
+        ret = self.client.get('/api/v1/tiles/?d=a.22.17')
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.17']
+        assert(tile['min_value'] == 'NaN')
+
+        ret = self.client.get('/api/v1/tiles/?d=a.22.117')
+        tile = json.loads(ret.content.decode('utf-8'))['a.22.117']
+        assert(tile['min_value'] == 'NaN')
+
+        #print("tile:", tile)
+
+
 class TileTests(dt.TestCase):
     def test_partitioning(self):
         result = tgt.partition_by_adjacent_tiles(["a.5.0.0", "a.5.0.10"])
@@ -144,7 +236,7 @@ class MultivecTests(dt.TestCase):
         '''
 
         ret = self.client.get('/api/v1/tiles/?d=a.11.0')
-        content = json.loads(ret.content)
+        content = json.loads(ret.content.decode('utf-8'))
         r = base64.decodestring(content['a.11.0']['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
@@ -248,7 +340,6 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
-
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
@@ -421,10 +512,24 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
+            
+            # user2 should not be able to rename the tileset created by user1
+            resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 403)
 
             # tileset should still be there
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
+            
+            # user1 should be able to rename or modify their tileset
+            resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
+            assert(resp.status_code == 200)
+            
+            # apply GET on uuid to ensure that tileset has the newly modified name
+            #resp = c1.get("/api/v1/tilesets/")
+            #assert(json.loads(resp.content.decode('utf-8'))['results'][0]['name'] == 'newname')
+            resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
+            assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
 
             # user1 should be able to delete his/her own tileset
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
@@ -714,7 +819,7 @@ class CoolerTest(dt.TestCase):
         tile_id = 'aa.4.5.5'
         ret = self.client.get('/api/v1/tiles/?d={}'.format(tile_id))
         content = json.loads(ret.content.decode('utf-8'));
-        data = content[tile_id] 
+        data = content[tile_id]
 
     def test_tile_symmetry(self):
         '''
@@ -735,7 +840,7 @@ class CoolerTest(dt.TestCase):
 
         import base64
         r = base64.decodestring(contents['aa.0.0.0']['dense'].encode('utf-8'))
-        q = np.frombuffer(r, dtype=np.float16)
+        q = np.frombuffer(r, dtype=np.float32)
 
         q = q.reshape((256,256))
 
@@ -892,10 +997,47 @@ class FileUploadTest(dt.TestCase):
             obj = tm.Tileset.objects.get(uuid='bb')
 
             # make sure the file was actually created
-            self.assertTrue(op.exists, obj.datafile.url)
+            self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
 
+
+    def test_link_file(self):
+        '''
+        Linking a file assuems the file is already accessable to the system, i.e. with somthing
+        like goofys, mounting s3 buckets
+        '''
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+        add_file('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool', sub_dir='.')
+
+        response = c.post(
+            '/api/v1/link_tile/',
+            json.dumps({
+                'filepath': 'Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
+                'filetype': 'hitile',
+                'datatype': 'vector',
+                'uuid': 'bb',
+                'private': 'True',
+                'coordSystem': 'hg19'
+            }),
+            content_type="application/json",
+        )
+
+
+        if hss.UPLOAD_ENABLED:
+            self.assertEqual(rfs.HTTP_201_CREATED, response.status_code)
+
+            response = c.get('/api/v1/tilesets/')
+
+            new_uuid = response.json()['results'][0]['uuid']
+            obj = tm.Tileset.objects.get(uuid=new_uuid)
+
+            # make sure the file was actually created
+            self.assertTrue(op.exists, obj.datafile.path)
+        else:
+            self.assertEqual(403, response.status_code)
 
 class GetterTest(dt.TestCase):
     def test_get_info(self):
@@ -986,6 +1128,18 @@ class BedDBTest(dt.TestCase):
             datatype='gene-annotations',
             owner=self.user1,
             uuid='bdb')
+
+
+    def test_get_info(self):
+        upload_file = open('data/984627_PM16-00568-A_SM-9J5GB.beddb', 'rb')
+        tileset1 = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='beddb',
+            datatype='bedlike',
+            owner=self.user1,
+            uuid='bdc')
+        returned_text = self.client.get('/api/v1/tileset_info/?d=bdc')
+        returned = json.loads(returned_text.content.decode('utf-8'))
 
     def test_get_tile(self):
         tile_id="{uuid}.{z}.{x}".format(uuid=self.tileset.uuid, z=0, x=0)
@@ -1088,10 +1242,10 @@ class TilesetsViewSetTest(dt.TestCase):
         )
 
         r = base64.decodestring(returned[list(returned.keys())[0]]['dense'].encode('utf-8'))
-        q = np.frombuffer(r, dtype=np.float16)
+        q = np.frombuffer(r, dtype=np.float32)
 
-        with h5py.File(self.cooler.datafile.url) as f:
-            tileset_info = hgco.tileset_info(self.cooler.datafile.url)
+        with h5py.File(self.cooler.datafile.path) as f:
+            tileset_info = hgco.tileset_info(self.cooler.datafile.path)
             tileset_file = f
 
             mat = [tileset_file, tileset_info]
@@ -1117,7 +1271,7 @@ class TilesetsViewSetTest(dt.TestCase):
 
     def test_create_with_anonymous_user(self):
         """
-        Don't allow the creation of datasets by anonymouse users.
+        Don't allow the creation of datasets by anonymous users.
         """
         with self.assertRaises(ValueError):
             upload_file =open('data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile', 'rb')

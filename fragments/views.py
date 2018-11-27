@@ -18,7 +18,6 @@ from os import path
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
 from tilesets.models import Tileset
-from tilesets.utils import get_datapath
 from fragments.utils import (
     calc_measure_dtd,
     calc_measure_size,
@@ -38,6 +37,7 @@ from fragments.utils import (
     blob_to_zip
 )
 from higlass_server.utils import getRdb
+from fragments.exceptions import SnippetTooLarge
 
 rdb = getRdb()
 
@@ -305,17 +305,14 @@ def get_fragments_by_loci(request):
                         tileset = Tileset.objects.get(
                             uuid=tilesets[0]
                         )
-                        tileset_file = get_datapath(
-                            tileset.datafile.url
-                        )
+
+                        tileset_file = tileset.datafile.url
 
                         tileset_file_secondary = None
                         if len(tilesets) > 1 and len(tilesets[1]) > 0:
-                            tileset_file_secondary = get_datapath(
-                                Tileset.objects.get(
-                                    uuid=tilesets[1]
-                                ).datafile.url
-                            )
+                            tileset_file_secondary = Tileset.objects.get(
+                                uuid=tilesets[1]
+                            ).datafile.url
 
                         ts_cache[locus[tileset_idx]] = {
                             "obj": tileset,
@@ -476,6 +473,12 @@ def get_fragments_by_loci(request):
 
                         data_types[idx] = 'matrix'
 
+    except SnippetTooLarge as ex:
+        raise
+        return JsonResponse({
+            'error': 'Requested fragment too large. Max is 1024x1024! Behave!',
+            'error_message': str(ex)
+        }, status=400)
     except Exception as ex:
         raise
         return JsonResponse({
@@ -640,9 +643,7 @@ def fragments_by_chr(request):
             cooler_file = path.join('data', cooler_file)
         else:
             try:
-                cooler_file = get_datapath(
-                    Tileset.objects.get(uuid=cooler_file).datafile.url
-                )
+                cooler_file = Tileset.objects.get(uuid=cooler_file).datafile.path
             except AttributeError:
                 return JsonResponse({
                     'error': 'Cooler file not in database',

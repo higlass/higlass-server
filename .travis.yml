@@ -23,7 +23,6 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION cython==0.25.2 numpy=1.11.2
   - pip install -r requirements.txt
-  - pip install -r requirements-secondary.txt
   - python manage.py migrate
 
 script:

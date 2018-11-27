@@ -1,2 +1,0 @@
-clodius==0.9.2
--e git+https://github.com/nvictus/pybbi.git@v0.1.1#egg=pybbi
