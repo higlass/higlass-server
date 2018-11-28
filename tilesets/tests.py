@@ -1067,7 +1067,6 @@ class SuggestionsTest(dt.TestCase):
         self.assertGreater(len(suggestions), 0)
         self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
 
-
 class FileUploadTest(dt.TestCase):
     '''
     Test file upload functionality

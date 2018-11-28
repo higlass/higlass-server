@@ -12,13 +12,10 @@ logger = logging.getLogger(__name__)
 
 def get_or_create_tag(tag):
     tag_obj = tm.Tag.objects.filter(name=tag['name'])
-    #print('tag_obj', tag_obj)
     if tag_obj.count() == 0:
-        print("adding:", tag_obj)
         # this tag doesn't exist so we need to create it
         ts = TagSerializer(data=tag)
         if not ts.is_valid():
-            #print("invalid create", ts.errors)
             # something is wrong with this tag so we'll ignore it
             return None
         ts.save()
@@ -83,13 +80,14 @@ class TilesetSerializer(serializers.ModelSerializer):
             slug_field='uuid',
             allow_null=True,
             required=False)
-    datatype = serializers.SerializerMethodField('tags_to_datatype')
+    # datatype = serializers.SerializerMethodField('tags_to_datatype')
 
     def update(self, instance, validated_data):
-        #print('update')
-        tag_data = validated_data.pop('tags')
+        tag_data = []
 
-        #print("tag_data", tag_data)
+        if 'tags' in validated_data:
+            tag_data = validated_data.pop('tags')
+
         # add missing tags
         for tag in tag_data:
             if 'name' not in tag or len(tag['name']) == 0:
@@ -107,13 +105,10 @@ class TilesetSerializer(serializers.ModelSerializer):
         # data
         tag_names = set([tag['name'] for tag in tag_data])
         for tag in instance.tags.all():
-            #print("tags:", tag.name)
             if tag.name not in tag_names:
-                print("removing", tag.name)
                 instance.tags.remove(tag)
                 tag.refs -= 1;
                 tag.save()
-        #print("instance.tags", type(instance.tags))
         #for tag_pair in instance.tags:
 
         # save all the other fields
@@ -132,22 +127,16 @@ class TilesetSerializer(serializers.ModelSerializer):
             else:
                 setattr(instance, attr, value)
 
-        print("instance", instance, instance.datafile.path)
         instance.save()
-        print("instance:", instance.datatype)
 
         return instance
 
     def create(self, validated_data):
-        print("create")
         # Taken from this StackOverflow question:
         # https://stackoverflow.com/questions/28706072/drf-3-creating-many-to-many-update-create-serializer-with-though-table
         # remove the tags otherwise the serializer will complain
-        print('pre vd', validated_data)
         tag_data = validated_data.pop('tags')
         new_obj = tm.Tileset.objects.create(**validated_data)
-        print("new_obj:", new_obj, new_obj.datafile.path)
-        print("tag_data:", tag_data)
         validated_data['tags'] = tag_data
 
         attrs_to_delete = []
