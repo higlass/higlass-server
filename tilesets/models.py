@@ -26,17 +26,6 @@ class ViewConf(models.Model):
 def decoded_slugid():
     return slugid.nice().decode('utf-8')
 
-class Tag(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    # uuid not necessary since name is unique
-    #uuid = models.CharField(max_length=100, unique=True, default=lambda: slugid.nice().decode('utf-8'))
-    name = models.TextField(unique=True)
-    description = models.TextField(default='', blank=True)
-    refs = models.IntegerField(default=0)
-
-    def __str__(self):
-        return "Tag [value: " + self.name + "]"
-
 class Project(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     last_viewed_time = models.DateTimeField(default=django.utils.timezone.now)
@@ -68,7 +57,6 @@ class Tileset(models.Model):
     datatype = models.TextField(default='unknown')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, 
             blank=True, null=True)
-    tags = models.ManyToManyField(Tag, blank=True)
     description = models.TextField(blank=True)
 
     coordSystem = models.TextField()
