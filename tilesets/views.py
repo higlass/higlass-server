@@ -39,7 +39,7 @@ import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
 from tilesets.management.commands.ingest_tileset import ingest as ingest_tileset_to_db
-from tilesets.management.commands.remove_tileset import remove as remove_tileset_from_db
+from tilesets.management.commands.delete_tileset import delete as remove_tileset_from_db
 
 import os
 import os.path as op
