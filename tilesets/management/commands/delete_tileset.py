@@ -6,7 +6,7 @@ import os
 
 def delete(uuid):
     # search for Django object, remove associated file and record
-    instance = tm.Tileset.objects.get(uuid=uuid)
+    instance = tm.Tileset.objects.get(uuid=uuid, **ignored)
     if not instance:
         raise CommandError('Instance for specified uuid ({}) was not found'.format(uuid))
     else:

@@ -14,7 +14,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name=''):
+def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name='', **ignored):
     uid = uid or slugid.nice().decode('utf-8')
     name = name or op.split(filename)[1]
 
