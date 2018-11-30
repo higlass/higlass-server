@@ -14,6 +14,7 @@ import json
 import os
 import os.path as op
 import slugid
+import math
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -276,6 +277,12 @@ USE_TZ = True
 
 UPLOAD_ENABLED = get_setting('UPLOAD_ENABLED', True)
 PUBLIC_UPLOAD_ENABLED = get_setting('PUBLIC_UPLOAD_ENABLED', True)
+
+SNIPPET_MAT_MAX_OUT_DIM = get_setting('SNIPPET_MAT_MAX_OUT_DIM', math.inf)
+SNIPPET_MAT_MAX_DATA_DIM = get_setting('SNIPPET_MAT_MAX_DATA_DIM', math.inf)
+SNIPPET_IMG_MAX_OUT_DIM = get_setting('SNIPPET_IMG_MAX_OUT_DIM', math.inf)
+SNIPPET_OSM_MAX_DATA_DIM = get_setting('SNIPPET_OSM_MAX_DATA_DIM', math.inf)
+SNIPPET_IMT_MAX_DATA_DIM = get_setting('SNIPPET_IMT_MAX_DATA_DIM', math.inf)
 
 
 # Static files (CSS, JavaScript, Images)
