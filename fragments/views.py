@@ -37,6 +37,7 @@ from fragments.utils import (
     blob_to_zip
 )
 from higlass_server.utils import getRdb
+from fragments.exceptions import SnippetTooLarge
 
 rdb = getRdb()
 
@@ -408,6 +409,12 @@ def get_fragments_by_loci(request):
 
                         data_types[idx] = 'matrix'
 
+    except SnippetTooLarge as ex:
+        raise
+        return JsonResponse({
+            'error': 'Requested fragment too large. Max is 1024x1024! Behave!',
+            'error_message': str(ex)
+        }, status=400)
     except Exception as ex:
         raise
         return JsonResponse({
