@@ -6,10 +6,13 @@ import clodius.tiles.bigwig as hgbi
 import slugid
 import tilesets.models as tm
 import django.core.files.uploadedfile as dcfu
+import logging
 import os
 import os.path as op
 import tilesets.chromsizes  as tcs
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 def chromsizes_match(chromsizes1, chromsizes2):
     pass  
@@ -38,7 +41,15 @@ def check_for_chromsizes(filename, coord_system):
     # of the input file
     if coord_system is not None and len(coord_system) > 0:
         try:
-            chrom_info_tileset = tm.Tileset.objects.get(coordSystem=coord_system)
+            chrom_info_tileset = tm.Tileset.objects.filter(
+                    coordSystem=coord_system,
+                    datatype='chromsizes')
+
+            if len(chrom_info_tileset) > 1:
+                raise CommandError("More than one available set of chromSizes"
+                        + "for this coordSystem ({})".format(coord_system))
+            
+            chrom_info_tileset = chrom_info_tileset.first()
         except dce.ObjectDoesNotExist:
             chrom_info_tileset = None
 
@@ -115,6 +126,7 @@ class Command(BaseCommand):
         # parser.add_argument('--coord', default='hg19', type=str)
         parser.add_argument('--uid', type=str)
         parser.add_argument('--name', type=str)
+        parser.add_argument('--project-name', type=str, default='')
 
         # Named (optional) arguments
         parser.add_argument(
@@ -134,12 +146,14 @@ class Command(BaseCommand):
         # coord = options['coord']
         uid = options.get('uid') or slugid.nice().decode('utf-8')
         name = options.get('name') or op.split(filename)[1]
+        project_name = options['project_name']
 
         if 'filetype' not in options:
             raise CommandError('Filetype has to be specified')
         
         if options['filetype'].lower() == 'bigwig':
             coordSystem = check_for_chromsizes(options['filename'], options['coordSystem'])
+
 
         if options['no_upload']:
             if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
@@ -155,6 +169,13 @@ class Command(BaseCommand):
             # remove the filepath of the filename
             django_file.name = op.split(django_file.name)[1]
 
+        try:
+            project_obj = tm.Project.objects.get(name=project_name)
+        except dce.ObjectDoesNotExist:
+            project_obj = tm.Project.objects.create(
+                name=project_name
+            )
+
         tm.Tileset.objects.create(
             datafile=django_file,
             filetype=filetype,
@@ -162,5 +183,6 @@ class Command(BaseCommand):
             coordSystem=coordSystem,
             coordSystem2=coordSystem2,
             owner=None,
+            project=project_obj,
             uuid=uid,
             name=name)
