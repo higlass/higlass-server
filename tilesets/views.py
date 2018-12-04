@@ -702,7 +702,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'error': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'The uuid parameter is undefined'}, status=400)
         try:
             instance = self.get_object()
             self.perform_destroy(instance)

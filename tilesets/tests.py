@@ -24,6 +24,36 @@ import tilesets.generate_tiles as tgt
 
 logger = logging.getLogger(__name__)
 
+def media_file(filename, sub_dir='uploads'):
+    '''
+    Returns path to file in the media uploads directory
+    Parameters:
+    -----------
+    filename: string
+        The path of the file in its original place
+    Returns:
+    -------
+    filename: string
+        The path of the file in its place in the media uploads directory
+    '''
+    target_dir = op.join(hss.MEDIA_ROOT, sub_dir)
+    target_file = op.join(target_dir, op.basename(filename))
+    return target_file
+
+def media_file_exists(filename):
+    '''
+    Test if a file exists in the media uploads directory
+    Parameters:
+    -----------
+    filename: string
+        The path of the file in its place in the media uploads directory
+    Returns:
+    -------
+    The return value. True for success, False otherwise.
+    '''
+    return False if not op.exists(media_file(filename)) else True 
+           
+
 def add_file(filename, sub_dir='uploads/data'):
     '''
     Add a file to the media directory and return its
@@ -589,9 +619,10 @@ class PermissionsTest(dt.TestCase):
 
         c1.login(username='user1', password='pass')
 
-        f = open('data/tiny.txt', 'rb')
+        fname = 'data/tiny.txt'
+        fhandle = open(fname, 'rb')
         test_tileset = {
-            'datafile': f,
+            'datafile': fhandle,
             'filetype': 'hitile',
             'datatype': 'vector',
             'uid': 'cc',
@@ -605,13 +636,19 @@ class PermissionsTest(dt.TestCase):
             test_tileset,
             format='multipart'
         )
-        f.close()
+        fhandle.close()
+        
+        assert(media_file_exists(fname))
 
         if hss.UPLOAD_ENABLED:
             # creating datasets is allowed if we're logged in
             assert(response.status_code == 201)
 
             ret = json.loads(response.content.decode('utf-8'))
+            
+            # update media filename for whatever name the server ended up using (i.e., in case of duplicates, a random suffix is added)
+            assert('datafile' in ret)
+            fname = op.basename(ret['datafile'])
 
             c2 = dt.Client()
             c2.login(username='user2', password='pass')
@@ -620,30 +657,38 @@ class PermissionsTest(dt.TestCase):
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
             
+            # the media file should still exist
+            assert(media_file_exists(fname))
+            
             # user2 should not be able to rename the tileset created by user1
             resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
             assert(resp.status_code == 403)
 
-            # tileset should still be there
+            # tileset should still be in the database and on the filesystem
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
+            assert(media_file_exists(fname))
             
             # user1 should be able to rename or modify their tileset
             resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
             assert(resp.status_code == 200)
             
             # apply GET on uuid to ensure that tileset has the newly modified name
-            #resp = c1.get("/api/v1/tilesets/")
-            #assert(json.loads(resp.content.decode('utf-8'))['results'][0]['name'] == 'newname')
             resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
             assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
+            
+            # the media file should still exist with the same name
+            assert(media_file_exists(fname))
 
-            # user1 should be able to delete his/her own tileset
+            # user1 should be able to delete his/her own tileset from the database
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             resp = c1.get("/api/v1/tilesets/")
             assert(resp.status_code == 200)
-
+            
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 0)
+
+            # the media file should no longer exist, as well
+            assert(not media_file_exists(fname))
 
             c3 = dt.Client()
             resp = c3.get('/api/v1/tilesets/')
