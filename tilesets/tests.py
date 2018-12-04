@@ -637,8 +637,6 @@ class PermissionsTest(dt.TestCase):
             format='multipart'
         )
         fhandle.close()
-        
-        assert(media_file_exists(fname))
 
         if hss.UPLOAD_ENABLED:
             # creating datasets is allowed if we're logged in
@@ -649,6 +647,9 @@ class PermissionsTest(dt.TestCase):
             # update media filename for whatever name the server ended up using (i.e., in case of duplicates, a random suffix is added)
             assert('datafile' in ret)
             fname = op.basename(ret['datafile'])
+            
+            # test that said media file exists
+            assert(media_file_exists(fname))
 
             c2 = dt.Client()
             c2.login(username='user2', password='pass')
@@ -684,11 +685,11 @@ class PermissionsTest(dt.TestCase):
             resp = c1.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             resp = c1.get("/api/v1/tilesets/")
             assert(resp.status_code == 200)
-            
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 0)
 
             # the media file should no longer exist, as well
             assert(not media_file_exists(fname))
+
 
             c3 = dt.Client()
             resp = c3.get('/api/v1/tilesets/')
