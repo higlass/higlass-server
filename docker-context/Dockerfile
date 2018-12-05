@@ -22,8 +22,6 @@ RUN pip install uwsgi==2.0.14
 WORKDIR /higlass-server
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
-COPY requirements-secondary.txt ./
-RUN pip install -r requirements-secondary.txt
 
 COPY docker-context/nginx.conf /etc/nginx/
 COPY docker-context/hgserver_nginx.conf /etc/nginx/sites-enabled/
@@ -39,6 +37,7 @@ EXPOSE 80
 
 ENV HIGLASS_SERVER_BASE_DIR /data
 VOLUME /data
+VOLUME /tmp
 
 ARG WORKERS=2
 ENV WORKERS ${WORKERS}
