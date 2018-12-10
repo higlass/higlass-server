@@ -29,4 +29,5 @@ script:
   - ./test.sh
 
 after_failure:
-  - "cat log/hgs.log"
+  - "ls -lr"
+  - "cat data/log/hgs.log"
