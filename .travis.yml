@@ -27,3 +27,6 @@ install:
 
 script:
   - ./test.sh
+
+after_failure:
+  - "cat log/hgs.log"
