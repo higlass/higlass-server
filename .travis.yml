@@ -29,5 +29,5 @@ script:
   - ./test.sh
 
 after_failure:
-  - "ls -lr"
-  - "cat data/log/hgs.log"
+  - "ls $BASE_DIR"
+  - "cat $BASE_DIR/log/hgs.log"
