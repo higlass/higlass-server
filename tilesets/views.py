@@ -702,12 +702,11 @@ def register_url(request):
     '''
     body = json.loads(request.body.decode('utf8'))
 
-    url = body.get('fileurl', None)
+    url = "%s.." % body.get('fileurl', '').replace('http:', 'http').replace('https:', 'https').replace('ftp:', 'ftp')
     media_base_path = op.realpath(hss.MEDIA_ROOT)
-    logger.warn('URL to register %s' % url)
 
     # validate the url to ensure we didn't get garbage
-    is_url = url != None #todo: replace with regex
+    is_url = url != '..' #todo: replace with regex
 
     if not is_url:
         error = ({
@@ -732,9 +731,7 @@ def register_url(request):
         )
     except Exception as e:
         logger.error('Problem registering url: %s' % e)
-        return JsonResponse(({
-            'error': str(e)
-        }), 500)
+        return JsonResponse({'error': str(e)}, status=500)
 
     return HttpResponse("Success", content_type="text/plain")
 

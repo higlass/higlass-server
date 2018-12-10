@@ -24,9 +24,9 @@ RUN pip install uwsgi==2.0.14
 WORKDIR /internal-services
 RUN git clone https://github.com/reservoirgenomics/httpfs.git
 RUN pip install -r httpfs/requirements.txt
-ENV HTTPFS_HTTP_DIR /data/media/http:
-ENV HTTPFS_HTTPS_DIR /data/media/https:
-ENV HTTPFS_FTP_DIR /data/media/ftp:
+ENV HTTPFS_HTTP_DIR /data/media/http
+ENV HTTPFS_HTTPS_DIR /data/media/https
+ENV HTTPFS_FTP_DIR /data/media/ftp
 
 WORKDIR /higlass-server
 COPY requirements.txt ./

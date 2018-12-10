@@ -21,14 +21,12 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
     if not filetype:
         raise CommandError('Filetype has to be specified')
 
-    if filetype.lower() == 'bigwig':
-        coordSystem = check_for_chromsizes(filename, coordSystem)
-
     if no_upload:
         if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
             not op.islink(op.join(settings.MEDIA_ROOT, filename)) and
-            not any([filename.startswith('http:'), filename.startswith('https:'), filename.startswith('ftp:')])):
+            not any([filename.startswith('http'), filename.startswith('https'), filename.startswith('ftp')])):
             raise CommandError('File does not exist under media root')
+        filename = op.join(settings.MEDIA_ROOT, filename)
         django_file = filename
     else:
         if os.path.islink(filename):
@@ -38,6 +36,9 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
 
         # remove the filepath of the filename
         django_file.name = op.split(django_file.name)[1]
+
+    if filetype.lower() == 'bigwig':
+        coordSystem = check_for_chromsizes(filename, coordSystem)
 
     try:
         project_obj = tm.Project.objects.get(name=project_name)
@@ -76,7 +77,6 @@ def check_for_chromsizes(filename, coord_system):
     # print("tileset chromsizes:", tileset_info['chromsizes'])
     tsinfo_chromsizes = set([(str(chrom), str(size)) for chrom, size in tileset_info['chromsizes']])
     # print("tsinfo_chromsizes:", tsinfo_chromsizes)
-
 
     chrom_info_tileset = None
 
