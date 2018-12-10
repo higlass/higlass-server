@@ -42,6 +42,17 @@ for FILE in $FILES; do
 done
 echo 'foo bar' > data/tiny.txt
 
+mkdir -p data/media/http
+mkdir -p data/media/https
+mkdir -p data/media/ftp
+
+git clone https://github.com/reservoirgenomics/httpfs.git
+pip install -r httpfs/requirements.txt
+
+python httpfs/httpfs.py data/media/https https --lru-capacity 1000 --disk-cache-dir data/disk-cache --disk-cache-size 4294967296
+python httpfs/httpfs.py data/media/http http --lru-capacity 1000 --disk-cache-dir data/disk-cache --disk-cache-size 4294967296
+python httpfs/httpfs.py data/media/ftp ftp --lru-capacity 1000 --disk-cache-dir data/disk-cache --disk-cache-size 4294967296
+
 SETTINGS=higlass_server.settings_test
 
 python manage.py migrate --settings=$SETTINGS
