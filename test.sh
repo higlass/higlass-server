@@ -46,6 +46,7 @@ mkdir -p data/media/http
 mkdir -p data/media/https
 mkdir -p data/media/ftp
 
+rm -rf httpfs/
 git clone https://github.com/reservoirgenomics/httpfs.git
 pip install -r httpfs/requirements.txt
 
