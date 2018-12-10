@@ -4,7 +4,7 @@ services:
   - docker
 
 before_install:
-  - docker build -f docker-context/Dockerfile .
+  - docker build -t higlass-server -f docker-context/Dockerfile .
 
 install:
   - docker run --cap-add SYS_ADMIN --device /dev/fuse --security-opt apparmor:unconfined --name higlass-server higlass-server
