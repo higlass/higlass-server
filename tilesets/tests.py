@@ -1189,6 +1189,12 @@ class FileUploadTest(dt.TestCase):
         obj = tm.Tileset.objects.get(uuid=uid)
         assert uid in obj.datafile.path
 
+        response = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=uid))
+        assert response.status_code == 200
+        response = c.get('/api/v1/tiles/?d={uuid}.0.0.0'.format(uuid=uid))
+        assert response.status_code == 200
+
+
 class GetterTest(dt.TestCase):
     def test_get_info(self):
         filepath = 'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'

@@ -727,6 +727,7 @@ def register_url(request):
             project_name=body.get('project_name', ''),
             uid=body.get('uid', None),
             name=body.get('name', None),
+            temporary=True,
             no_upload=True
         )
     except Exception as e:

@@ -14,7 +14,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name='', **ignored):
+def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name='', temporary=False, **ignored):
     uid = uid or slugid.nice().decode('utf-8')
     name = name or op.split(filename)[1]
 
@@ -24,7 +24,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
     if no_upload:
         if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
             not op.islink(op.join(settings.MEDIA_ROOT, filename)) and
-            not any([filename.startswith('http'), filename.startswith('https'), filename.startswith('ftp')])):
+            not any([filename.startswith('http/'), filename.startswith('https/'), filename.startswith('ftp/')])):
             raise CommandError('File does not exist under media root')
         filename = op.join(settings.MEDIA_ROOT, filename)
         django_file = filename
@@ -56,6 +56,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         owner=None,
         project=project_obj,
         uuid=uid,
+        temporary=temporary,
         name=name)
 
 def chromsizes_match(chromsizes1, chromsizes2):
