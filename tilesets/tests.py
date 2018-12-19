@@ -54,7 +54,7 @@ def add_file(filename, sub_dir='uploads/data'):
     django_file = op.join('uploads', filename)
 
     return django_file
-        
+
     def test_list_tilesets(self):
         user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
@@ -95,7 +95,7 @@ def add_file(filename, sub_dir='uploads/data'):
         )
 
         assert(ret.status_code==201)
-        
+
         # create another tileset which isn't associated with this
         # project
         ret = self.client.post(
@@ -206,7 +206,7 @@ class IngestTests(dt.TestCase):
             owner=self.user1,
             coordSystem="hg19_1",
         )
-        
+
         dcm.call_command('ingest_tileset',
             filename = 'data/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig',
             filetype='bigwig', datatype='vector',
@@ -619,7 +619,7 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
-            
+
             # user2 should not be able to rename the tileset created by user1
             resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
             assert(resp.status_code == 403)
@@ -627,11 +627,11 @@ class PermissionsTest(dt.TestCase):
             # tileset should still be there
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
-            
+
             # user1 should be able to rename or modify their tileset
             resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
             assert(resp.status_code == 200)
-            
+
             # apply GET on uuid to ensure that tileset has the newly modified name
             #resp = c1.get("/api/v1/tilesets/")
             #assert(json.loads(resp.content.decode('utf-8'))['results'][0]['name'] == 'newname')
@@ -1144,6 +1144,56 @@ class FileUploadTest(dt.TestCase):
             self.assertTrue(op.exists, obj.datafile.path)
         else:
             self.assertEqual(403, response.status_code)
+
+    def test_register_url(self):
+        '''
+        Registering a url allows the file to remain on a remote server and be accessed through the local higlass-server
+        '''
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            coordSystem="hg19_url",
+        )
+
+        uid = "wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2"
+        url = "https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig"
+
+        response = c.post(
+            '/api/v1/register_url/',
+            json.dumps({
+              "fileurl": url,
+              "uid": uid,
+              "name": uid,
+              "datatype": "vector",
+              "filetype": "bigwig",
+              "coordSystem": "hg19_url"
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+
+        response = c.get('/api/v1/tilesets/')
+        record_matches = [result for result in response.json()['results'] if result['uuid'] == uid]
+        assert len(record_matches) == 1
+        assert record_matches[0]['name'] == uid
+
+        obj = tm.Tileset.objects.get(uuid=uid)
+        assert uid in obj.datafile.path
+
+        response = c.get('/api/v1/tileset_info/?d={uuid}'.format(uuid=uid))
+        assert response.status_code == 200
+        response = c.get('/api/v1/tiles/?d={uuid}.0.0.0'.format(uuid=uid))
+        assert response.status_code == 200
+
 
 class GetterTest(dt.TestCase):
     def test_get_info(self):

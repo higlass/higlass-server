@@ -13,11 +13,20 @@ RUN apt-get update && apt-get install -y \
         build-essential \
         libssl-dev \
         libpng-dev \
+        git \
+        fuse \
     && rm -rf /var/lib/apt/lists/*
 
 RUN conda install --yes cython==0.25.2 numpy=1.12.0
 RUN conda install --yes --channel bioconda pysam htslib=1.3.2
 RUN pip install uwsgi==2.0.14
+
+WORKDIR /internal-services
+RUN git clone https://github.com/reservoirgenomics/httpfs.git
+RUN pip install -r httpfs/requirements.txt
+ENV HTTPFS_HTTP_DIR /data/media/http
+ENV HTTPFS_HTTPS_DIR /data/media/https
+ENV HTTPFS_FTP_DIR /data/media/ftp
 
 WORKDIR /higlass-server
 COPY requirements.txt ./
@@ -32,6 +41,8 @@ COPY docker-context/default-viewconf-fixture.xml ./
 
 COPY docker-context/supervisord.conf ./
 COPY docker-context/uwsgi.ini ./
+
+COPY docker-context/httpfs.sh ./
 
 EXPOSE 80
 
