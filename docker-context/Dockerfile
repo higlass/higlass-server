@@ -21,9 +21,8 @@ RUN conda install --yes cython==0.25.2 numpy=1.12.0
 RUN conda install --yes --channel bioconda pysam htslib=1.3.2
 RUN pip install uwsgi==2.0.14
 
-WORKDIR /internal-services
-RUN git clone https://github.com/reservoirgenomics/httpfs.git
-RUN pip install -r httpfs/requirements.txt
+RUN pip install simple-httpfs
+
 ENV HTTPFS_HTTP_DIR /data/media/http
 ENV HTTPFS_HTTPS_DIR /data/media/https
 ENV HTTPFS_FTP_DIR /data/media/ftp

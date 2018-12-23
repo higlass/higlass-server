@@ -702,7 +702,7 @@ def register_url(request):
     '''
     body = json.loads(request.body.decode('utf8'))
 
-    url = "%s.." % body.get('fileurl', '').replace('http:', 'http').replace('https:', 'https').replace('ftp:', 'ftp')
+    url = "%s" % body.get('fileurl', '').replace('http:/', 'http').replace('https:/', 'https').replace('ftp:/', 'ftp')
     media_base_path = op.realpath(hss.MEDIA_ROOT)
 
     # validate the url to ensure we didn't get garbage
