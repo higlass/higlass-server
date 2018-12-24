@@ -35,18 +35,18 @@ To install HiGlass Server manually follow the steps below. Note we strongly reco
 git clone https://github.com/higlass/higlass-server && cd higlass-server
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
-pip install --upgrade -r ./requirements-secondary.txt
 python manage.py runserver
 ```
 
 To enable the register_url api endpoint, HiGlass depends on a project called httpfs to cache external url files. Tests depend on this process running. Set it up as follows:
 ```bash
-git clone https://github.com/reservoirgenomics/httpfs.git
-pip install -r httpfs/requirements.txt
-python /internal-services/httpfs/httpfs.py </path/to/data>/https https --lru-capacity 1000 --disk-cache-dir /data/disk-cache --disk-cache-size 4294967296
-python /internal-services/httpfs/httpfs.py </path/to/data>/http http --lru-capacity 1000 --disk-cache-dir /data/disk-cache --disk-cache-size 4294967296
-python /internal-services/httpfs/httpfs.py </path/to/data>/http ftp --lru-capacity 1000 --disk-cache-dir /data/disk-cache --disk-cache-size 4294967296
+pip install simple-httpfs
+
+simple-httpfs.py media/http
+simple-httpfs.py media/https
 ```
+
+Or simply use `./unit_tests.sh`.
 
 ---
 
