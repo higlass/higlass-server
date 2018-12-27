@@ -21,7 +21,7 @@ RUN conda install --yes cython==0.25.2 numpy=1.12.0
 RUN conda install --yes --channel bioconda pysam htslib=1.3.2
 RUN pip install uwsgi==2.0.14
 
-RUN pip install simple-httpfs>=0.1.2
+RUN pip install simple-httpfs>=0.1.3
 
 ENV HTTPFS_HTTP_DIR /data/media/http
 ENV HTTPFS_HTTPS_DIR /data/media/https
