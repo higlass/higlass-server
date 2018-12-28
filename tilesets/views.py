@@ -702,9 +702,9 @@ def register_url(request):
     '''
     body = json.loads(request.body.decode('utf8'))
 
-    url = "%s.." % body.get('fileurl', '').replace('http:/', 'http').replace('https:/', 'https').replace('ftp:/', 'ftp')
-    media_base_path = op.realpath(hss.MEDIA_ROOT)
+    url = body.get('fileurl', '')
 
+    """
     # validate the url to ensure we didn't get garbage
     is_url = url != '..' #todo: replace with regex
 
@@ -713,10 +713,9 @@ def register_url(request):
             'error': 'Specified url ({}) is not valid.'.format(url)
         })
         return JsonResponse(error, 400)
+    """
 
     try:
-        if not op.exists(media_base_path):
-            os.makedirs(media_base_path)
         # ingest the file by calling the ingest_tileset command
         ingest_tileset_to_db(
             filename=url,
