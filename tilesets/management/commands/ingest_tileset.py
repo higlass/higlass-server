@@ -61,8 +61,8 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         project_obj = tm.Project.objects.create(
             name=project_name
         )
-
-    tm.Tileset.objects.create(
+        
+    return tm.Tileset.objects.create(
         datafile=django_file,
         filetype=filetype,
         datatype=datatype,

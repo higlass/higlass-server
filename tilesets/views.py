@@ -717,7 +717,7 @@ def register_url(request):
 
     try:
         # ingest the file by calling the ingest_tileset command
-        ingest_tileset_to_db(
+        new_obj = ingest_tileset_to_db(
             filename=url,
             datatype=body.get('datatype', None),
             filetype=body.get('filetype', None),
@@ -733,7 +733,7 @@ def register_url(request):
         logger.error('Problem registering url: %s' % e)
         return JsonResponse({'error': str(e)}, status=500)
 
-    return HttpResponse("Success", content_type="text/plain")
+    return JsonResponse({ 'uid': new_obj.uuid }, content_type="text/plain")
 
 
 @method_decorator(gzip_page, name='dispatch')

@@ -54,7 +54,7 @@ class Tileset(models.Model):
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
-    datatype = models.TextField(default='unknown')
+    datatype = models.TextField(default='unknown', blank=True, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE,
             blank=True, null=True)
     description = models.TextField(blank=True)
