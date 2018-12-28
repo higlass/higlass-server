@@ -21,3 +21,4 @@ slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
 clodius>=0.10.0.rc2
+simple-httpfs>=0.1.3
