@@ -495,7 +495,12 @@ def get_fragments_by_loci(request):
             mat_b64 = pybase64.b64encode(np_to_png(matrix)).decode('ascii')
 
             if not no_cache:
-                rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
+                try:
+                    rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
+                except Exception as ex:
+                    # error caching a tile
+                    # log the error and carry forward, this isn't critical
+                    logger.warn(ex)
 
             matrices[i] = mat_b64
 
@@ -522,7 +527,12 @@ def get_fragments_by_loci(request):
         results['previews2d'] = previews_2d
 
     # Cache results for 30 minutes
-    rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
+    try:
+        rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
+    except Exception as ex:
+        # error caching a tile
+        # log the error and carry forward, this isn't critical
+        logger.warn(ex)
 
     if encoding == 'image':
         if len(matrices) == 1:
@@ -733,7 +743,12 @@ def fragments_by_chr(request):
         results['fragments'] = fragments_arr
 
     # Cache results for 30 mins
-    rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
+    try:
+        rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
+    except Exception as ex:
+        # error caching a tile
+        # log the error and carry forward, this isn't critical
+        logger.warn(ex)
 
     return JsonResponse(results)
 
