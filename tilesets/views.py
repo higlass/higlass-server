@@ -437,7 +437,7 @@ def tiles(request):
             # there was an error accessing the cache server
             # log the error and carry forward fetching the tile
             # from the original data
-            logger.error(ex)
+            logger.warn(ex)
 
         #tile_value = None
 
@@ -479,7 +479,7 @@ def tiles(request):
         except Exception as ex:
             # error caching a tile
             # log the error and carry forward, this isn't critical
-            logger.error(ex)
+            logger.warn(ex)
 
         if tile_id in transform_id_to_original_id:
             original_tile_id = transform_id_to_original_id[tile_id]
