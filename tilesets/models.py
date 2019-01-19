@@ -50,17 +50,18 @@ class Tileset(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     uuid = models.CharField(max_length=100, unique=True, default=decoded_slugid)
-    
+
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
     filetype = models.TextField()
-    datatype = models.TextField(default='unknown')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, 
+    datatype = models.TextField(default='unknown', blank=True, null=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE,
             blank=True, null=True)
     description = models.TextField(blank=True)
 
     coordSystem = models.TextField()
     coordSystem2 = models.TextField(default='')
+    temporary = models.BooleanField(default=False)
 
     owner = models.ForeignKey(
         'auth.User', related_name='tilesets', on_delete=models.CASCADE,

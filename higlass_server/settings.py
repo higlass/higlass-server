@@ -100,6 +100,21 @@ if 'HIGLASS_MEDIA_ROOT' in os.environ:
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+if 'HTTPFS_HTTP_DIR' in os.environ:
+    HTTPFS_HTTP_DIR = os.environ['HTTPFS_HTTP_DIR']
+else:
+    HTTPFS_HTTP_DIR = os.path.join(MEDIA_ROOT, 'http')
+
+if 'HTTPFS_HTTPS_DIR' in os.environ:
+    HTTPFS_HTTPS_DIR = os.environ['HTTPFS_HTTPS_DIR']
+else:
+    HTTPFS_HTTPS_DIR = os.path.join(MEDIA_ROOT, 'https')
+
+if 'HTTPFS_FTP_DIR' in os.environ:
+    HTTPFS_FTP_DIR = os.environ['HTTPFS_FTP_DIR']
+else:
+    HTTPFS_FTP_DIR = os.path.join(MEDIA_ROOT, 'ftp')
+
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
 
 LOGGING = {

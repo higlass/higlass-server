@@ -1,7 +1,7 @@
 pybbi==0.2.0
 bumpversion==0.5.3
 CacheControl==0.12.4
-cooler==0.7.10
+cooler==0.7.11
 django-cors-headers
 django-guardian
 django-rest-swagger
@@ -21,3 +21,4 @@ slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
 clodius>=0.10.0
+simple-httpfs>=0.1.3
