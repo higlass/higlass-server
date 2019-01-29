@@ -13,7 +13,7 @@
 FROM ubuntu
 
 RUN apt-get update
-RUN apt-get -y install libatlas-dev libatlas-base-dev liblapack-dev gfortran wget bzip2 git libz-dev curl
+RUN apt-get -y install libatlas-base-dev liblapack-dev gfortran wget bzip2 git libz-dev curl
 RUN useradd --create-home --shell /bin/bash higlass
 
 USER higlass
