@@ -84,7 +84,7 @@ SECRET_KEY = get_setting('SECRET_KEY', slugid.nice())
 DEBUG = get_setting('DEBUG', False)
 
 ALLOWED_HOSTS = [
-    'localhost', '127.0.0.1', 'higlass.site', 'higlass.io', 'test.higlass.io'
+    '*',
 ]
 
 if 'SITE_URL' in os.environ:
@@ -93,7 +93,28 @@ if 'SITE_URL' in os.environ:
 # this specifies where uploaded files will be place
 # (e.g. BASE_DIR/media/uplaods/file.x)
 MEDIA_URL = 'media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if 'HIGLASS_MEDIA_ROOT' in os.environ:
+    MEDIA_ROOT = os.environ['HIGLASS_MEDIA_ROOT']
+else:
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if 'HTTPFS_HTTP_DIR' in os.environ:
+    HTTPFS_HTTP_DIR = os.environ['HTTPFS_HTTP_DIR']
+else:
+    HTTPFS_HTTP_DIR = os.path.join(MEDIA_ROOT, 'http')
+
+if 'HTTPFS_HTTPS_DIR' in os.environ:
+    HTTPFS_HTTPS_DIR = os.environ['HTTPFS_HTTPS_DIR']
+else:
+    HTTPFS_HTTPS_DIR = os.path.join(MEDIA_ROOT, 'https')
+
+if 'HTTPFS_FTP_DIR' in os.environ:
+    HTTPFS_FTP_DIR = os.environ['HTTPFS_FTP_DIR']
+else:
+    HTTPFS_FTP_DIR = os.path.join(MEDIA_ROOT, 'ftp')
+
+AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
 
 LOGGING = {
     'version': 1,
