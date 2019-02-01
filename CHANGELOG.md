@@ -1,3 +1,7 @@
+v1.7.? (????-??-??)
+
+- Snippets API now allows limiting the size of snippets via `config.json`
+
 v1.7.3 (2018-07-12)
 
 - Return datatype along with tileset info

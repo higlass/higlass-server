@@ -42,6 +42,13 @@ class TilesetSerializer(serializers.ModelSerializer):
             slug_field='uuid',
             allow_null=True,
             required=False)
+    project_name = serializers.SerializerMethodField('retrieve_project_name')
+
+    def retrieve_project_name(self, obj):
+        if obj.project is None:
+            return ''
+
+        return obj.project.name
 
     class Meta:
         owner = serializers.ReadOnlyField(source='owner.username')
@@ -56,6 +63,7 @@ class TilesetSerializer(serializers.ModelSerializer):
             'coordSystem2',
             'created',
             'project',
+            'project_name',
             'description',
             'private',
         )
@@ -65,7 +73,6 @@ class UserFacingTilesetSerializer(TilesetSerializer):
     owner = serializers.ReadOnlyField(source='owner.username')
     project_name = serializers.SerializerMethodField('retrieve_project_name')
     project_owner = serializers.SerializerMethodField('retrieve_project_owner')
-
 
     def retrieve_project_name(self, obj):
         if obj.project is None:
