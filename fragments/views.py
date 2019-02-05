@@ -11,6 +11,8 @@ try:
 except:
     import pickle
 
+import higlass_server.settings as hss
+
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from io import BytesIO
@@ -38,6 +40,10 @@ from fragments.utils import (
 )
 from higlass_server.utils import getRdb
 from fragments.exceptions import SnippetTooLarge
+
+import h5py
+
+from math import floor, log
 
 rdb = getRdb()
 
@@ -232,7 +238,9 @@ def get_fragments_by_loci(request):
     encoding = params['encoding']
     representatives = params['representatives']
 
-    tileset_idx = 6 if len(loci) and len(loci[0]) > 7 else 4
+    # Check if requesting a snippet from a `.cool` cooler file
+    is_cool = len(loci) and len(loci[0]) > 7
+    tileset_idx = 6 if is_cool else 4
     zoom_level_idx = tileset_idx + 1
 
     filetype = None
@@ -286,12 +294,7 @@ def get_fragments_by_loci(request):
                     'error': 'Tileset not specified',
                 }, status=400)
 
-            if tileset_file not in loci_lists:
-                loci_lists[tileset_file] = {}
-
-            if locus[zoom_level_idx] not in loci_lists[tileset_file]:
-                loci_lists[tileset_file][locus[zoom_level_idx]] = []
-
+            # Get the dimensions of the snippets (i.e., width and height in px)
             inset_dim = (
                 locus[zoom_level_idx + 1]
                 if (
@@ -300,10 +303,41 @@ def get_fragments_by_loci(request):
                 )
                 else 0
             )
+            out_dim = inset_dim | dims
+
+            # Make sure out dim (in pixel) is not too large
+            if is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM:
+                raise SnippetTooLarge()
+            if not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM:
+                raise SnippetTooLarge()
+
+            if tileset_file not in loci_lists:
+                loci_lists[tileset_file] = {}
+
+            if is_cool:
+                with h5py.File(tileset_file, 'r') as f:
+                    # get base resolution of cooler file
+                    max_zoom = f.attrs['max-zoom']
+                    bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+            else:
+                bin_size = 1
+
+            # Get max abs dim in base pairs
+            max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+
+            # Find closest zoom level if `zoomout_level < 0`
+            zoomout_level = (
+                locus[zoom_level_idx]
+                if locus[zoom_level_idx] >= 0
+                else floor(log((max_abs_dim / bin_size) / out_dim, 2))
+            )
+
+            if zoomout_level not in loci_lists[tileset_file]:
+                loci_lists[tileset_file][zoomout_level] = []
 
             locus_id = '.'.join(map(str, locus))
 
-            loci_lists[tileset_file][locus[zoom_level_idx]].append(
+            loci_lists[tileset_file][zoomout_level].append(
                 locus[0:tileset_idx] + [i, inset_dim, locus_id]
             )
             loci_ids.append(locus_id)
@@ -409,12 +443,6 @@ def get_fragments_by_loci(request):
 
                         data_types[idx] = 'matrix'
 
-    except SnippetTooLarge as ex:
-        raise
-        return JsonResponse({
-            'error': 'Requested fragment too large. Max is 1024x1024! Behave!',
-            'error_message': str(ex)
-        }, status=400)
     except Exception as ex:
         raise
         return JsonResponse({
