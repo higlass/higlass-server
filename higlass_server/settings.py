@@ -314,7 +314,7 @@ if 'APP_BASEPATH' in os.environ:
     LOGIN_REDIRECT_URL = os.environ['APP_BASEPATH']
     LOGOUT_REDIRECT_URL = os.environ['APP_BASEPATH']
 
-    STATIC_URL = op.join(os.environ['APP_BASEPATH'], 'hgs-static')
+    STATIC_URL = op.join(os.environ['APP_BASEPATH'], 'hgs-static') + "/"
 
 ADMIN_URL = r'^admin/'
 
