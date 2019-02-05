@@ -306,6 +306,18 @@ SNIPPET_IMT_MAX_DATA_DIM = get_setting('SNIPPET_IMT_MAX_DATA_DIM', math.inf)
 STATIC_URL = '/hgs-static/'
 STATIC_ROOT = 'hgs-static/'
 
+if 'APP_BASEPATH' in os.environ:
+    # https://stackoverflow.com/questions/44987110/django-in-subdirectory-admin-site-is-not-working
+    USE_X_FORWARDED_HOST = True
+    FORCE_SCRIPT_NAME = os.environ['APP_BASEPATH']
+    SESSION_COOKIE_PATH = os.environ['APP_BASEPATH']
+    LOGIN_REDIRECT_URL = os.environ['APP_BASEPATH']
+    LOGOUT_REDIRECT_URL = os.environ['APP_BASEPATH']
+
+    STATIC_URL = op.join(os.environ['APP_BASEPATH'], 'hgs-static')
+
+ADMIN_URL = r'^admin/'
+
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
 # )
