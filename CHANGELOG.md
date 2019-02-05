@@ -1,3 +1,11 @@
+v1.9.2
+
+- Fixed STATIC_URL settings must end with a slash bug
+
+v1.9.1
+
+- Added support for the APP_BASEPATH setting
+
 v1.7.? (????-??-??)
 
 - Snippets API now allows limiting the size of snippets via `config.json`
