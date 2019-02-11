@@ -19,7 +19,8 @@ import time
 import tempfile
 import tilesets.models as tm
 import tilesets.chromsizes  as tcs
-import tilesets.multivec_tiles as tmt
+
+import clodius.tiles.multivec as ctmu
 
 import higlass_server.settings as hss
 
@@ -504,7 +505,7 @@ def generate_tiles(tileset_tile_ids):
         return generate_1d_tiles(
                 tileset.datafile.path,
                 tile_ids,
-                tmt.get_single_tile)
+                ctmu.get_single_tile)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     else:
