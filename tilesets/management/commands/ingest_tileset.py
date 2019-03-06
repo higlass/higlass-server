@@ -20,7 +20,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
 
     if not filetype:
         raise CommandError('Filetype has to be specified')
-    
+
     django_file = None
 
     # if we're ingesting a url, place it relative to the httpfs directories
@@ -31,7 +31,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
     if filename[:8] == 'https://':
         filename = "{}..".format(filename.replace('https:/', 'https'))
         no_upload=True
-    if filename[:8] == 'ftp://':
+    if filename[:6] == 'ftp://':
         filename = "{}..".format(filename.replace('ftp:/', 'ftp'))
         no_upload=True
 
@@ -61,7 +61,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         project_obj = tm.Project.objects.create(
             name=project_name
         )
-        
+
     return tm.Tileset.objects.create(
         datafile=django_file,
         filetype=filetype,
