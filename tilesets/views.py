@@ -31,6 +31,7 @@ import clodius.tiles.multivec as hgmu
 import clodius.tiles.time_interval as hgti
 import clodius.tiles.geo as hggo
 import clodius.tiles.imtiles as hgim
+import clodius.tiles.mrmatrix as hgmr
 
 import tilesets.chromsizes as tcs
 import tilesets.models as tm
@@ -622,6 +623,9 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = hggo.tileset_info(
                 tileset_object.datafile.path
             )
+        elif tileset_object.filetype == 'mrmatrix':
+            with h5py.File(tileset_object.datafile.path, 'r') as fi:
+                tileset_infos[tileset_uuid] = hgmr.tileset_info(fi)
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {

@@ -34,6 +34,7 @@ sample.bed.multires.mv5
 984627_PM16-00568-A_SM-9J5GB.beddb
 chromInfo_mm9.txt
 chromSizes_hg19_reordered.tsv
+dense.mrmatrix
 END
 )
 

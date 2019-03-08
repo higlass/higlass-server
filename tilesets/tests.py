@@ -792,6 +792,29 @@ class BigWigTest(dt.TestCase):
         # the assembly
         ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content.decode('utf-8'))
 
+class MrMatrixTest(dt.TestCase):
+    def setUp(self):
+        upload_file = open('data/dense.mrmatrix', 'rb')
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name,
+                upload_file.read()),
+                filetype='mrmatrix',
+                datatype='matrix',
+                coordSystem='',
+                coordSystem2='',
+                name="x",
+                uuid='md')
+
+    def test_tileset_info(self):
+        c1 = dt.Client()
+        ret = json.loads(c1.get('/api/v1/tileset_info/?d=md').content.decode('utf-8'))
+        print('ret:', ret)
+
+    def test_tiles(self):
+        c1 = dt.Client()
+        ret = json.loads(c1.get('/api/v1/tiles/?d=md.0.0.0').content.decode('utf-8'))
+        assert(ret['md']['mirror_tiles'] == 'false')
+        assert(ret['md']['bins_per_tile'] == 256)
 
 class CoolerTest(dt.TestCase):
     def setUp(self):

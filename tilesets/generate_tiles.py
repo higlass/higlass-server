@@ -9,6 +9,11 @@ import clodius.tiles.bigwig as hgbi
 import clodius.tiles.cooler as hgco
 import clodius.tiles.geo as hggo
 import clodius.tiles.imtiles as hgim
+import clodius.tiles.mrmatrix as hgmr
+import clodius.tiles.utils as hgut
+import clodius.tiles.format as hgfo
+
+import higlass.tilesets as hgti
 
 import h5py
 import itertools as it
@@ -498,6 +503,9 @@ def generate_tiles(tileset_tile_ids):
         return generate_hibed_tiles(tileset, tile_ids)
     elif tileset.filetype == 'cooler':
         return hgco.generate_tiles(tileset.datafile.path, tile_ids)
+    elif tileset.filetype == 'mrmatrix':
+        ti = hgti.mrmatrix(tileset.datafile.path)
+        return ti.tiles(tile_ids)
     elif tileset.filetype == 'bigwig':
         chromsizes = get_chromsizes(tileset)
         return hgbi.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
