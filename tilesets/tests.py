@@ -809,12 +809,13 @@ class MrMatrixTest(dt.TestCase):
         c1 = dt.Client()
         ret = json.loads(c1.get('/api/v1/tileset_info/?d=md').content.decode('utf-8'))
         print('ret:', ret)
+        assert(ret['md']['mirror_tiles'] == 'false')
+        assert(ret['md']['bins_per_dimension'] == 256)
 
     def test_tiles(self):
         c1 = dt.Client()
         ret = json.loads(c1.get('/api/v1/tiles/?d=md.0.0.0').content.decode('utf-8'))
-        assert(ret['md']['mirror_tiles'] == 'false')
-        assert(ret['md']['bins_per_tile'] == 256)
+        assert('md.0.0.0' in ret)
 
 class CoolerTest(dt.TestCase):
     def setUp(self):

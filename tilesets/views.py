@@ -19,6 +19,7 @@ import django.http as dh
 
 import guardian.utils as gu
 
+import higlass.tilesets as hgti
 import higlass_server.settings as hss
 import itertools as it
 
@@ -28,7 +29,7 @@ import tilesets.generate_tiles as tgt
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.multivec as hgmu
-import clodius.tiles.time_interval as hgti
+import clodius.tiles.time_interval as ctti
 import clodius.tiles.geo as hggo
 import clodius.tiles.imtiles as hgim
 import clodius.tiles.mrmatrix as hgmr
@@ -604,12 +605,8 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = cdt.get_2d_tileset_info(
                 tileset_object.datafile.path
             )
-        elif tileset_object.filetype == 'cooler':
-            tileset_infos[tileset_uuid] = hgco.tileset_info(
-                    tileset_object.datafile.path
-            )
         elif tileset_object.filetype == 'time-interval-json':
-            tileset_infos[tileset_uuid] = hgti.tileset_info(
+            tileset_infos[tileset_uuid] = ctti.tileset_info(
                     tileset_object.datafile.path
             )
         elif (
@@ -623,14 +620,18 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = hggo.tileset_info(
                 tileset_object.datafile.path
             )
-        elif tileset_object.filetype == 'mrmatrix':
-            with h5py.File(tileset_object.datafile.path, 'r') as fi:
-                tileset_infos[tileset_uuid] = hgmr.tileset_info(fi)
         else:
-            # Unknown filetype
-            tileset_infos[tileset_uuid] = {
-                'error': 'Unknown filetype ' + tileset_object.filetype
-            }
+            filetype = tileset_object.filetype
+            filepath = tileset_object.datafile.path
+
+            if filetype in hgti.by_filetype:
+                tsinfo = hgti.by_filetype[filetype](filepath).tileset_info()
+                tileset_infos[tileset_uuid] = tsinfo
+            else:
+                # Unknown filetype
+                tileset_infos[tileset_uuid] = {
+                    'error': 'Unknown filetype ' + tileset_object.filetype
+                }
 
         tileset_infos[tileset_uuid]['name'] = tileset_object.name
         tileset_infos[tileset_uuid]['datatype'] = tileset_object.datatype
