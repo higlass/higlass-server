@@ -61,4 +61,4 @@ echo 'PASS!'
 
 # kill all child processes of this bash script
 # e.g.: the server
-pkill -P $$
+kill $(ps -o pid= --ppid $$)
