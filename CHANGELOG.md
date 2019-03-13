@@ -1,3 +1,8 @@
+v1.10.0
+
+- Added support for mrmatrix files
+- Small bug fix for 500 available-chrom-sizes
+
 v1.9.2
 
 - Fixed STATIC_URL settings must end with a slash bug
