@@ -24,7 +24,6 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
-import tilesets.multivec_tiles as tmt
 
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
