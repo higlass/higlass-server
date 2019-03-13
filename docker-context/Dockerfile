@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y \
         fuse \
     && rm -rf /var/lib/apt/lists/*
 
-RUN conda install --yes cython==0.25.2 numpy=1.12.0
+RUN conda install --yes cython numpy
 RUN conda install --yes --channel bioconda pysam htslib=1.3.2
-RUN pip install uwsgi==2.0.14
+RUN pip install uwsgi
 
 RUN pip install simple-httpfs>=0.1.3
 
