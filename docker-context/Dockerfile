@@ -1,7 +1,7 @@
 FROM continuumio/miniconda3:4.5.12
 
 RUN apt-get update && apt-get install -y \
-        gcc=4:4.9.2-2 \
+        gcc \
         nginx-full \
         supervisor \
         unzip=6.0-16+deb8u2 \
