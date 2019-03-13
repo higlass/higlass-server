@@ -4,9 +4,9 @@ RUN apt-get update && apt-get install -y \
         gcc \
         nginx-full \
         supervisor \
-        unzip=6.0-16+deb8u2 \
+        unzip \
         uwsgi-plugin-python3 \
-        zlib1g-dev=1:1.2.8.dfsg-2+b1 \
+        zlib1g-dev \
         libcurl4-openssl-dev \
         g++ \
         vim \
