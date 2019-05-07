@@ -51,8 +51,8 @@ def media_file_exists(filename):
     -------
     The return value. True for success, False otherwise.
     '''
-    return False if not op.exists(media_file(filename)) else True 
-           
+    return False if not op.exists(media_file(filename)) else True
+
 
 def add_file(filename, sub_dir='uploads/data'):
     '''
@@ -468,8 +468,8 @@ class TilesetModelTest(dt.TestCase):
         )
         upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name,
-            upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()),
             filetype='cooler',
             owner=self.user1,
             uuid='x1x'
@@ -477,6 +477,25 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
+
+    def test_destroy_deletes_file(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
+        ts = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x2x'
+        )
+        filepath = op.join(hss.MEDIA_ROOT, ts.datafile.name)
+        self.assertTrue(op.exists(filepath))
+
+        ts.delete()
+        self.assertFalse(op.exists(filepath))
+
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
@@ -643,11 +662,11 @@ class PermissionsTest(dt.TestCase):
             assert(response.status_code == 201)
 
             ret = json.loads(response.content.decode('utf-8'))
-            
+
             # update media filename for whatever name the server ended up using (i.e., in case of duplicates, a random suffix is added)
             assert('datafile' in ret)
             fname = op.basename(ret['datafile'])
-            
+
             # test that said media file exists
             assert(media_file_exists(fname))
 
@@ -657,10 +676,10 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
-            
+
             # the media file should still exist
             assert(media_file_exists(fname))
-            
+
 
             # user2 should not be able to rename the tileset created by user1
             resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -670,7 +689,7 @@ class PermissionsTest(dt.TestCase):
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
             assert(media_file_exists(fname))
-            
+
 
             # user1 should be able to rename or modify their tileset
             resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -679,7 +698,7 @@ class PermissionsTest(dt.TestCase):
             # apply GET on uuid to ensure that tileset has the newly modified name
             resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
             assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
-            
+
             # the media file should still exist with the same name
             assert(media_file_exists(fname))
 
