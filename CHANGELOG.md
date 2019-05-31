@@ -1,3 +1,17 @@
+v1.10.2
+
+- Added project to the admin interface
+- coordSystem2 is no longer a required field
+
+v1.10.1
+
+- Check to make sure project's owner is not None before returning username
+
+v1.10.0
+
+- Added support for mrmatrix files
+- Small bug fix for 500 available-chrom-sizes
+
 v1.9.2
 
 - Fixed STATIC_URL settings must end with a slash bug
