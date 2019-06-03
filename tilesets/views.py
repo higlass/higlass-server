@@ -298,7 +298,7 @@ def viewconfs(request):
             }, status=403)
 
         viewconf_wrapper = json.loads(request.body.decode('utf-8'))
-        uid = viewconf_wrapper.get('uid') or slugid.nice().decode('utf-8')
+        uid = viewconf_wrapper.get('uid') or slugid.nice()
 
         try:
             viewconf = json.dumps(viewconf_wrapper['viewconf'])
@@ -683,7 +683,6 @@ def link_tile(request):
     return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
 @api_view(['POST'])
-@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
 def register_url(request):
     '''
     Register a url to use as a tileset and register it with the database.
@@ -699,9 +698,20 @@ def register_url(request):
     Returns:
         HttpResponse code for the request, 200 if the action is successful
     '''
+    print("body:", request.body.decode('utf8'))
     body = json.loads(request.body.decode('utf8'))
 
     url = body.get('fileurl', '')
+
+    if not url:
+        return JsonResponse({ 'error': 'No url provided in the fileurl field'})
+
+    index_url = None
+    filetype = body.get('filetype', None)
+    if filetype == 'bamfile':
+        index_url = body.get('indexurl', None)
+        if not index_url:
+            return JsonResponse({ 'error': 'bamfile filetype requires an indexurl field'})
 
     """
     # validate the url to ensure we didn't get garbage
@@ -725,6 +735,7 @@ def register_url(request):
             project_name=body.get('project_name', ''),
             uid=body.get('uid', None),
             name=body.get('name', None),
+            indexfile=index_url,
             temporary=True,
             no_upload=True
         )
@@ -860,7 +871,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             except tm.Tileset.DoesNotExist:
                 uid = self.request.data['uid']
         else:
-            uid = slugid.nice().decode('utf-8')
+            uid = slugid.nice()
 
         if 'filetype' not in self.request.data:
             raise rfe.APIException('Missing filetype')

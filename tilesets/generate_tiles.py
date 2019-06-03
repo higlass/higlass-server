@@ -4,6 +4,7 @@ import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
 
+import clodius.tiles.bamfile as ctbf
 import clodius.tiles.beddb as hgbe
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.cooler as hgco
@@ -19,6 +20,8 @@ import time
 import tempfile
 import tilesets.models as tm
 import tilesets.chromsizes  as tcs
+
+import higlass.tilesets as hgti
 
 import clodius.tiles.multivec as ctmu
 
@@ -508,7 +511,15 @@ def generate_tiles(tileset_tile_ids):
                 ctmu.get_single_tile)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
+    elif tileset.filetype == 'bamfile':
+        return ctbf.tiles(tileset.datafile.path, tileset.indexfile.path, tile_ids)
     else:
+        filetype = tileset.filetype
+        filepath = tileset.datafile.path
+
+        if filetype in hgti.by_filetype:
+            return hgti.by_filetype[filetype](filepath).tiles(tile_ids)
+
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
 

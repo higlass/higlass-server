@@ -1,3 +1,5 @@
+curl -H "Content-Type: application/json" --request POST --data '{ "fileurl": "https://pkerp.s3.amazonaws.com/public/bamfile_test/SRR1770413.sorted.bam", "indexurl": "https://pkerp.s3.amazonaws.com/public/bamfile_test/SRR1770413.sorted.bam.bai", "filetype": "bamfile" }' localhost:8000/api/v1/register_url/
+
 python manage.py   ingest_tileset   --filename uploads/hg38.tiled.multires   --datatype multivec   --filetype multivec   --coordSystem hg19 --no-upload
 
 export PYTHONPATH=$PYTHONPATH:.
