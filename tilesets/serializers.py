@@ -84,6 +84,9 @@ class UserFacingTilesetSerializer(TilesetSerializer):
         if obj.project is None:
             return ''
 
+        if obj.project.owner is None:
+            return ''
+
         return obj.project.owner.username
 
     class Meta:

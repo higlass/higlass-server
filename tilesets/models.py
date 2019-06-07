@@ -24,7 +24,7 @@ class ViewConf(models.Model):
         return "Viewconf [uuid: {}]".format(self.uuid)
 
 def decoded_slugid():
-    return slugid.nice().decode('utf-8')
+    return slugid.nice()
 
 class Project(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -60,7 +60,7 @@ class Tileset(models.Model):
     description = models.TextField(blank=True)
 
     coordSystem = models.TextField()
-    coordSystem2 = models.TextField(default='')
+    coordSystem2 = models.TextField(default='', blank=True)
     temporary = models.BooleanField(default=False)
 
     owner = models.ForeignKey(
