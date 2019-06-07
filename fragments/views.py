@@ -12,6 +12,8 @@ try:
 except:
     import pickle
 
+import higlass_server.settings as hss
+
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
 from os import path
@@ -40,6 +42,10 @@ from fragments.utils import (
 )
 from higlass_server.utils import getRdb
 from fragments.exceptions import SnippetTooLarge
+
+import h5py
+
+from math import floor, log
 
 rdb = getRdb()
 
@@ -257,11 +263,12 @@ def get_fragments_by_loci(request):
     max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
-    log = params['log']
+    log_scale = params['log']
     colormap = params['colormap']
     dtype = params['dtype']
 
     is_image = dtype == 'image'
+    is_cool = not is_image
     tileset_idx = (
         4 if (len(loci) and len(loci[0]) < 8) or is_image else 6
     )
@@ -387,6 +394,7 @@ def get_fragments_by_loci(request):
             if locus[zoom_level_idx] not in loci_lists[tileset_file]:
                 loci_lists[tileset_file][locus[zoom_level_idx]] = []
 
+            # Get the dimensions of the snippets (i.e., width and height in px)
             inset_dim = (
                 locus[zoom_level_idx + 1]
                 if (
@@ -395,6 +403,37 @@ def get_fragments_by_loci(request):
                 )
                 else 0
             )
+            out_dim = inset_dim | dims
+
+            # Make sure out dim (in pixel) is not too large
+            if is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM:
+                raise SnippetTooLarge()
+            if not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM:
+                raise SnippetTooLarge()
+
+            if tileset_file not in loci_lists:
+                loci_lists[tileset_file] = {}
+
+            if is_cool:
+                with h5py.File(tileset_file, 'r') as f:
+                    # get base resolution of cooler file
+                    max_zoom = f.attrs['max-zoom']
+                    bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+            else:
+                bin_size = 1
+
+            # Get max abs dim in base pairs
+            max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+
+            # Find closest zoom level if `zoomout_level < 0`
+            zoomout_level = (
+                locus[zoom_level_idx]
+                if locus[zoom_level_idx] >= 0
+                else floor(log((max_abs_dim / bin_size) / out_dim, 2))
+            )
+
+            if zoomout_level not in loci_lists[tileset_file]:
+                loci_lists[tileset_file][zoomout_level] = []
 
             locus_id = '.'.join(map(str, locus))
             local_id = locus[snippet_id_idx] if snippet_id_idx else None
@@ -430,7 +469,7 @@ def get_fragments_by_loci(request):
         str(max_previews) +
         str(encoding) +
         str(representatives) +
-        str(log) +
+        str(log_scale) +
         str(dtype)
     )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
@@ -461,7 +500,7 @@ def get_fragments_by_loci(request):
                         ignore_diags=ignore_diags,
                         no_normalize=no_normalize,
                         aggregate=aggregate,
-                        log=log,
+                        log=log_scale,
                     )
 
                     for i, matrix in enumerate(raw_matrices):
@@ -497,12 +536,6 @@ def get_fragments_by_loci(request):
 
                         data_types[idx] = 'matrix'
 
-    except SnippetTooLarge as ex:
-        raise
-        return JsonResponse({
-            'error': 'Requested fragment too large. Max is 1024x1024! Behave!',
-            'error_message': str(ex)
-        }, status=400)
     except Exception as ex:
         raise
         return JsonResponse({
@@ -606,7 +639,12 @@ def get_fragments_by_loci(request):
             mat_b64 = pybase64.b64encode(png).decode('ascii')
 
             if not no_cache:
-                rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
+                try:
+                    rdb.set('im_b64_%s' % id, mat_b64, 60 * 30)
+                except Exception as ex:
+                    # error caching a tile
+                    # log the error and carry forward, this isn't critical
+                    logger.warn(ex)
 
             matrices[i] = mat_b64
 
@@ -633,7 +671,12 @@ def get_fragments_by_loci(request):
         results['previews2d'] = previews_2d
 
     # Cache results for 30 minutes
-    rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
+    try:
+        rdb.set('frag_by_loci_%s' % uuid, pickle.dumps(results), 60 * 30)
+    except Exception as ex:
+        # error caching a tile
+        # log the error and carry forward, this isn't critical
+        logger.warn(ex)
 
     if encoding == 'image':
         if len(matrices) == 1:
@@ -848,7 +891,12 @@ def fragments_by_chr(request):
         results['fragments'] = fragments_arr
 
     # Cache results for 30 mins
-    rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
+    try:
+        rdb.set('frag_by_chrom_%s' % uuid, pickle.dumps(results), 60 * 30)
+    except Exception as ex:
+        # error caching a tile
+        # log the error and carry forward, this isn't critical
+        logger.warn(ex)
 
     return JsonResponse(results)
 

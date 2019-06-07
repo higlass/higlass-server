@@ -24,7 +24,6 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
-import tilesets.multivec_tiles as tmt
 
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
@@ -38,6 +37,8 @@ import tilesets.models as tm
 import tilesets.permissions as tsp
 import tilesets.serializers as tss
 import tilesets.suggestions as tsu
+
+from tilesets.management.commands.ingest_tileset import ingest as ingest_tileset_to_db
 
 import os
 import os.path as op
@@ -435,7 +436,7 @@ def tiles(request):
             # there was an error accessing the cache server
             # log the error and carry forward fetching the tile
             # from the original data
-            logger.error(ex)
+            logger.warn(ex)
 
         #tile_value = None
 
@@ -477,7 +478,7 @@ def tiles(request):
         except Exception as ex:
             # error caching a tile
             # log the error and carry forward, this isn't critical
-            logger.error(ex)
+            logger.warn(ex)
 
         if tile_id in transform_id_to_original_id:
             original_tile_id = transform_id_to_original_id[tile_id]
@@ -681,6 +682,58 @@ def link_tile(request):
 
     return JsonResponse({'uuid': str(obj.uuid)}, status=201)
 
+@api_view(['POST'])
+@authentication_classes((CsrfExemptSessionAuthentication, BasicAuthentication))
+def register_url(request):
+    '''
+    Register a url to use as a tileset and register it with the database.
+    Parameters:
+        request: The HTTP request associate with this post action
+            url: the url of the file
+            name: A name to give the tileset
+            filetype: A filetype for the tileset
+            datatype: A datatype for the tileset
+            uid: A unique identifier for the tileset
+            coordSystem:
+            coordSystem2:
+    Returns:
+        HttpResponse code for the request, 200 if the action is successful
+    '''
+    body = json.loads(request.body.decode('utf8'))
+
+    url = body.get('fileurl', '')
+
+    """
+    # validate the url to ensure we didn't get garbage
+    is_url = url != '..' #todo: replace with regex
+
+    if not is_url:
+        error = ({
+            'error': 'Specified url ({}) is not valid.'.format(url)
+        })
+        return JsonResponse(error, 400)
+    """
+
+    try:
+        # ingest the file by calling the ingest_tileset command
+        new_obj = ingest_tileset_to_db(
+            filename=url,
+            datatype=body.get('datatype', None),
+            filetype=body.get('filetype', None),
+            coordSystem=body.get('coordSystem', ''),
+            coordSystem2=body.get('coordSystem2', ''),
+            project_name=body.get('project_name', ''),
+            uid=body.get('uid', None),
+            name=body.get('name', None),
+            temporary=True,
+            no_upload=True
+        )
+    except Exception as e:
+        logger.error('Problem registering url: %s' % e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({ 'uid': new_obj.uuid }, content_type="text/plain")
+
 
 @method_decorator(gzip_page, name='dispatch')
 class TilesetsViewSet(viewsets.ModelViewSet):
@@ -696,13 +749,13 @@ class TilesetsViewSet(viewsets.ModelViewSet):
 
     lookup_field = 'uuid'
     parser_classes = (rfp.JSONParser, rfp.MultiPartParser,)
-            
+
     def destroy(self, request, *args, **kwargs):
         '''Delete a tileset instance and underlying media upload
         '''
         uuid = self.kwargs['uuid']
         if not uuid:
-            return JsonResponse({'error': 'uuid is undefined'}, status=400)
+            return JsonResponse({'error': 'The uuid parameter is undefined'}, status=400)
         try:
             instance = self.get_object()
             self.perform_destroy(instance)
@@ -718,7 +771,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         except OSError:
             return JsonResponse({'error': 'Unable to delete tileset media file: {}'.format(filepath)}, status=500)
         return HttpResponse(status=204)
-        
+
     def retrieve(self, request, *args, **kwargs):
         '''Retrieve a serialized JSON object made from a subset of properties of a tileset instance
         '''
@@ -735,7 +788,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
         except IndexError as ie:
             return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
         return JsonResponse(instance)
-            
+
     def list(self, request, *args, **kwargs):
         '''List the available tilesets
 

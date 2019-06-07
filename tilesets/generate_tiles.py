@@ -3,10 +3,13 @@ import tilesets.bigwig_tiles as bwt
 import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
+
+import clodius.tiles.beddb as hgbe
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.cooler as hgco
 import clodius.tiles.geo as hggo
 import clodius.tiles.imtiles as hgim
+
 import h5py
 import itertools as it
 import numpy as np
@@ -16,9 +19,28 @@ import time
 import tempfile
 import tilesets.models as tm
 import tilesets.chromsizes  as tcs
-import tilesets.multivec_tiles as tmt
+
+import clodius.tiles.multivec as ctmu
 
 import higlass_server.settings as hss
+
+def get_tileset_datatype(tileset):
+    '''
+    Extract the filetype for the tileset
+
+    This should be encoded in one of the tags. If there are multiple
+    "datatype" tags, use the most recent one.
+    '''
+    if tileset.datatype is not None and len(tileset.datatype) > 0:
+        return tileset.datatype
+
+    for tag in tileset.tags.all():
+        parts = tag.name.split(':')
+        if parts[0] == 'datatype':
+            return parts[1]
+
+    # fall back to the filetype attribute of the tileset
+    return tileset.datatype
 
 def get_cached_datapath(path):
     '''
@@ -229,54 +251,6 @@ def generate_hitile_tiles(tileset, tile_ids):
             }
 
         generated_tiles += [(tile_id, tile_value)]
-
-    return generated_tiles
-
-
-
-def generate_beddb_tiles(tileset, tile_ids):
-    '''
-    Generate tiles from a beddb file.
-
-    Parameters
-    ----------
-    tileset: tilesets.models.Tileset object
-        The tileset that the tile ids should be retrieved from
-    tile_ids: [str,...]
-        A list of tile_ids (e.g. xyx.0.1) identifying the tiles
-        to be retrieved
-
-    Returns
-    -------
-    generated_tiles: [(tile_id, tile_data),...]
-        A list of tile_id, tile_data tuples
-    '''
-    tile_ids_by_zoom = bin_tiles_by_zoom(tile_ids).values()
-    partitioned_tile_ids = list(it.chain(*[partition_by_adjacent_tiles(t, dimension=1)
-        for t in tile_ids_by_zoom]))
-
-    generated_tiles = []
-
-    for tile_group in partitioned_tile_ids:
-        zoom_level = int(tile_group[0].split('.')[1])
-        tileset_id = tile_group[0].split('.')[0]
-        tile_positions = [[int(x) for x in t.split('.')[2:3]] for t in tile_group]
-
-        if len(tile_positions) == 0:
-            continue
-
-        minx = min([t[0] for t in tile_positions])
-        maxx = max([t[0] for t in tile_positions])
-
-        t1 = time.time()
-        tile_data_by_position = cdt.get_tiles(
-            get_cached_datapath(tileset.datafile.path),
-            zoom_level,
-            minx,
-            maxx - minx + 1
-        )
-        generated_tiles += [(".".join(map(str, [tileset_id] + [zoom_level] + [position])), tile_data)
-            for (position, tile_data) in tile_data_by_position.items()]
 
     return generated_tiles
 
@@ -515,7 +489,7 @@ def generate_tiles(tileset_tile_ids):
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
     elif tileset.filetype == 'beddb':
-        return generate_beddb_tiles(tileset, tile_ids)
+        return hgbe.tiles(tileset.datafile.path, tile_ids)
     elif tileset.filetype == 'bed2ddb' or tileset.filetype == '2dannodb':
         return generate_bed2ddb_tiles(tileset, tile_ids)
     elif tileset.filetype == 'geodb':
@@ -531,7 +505,7 @@ def generate_tiles(tileset_tile_ids):
         return generate_1d_tiles(
                 tileset.datafile.path,
                 tile_ids,
-                tmt.get_single_tile)
+                ctmu.get_single_tile)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     else:

@@ -23,6 +23,8 @@ from django.http import HttpResponse
 
 from clodius.tiles.geo import get_tile_pos_from_lng_lat
 
+import higlass_server.settings as hss
+
 from higlass_server.utils import getRdb
 from fragments.exceptions import SnippetTooLarge
 
@@ -722,9 +724,9 @@ def get_frag_by_loc_from_imtiles(
         tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
 
         # Make sure that no more than 6 standard tiles (256px) are loaded.
-        if tile_size * len(tiles_x_range) > 1536:
+        if tile_size * len(tiles_x_range) > hss.SNIPPET_IMT_MAX_DATA_DIM:
             raise SnippetTooLarge()
-        if tile_size * len(tiles_y_range) > 1536:
+        if tile_size * len(tiles_y_range) > hss.SNIPPET_IMT_MAX_DATA_DIM:
             raise SnippetTooLarge()
 
         # Extract image tiles
@@ -868,9 +870,9 @@ def get_frag_by_loc_from_osm(
         tiles_y_range = range(tile_start2_id, tile_end2_id + 1)
 
         # Make sure that no more than 6 standard tiles (256px) are loaded.
-        if tile_size * len(tiles_x_range) > 1536:
+        if tile_size * len(tiles_x_range) > hss.SNIPPET_OSM_MAX_DATA_DIM:
             raise SnippetTooLarge()
-        if tile_size * len(tiles_y_range) > 1536:
+        if tile_size * len(tiles_y_range) > hss.SNIPPET_OSM_MAX_DATA_DIM:
             raise SnippetTooLarge()
 
         # Extract image tiles
@@ -1238,9 +1240,9 @@ def get_frag(
         abs_dim2 = height
 
     # Maximum width / height is 512
-    if abs_dim1 > 512:
+    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM:
         raise SnippetTooLarge()
-    if abs_dim2 > 512:
+    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM:
         raise SnippetTooLarge()
 
     # Finally, adjust to negative values.
@@ -1306,7 +1308,7 @@ def get_frag(
     # Assign 0 for now to avoid influencing the max values
     frag[low_quality_bins] = 0
 
-    # Scale array if needed
+    # Scale fragment down if needed
     scaled = False
     scale_x = width / frag.shape[0]
     if frag.shape[0] > width or frag.shape[1] > height:

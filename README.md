@@ -21,6 +21,12 @@ _Note: that the HiGlass Server itself only provides an API, and does not serve a
 
 The easiest way to run HiGlass with HiGlass Server is with Docker. More information is available at [higlass-docker](https://github.com/higlass/higlass-docker#readme) or check out the [Dockerfile](docker-context/Dockerfile).
 
+This project also includes a Dockerfile in the docker-context directory that can be used to run a locally checked out copy of higlass-server as follows:
+```bash
+docker build -t higlass-server -f docker-context/Dockerfile .
+docker run -d --cap-add SYS_ADMIN --device /dev/fuse --security-opt apparmor:unconfined --name higlass-server higlass-server
+```
+
 ### Manually
 
 To install HiGlass Server manually follow the steps below. Note we strongly recommend to create a virtual environment using [Virtualenvwrapper](https://pypi.python.org/pypi/virtualenvwrapper) for example. Skip step 2 if you don't work with virtual environments.
@@ -29,9 +35,18 @@ To install HiGlass Server manually follow the steps below. Note we strongly reco
 git clone https://github.com/higlass/higlass-server && cd higlass-server
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
-pip install --upgrade -r ./requirements-secondary.txt
 python manage.py runserver
 ```
+
+To enable the register_url api endpoint, HiGlass depends on a project called httpfs to cache external url files. Tests depend on this process running. Set it up as follows:
+```bash
+pip install simple-httpfs
+
+simple-httpfs.py media/http
+simple-httpfs.py media/https
+```
+
+Or simply use `./unit_tests.sh`.
 
 ---
 

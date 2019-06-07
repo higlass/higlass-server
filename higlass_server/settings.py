@@ -14,6 +14,7 @@ import json
 import os
 import os.path as op
 import slugid
+import math
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -98,6 +99,21 @@ if 'HIGLASS_MEDIA_ROOT' in os.environ:
     MEDIA_ROOT = os.environ['HIGLASS_MEDIA_ROOT']
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if 'HTTPFS_HTTP_DIR' in os.environ:
+    HTTPFS_HTTP_DIR = os.environ['HTTPFS_HTTP_DIR']
+else:
+    HTTPFS_HTTP_DIR = os.path.join(MEDIA_ROOT, 'http')
+
+if 'HTTPFS_HTTPS_DIR' in os.environ:
+    HTTPFS_HTTPS_DIR = os.environ['HTTPFS_HTTPS_DIR']
+else:
+    HTTPFS_HTTPS_DIR = os.path.join(MEDIA_ROOT, 'https')
+
+if 'HTTPFS_FTP_DIR' in os.environ:
+    HTTPFS_FTP_DIR = os.environ['HTTPFS_FTP_DIR']
+else:
+    HTTPFS_FTP_DIR = os.path.join(MEDIA_ROOT, 'ftp')
 
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
 
@@ -277,12 +293,30 @@ USE_TZ = True
 UPLOAD_ENABLED = get_setting('UPLOAD_ENABLED', True)
 PUBLIC_UPLOAD_ENABLED = get_setting('PUBLIC_UPLOAD_ENABLED', True)
 
+SNIPPET_MAT_MAX_OUT_DIM = get_setting('SNIPPET_MAT_MAX_OUT_DIM', math.inf)
+SNIPPET_MAT_MAX_DATA_DIM = get_setting('SNIPPET_MAT_MAX_DATA_DIM', math.inf)
+SNIPPET_IMG_MAX_OUT_DIM = get_setting('SNIPPET_IMG_MAX_OUT_DIM', math.inf)
+SNIPPET_OSM_MAX_DATA_DIM = get_setting('SNIPPET_OSM_MAX_DATA_DIM', math.inf)
+SNIPPET_IMT_MAX_DATA_DIM = get_setting('SNIPPET_IMT_MAX_DATA_DIM', math.inf)
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/hgs-static/'
 STATIC_ROOT = 'hgs-static/'
+
+if 'APP_BASEPATH' in os.environ:
+    # https://stackoverflow.com/questions/44987110/django-in-subdirectory-admin-site-is-not-working
+    USE_X_FORWARDED_HOST = True
+    FORCE_SCRIPT_NAME = os.environ['APP_BASEPATH']
+    SESSION_COOKIE_PATH = os.environ['APP_BASEPATH']
+    LOGIN_REDIRECT_URL = os.environ['APP_BASEPATH']
+    LOGOUT_REDIRECT_URL = os.environ['APP_BASEPATH']
+
+    STATIC_URL = op.join(os.environ['APP_BASEPATH'], 'hgs-static') + "/"
+
+ADMIN_URL = r'^admin/'
 
 # STATICFILES_DIRS = (
 #    os.path.join(BASE_DIR, 'static'),
