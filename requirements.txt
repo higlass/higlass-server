@@ -2,9 +2,9 @@ pybbi==0.2.0
 bumpversion==0.5.3
 CacheControl==0.12.4
 cooler==0.7.11
-django-cors-headers
-django-guardian
-django-rest-swagger
+django-cors-headers==3.0.2
+django-guardian==1.5.1
+django-rest-swagger==2.2.0
 django==2.1.5
 djangorestframework==3.7.3
 h5py==2.6.0
