@@ -419,11 +419,14 @@ def get_fragments_by_loci(request):
                     # get base resolution of cooler file
                     max_zoom = f.attrs['max-zoom']
                     bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
             else:
                 bin_size = 1
 
-            # Get max abs dim in base pairs
-            max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[1] - locus[0], locus[3] - locus[2])
 
             # Find closest zoom level if `zoomout_level < 0`
             zoomout_level = (
