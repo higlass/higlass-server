@@ -8,19 +8,6 @@ import tempfile
 
 import higlass_server.settings as hss
 
-async def screenshot():
-    browser = await launch(
-    headless=true,
-    args=['--no-sandbox'],
-    handleSIGINT=False,
-    handleSIGTERM=False,
-    handleSIGHUP=False
-        )
-    page = await browser.newPage()
-    await page.goto('http://higlass.io')
-    await page.screenshot({'path': '/tmp/example.png'})
-    await browser.close()
-
 from django.http import HttpResponse
 
 def link(request):
