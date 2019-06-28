@@ -6,5 +6,5 @@ from website import views
 urlpatterns = [
     #url(r'^schema', schema_view),
     url(r'^link', views.link),
-    url(r'^preview', views.preview),
+    url(r'^thumbnail', views.thumbnail),
 ]

@@ -1,9 +1,12 @@
 import subprocess
 import pyppeteer
 import asyncio
+import os
 import os.path as op
 from pyppeteer import launch
 import tempfile
+
+import higlass_server.settings as hss
 
 async def screenshot():
     browser = await launch(
@@ -31,29 +34,35 @@ def link(request):
 
     return HttpResponse(html)
 
-def preview(request):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        output_file = op.join(tmp_dir, 'screenshot.png')
+def thumbnail(request):
+    uuid = request.GET.get('d')
+    if not op.exists(hss.THUMBNAILS_ROOT):
+        os.makedirs(hss.THUMBNAILS_ROOT)
+    output_file = op.join(hss.THUMBNAILS_ROOT, uuid + ".png")
+
+    if not op.exists(output_file):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(screenshot(output_file))
+        loop.run_until_complete(
+            screenshot(
+                hss.THUMBNAIL_RENDER_URL_BASE,
+                uuid,
+                output_file))
         loop.close()
 
+    with open(output_file, 'rb') as f:
+        return HttpResponse(
+            f.read(),
+            content_type="image/jpeg")
 
-        with open(output_file, 'rb') as f:
-            return HttpResponse(
-                f.read(),
-                content_type="image/jpeg")
-
-async def screenshot(output_file):
+async def screenshot(base_url, uuid, output_file):
     browser = await launch(
         handleSIGINT=False,
         handleSIGTERM=False,
         handleSIGHUP=False
     )
-    print("hi")
     page = await browser.newPage()
-    await page.goto('http://higlass.io/app/?config=MSHhOBbOSW6iIovB5yk6BA', {
+    await page.goto(f'{base_url}?config={uuid}', {
         'waitUntil': 'networkidle2',
     })
     await page.screenshot({'path': output_file})
