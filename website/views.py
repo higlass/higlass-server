@@ -10,6 +10,8 @@ import higlass_server.settings as hss
 
 async def screenshot():
     browser = await launch(
+    headless=true,
+    args=['--no-sandbox'],
     handleSIGINT=False,
     handleSIGTERM=False,
     handleSIGHUP=False
