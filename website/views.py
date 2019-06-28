@@ -46,7 +46,7 @@ def thumbnail(request):
 
 async def screenshot(base_url, uuid, output_file):
     browser = await launch(
-        headless=true,
+        headless=True,
         args=['--no-sandbox'],
         handleSIGINT=False,
         handleSIGTERM=False,
