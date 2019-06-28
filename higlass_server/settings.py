@@ -117,7 +117,11 @@ else:
 
 THUMBNAILS_ROOT = os.path.join(MEDIA_ROOT, 'thumbnails')
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
-THUMBNAIL_RENDER_URL_BASE = ''
+
+if 'THUMBNAIL_RENDER_URL_BASE' in os.environ:
+    THUMBNAIL_RENDER_URL_BASE = os.environ['THUMBNAIL_RENDER_URL_BASE']
+else:
+    THUMBNAIL_RENDER_URL_BASE = '/app/'
 
 LOGGING = {
     'version': 1,
