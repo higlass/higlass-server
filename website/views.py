@@ -35,6 +35,10 @@ def link(request):
     return HttpResponse(html)
 
 def thumbnail(request):
+    # print('request:', dir(request))
+    # print('r', request.get_host())
+    # print('r', request.get_port())
+
     uuid = request.GET.get('d')
     if not op.exists(hss.THUMBNAILS_ROOT):
         os.makedirs(hss.THUMBNAILS_ROOT)
@@ -45,7 +49,7 @@ def thumbnail(request):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(
             screenshot(
-                hss.THUMBNAIL_RENDER_URL_BASE,
+                '{}:{}/app/'.format(request.get_host(), request.get_port()),
                 uuid,
                 output_file))
         loop.close()
@@ -61,6 +65,7 @@ async def screenshot(base_url, uuid, output_file):
         handleSIGTERM=False,
         handleSIGHUP=False
     )
+    print('base_url:', base_url)
     page = await browser.newPage()
     await page.goto(f'{base_url}?config={uuid}', {
         'waitUntil': 'networkidle2',

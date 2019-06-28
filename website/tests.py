@@ -13,10 +13,10 @@ class SiteTests(dt.TestCase):
 
         assert ret.content.decode('utf8').find('window.location') >= 0
 
-    @mock.patch('website.views.hss')
-    def test_thumbnail(self, mock_hss):
-        mock_hss.configure_mock(THUMBNAILS_ROOT=op.join(hss.MEDIA_ROOT, 'thumbnails'))
-        mock_hss.configure_mock(THUMBNAIL_RENDER_URL_BASE='http://higlass.io/app')
+    def test_thumbnail(self):
+        # mock_hss.configure_mock(THUMBNAILS_ROOT=op.join(hss.MEDIA_ROOT, 'thumbnails'))
+        # mock_hss.configure_mock(THUMBNAIL_RENDER_URL_BASE='http://higlass.io/app')
+
         uuid = 'L4nKi6eGSzWOpi-rU2DAMA'
         output_file = op.join(hss.THUMBNAILS_ROOT, uuid + ".png")
 
