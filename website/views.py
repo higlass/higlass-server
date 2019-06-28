@@ -1,10 +1,13 @@
 import subprocess
 import pyppeteer
 import asyncio
+import logging
 import os
 import os.path as op
 from pyppeteer import launch
 import tempfile
+
+logger = logging.getLogger(__name__)
 
 import higlass_server.settings as hss
 
@@ -38,6 +41,8 @@ def thumbnail(request):
     # print('request:', dir(request))
     # print('r', request.get_host())
     # print('r', request.get_port())
+
+    logger.info('h:', request.get_host(), 'p:', request.get_port())
 
     uuid = request.GET.get('d')
     if not op.exists(hss.THUMBNAILS_ROOT):
