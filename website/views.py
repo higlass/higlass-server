@@ -41,10 +41,12 @@ def thumbnail(request):
     print('request:', dir(request))
     print('r', request.get_host())
     print('r', request.get_port())
-
-    logger.info('h:', request.get_host(), 'p:', request.get_port())
+    print('s', request.scheme)
+    print('u', request.get_raw_uri())
 
     uuid = request.GET.get('d')
+
+    base_url = f'{request.scheme}://localhost/app/'
 
     if not uuid:
         return HttpResponseNotFound('<h1>No uuid specified</h1>')
@@ -57,7 +59,7 @@ def thumbnail(request):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(
             screenshot(
-                '{}/app/'.format(request.get_host()),
+                base_url,
                 uuid,
                 output_file))
         loop.close()
