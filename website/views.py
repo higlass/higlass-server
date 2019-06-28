@@ -22,7 +22,7 @@ async def screenshot():
     await page.screenshot({'path': '/tmp/example.png'})
     await browser.close()
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 
 def link(request):
     config = request.GET.get('config')
@@ -38,13 +38,16 @@ def link(request):
     return HttpResponse(html)
 
 def thumbnail(request):
-    # print('request:', dir(request))
-    # print('r', request.get_host())
-    # print('r', request.get_port())
+    print('request:', dir(request))
+    print('r', request.get_host())
+    print('r', request.get_port())
 
     logger.info('h:', request.get_host(), 'p:', request.get_port())
 
     uuid = request.GET.get('d')
+
+    if not uuid:
+        return HttpResponseNotFound('<h1>No uuid specified</h1>')
     if not op.exists(hss.THUMBNAILS_ROOT):
         os.makedirs(hss.THUMBNAILS_ROOT)
     output_file = op.join(hss.THUMBNAILS_ROOT, uuid + ".png")
@@ -54,7 +57,7 @@ def thumbnail(request):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(
             screenshot(
-                '{}:{}/app/'.format(request.get_host(), request.get_port()),
+                '{}/app/'.format(request.get_host()),
                 uuid,
                 output_file))
         loop.close()
