@@ -7,33 +7,41 @@ import os.path as op
 from pyppeteer import launch
 import tempfile
 
-logger = logging.getLogger(__name__)
-
 import higlass_server.settings as hss
 
-async def screenshot():
-    browser = await launch(
-    handleSIGINT=False,
-    handleSIGTERM=False,
-    handleSIGHUP=False
-        )
-    page = await browser.newPage()
-    await page.goto('http://higlass.io')
-    await page.screenshot({'path': '/tmp/example.png'})
-    await browser.close()
+from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 
-from django.http import HttpResponse, HttpResponseNotFound
+logger = logging.getLogger(__name__)
 
 def link(request):
-    config = request.GET.get('config')
+    '''Generate a small page containing the metadata necessary for
+    link unfurling by Slack or Twitter. The generated page will
+    point to a screenshot of the rendered viewconf. The page will automatically
+    redirect to the rendering so that if anybody clicks on this link
+    they'll be taken to an interactive higlass view.
+
+    The viewconf to render should be specified with the d= html parameter.
+
+    Args:
+        request: The incoming http request.
+    Returns:
+        A response containing an html page with metadata
+    '''
+    # the uuid of the viewconf to render
     uuid = request.GET.get('d')
 
     if not uuid:
+        # if there's no uuid specified, return an empty page
         return HttpResponseNotFound('<h1>No uuid specified</h1>')
 
+    # the url for the thumnbail
     thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+
+    # the page to redirect to for interactive explorations
     redirect_url=f'{request.scheme}://{request.get_host()}/app/?config={uuid}'
 
+    # Simple html page. Not a template just for simplicity's sake.
+    # If it becomes more complex, we can make it into a template.
     html = f"""<html>
 <meta charset="utf-8">
 <meta name="author" content="Peter Kerpedjiev, Fritz Lekschas, Nezar Abdennur, Nils Gehlenborg">
@@ -62,13 +70,17 @@ def link(request):
 
     return HttpResponse(html)
 
-def thumbnail(request):
-    print('request:', dir(request))
-    print('r', request.get_host())
-    print('r', request.get_port())
-    print('s', request.scheme)
-    print('u', request.get_raw_uri())
+def thumbnail(request: HttpRequest):
+    '''Retrieve a thumbnail for the viewconf specified by the d=
+    parameter.
 
+    Args:
+        request: The incoming request.
+    Returns:
+        A response of either 404 if there's no uuid provided or an
+        image containing a screenshot of the rendered viewconf with
+        that uuid.
+    '''
     uuid = request.GET.get('d')
 
     base_url = f'{request.scheme}://localhost/app/'
@@ -89,12 +101,26 @@ def thumbnail(request):
                 output_file))
         loop.close()
 
-    with open(output_file, 'rb') as f:
+    with open(output_file, 'rb') as file:
         return HttpResponse(
-            f.read(),
+            file.read(),
             content_type="image/jpeg")
 
-async def screenshot(base_url, uuid, output_file):
+async def screenshot(
+    base_url: str,
+    uuid: str,
+    output_file: str
+):
+    '''Take a screenshot of a rendered viewconf.
+
+    Args:
+        base_url: The url to use for rendering the viewconf
+        uuid: The uuid of the viewconf to render
+        output_file: The location on the local filesystem to cache
+            the thumbnail.
+    Returns:
+        Nothing, just stores the screenshot at the given location.
+    '''
     browser = await launch(
         headless=True,
         args=['--no-sandbox'],
@@ -102,9 +128,7 @@ async def screenshot(base_url, uuid, output_file):
         handleSIGTERM=False,
         handleSIGHUP=False
     )
-    # print('base_url:', base_url)
     url = f'{base_url}?config={uuid}'
-    # print("url:", url)
     page = await browser.newPage()
     await page.goto(url, {
         'waitUntil': 'networkidle2',
