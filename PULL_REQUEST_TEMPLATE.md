@@ -1,4 +1,13 @@
+## Description
+
+What was changed in this pull request?
+
+Why is it necessary?
+
+Fixes #___
+
 ## Checklist
 
-- [ ] Tests added
-- [ ] CHANGELOG.md updated
+- [ ] Unit tests added or updated
+- [ ] Documentation added or updated
+- [ ] Updated CHANGELOG.md

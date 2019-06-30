@@ -1,3 +1,7 @@
+** Staged **
+
+- Link unfurling endpoints /link and /thumbnail
+
 v1.10.2
 
 - Added project to the admin interface

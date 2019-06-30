@@ -25,3 +25,4 @@ simple-httpfs>=0.1.3
 
 #### test requirements
 asynctest>=0.13.0
+pyppeteer>=0.0.25
