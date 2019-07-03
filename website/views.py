@@ -9,7 +9,8 @@ import tempfile
 
 import higlass_server.settings as hss
 
-from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
+from django.http import HttpRequest, HttpResponse, \
+    HttpResponseNotFound, HttpResponseBadRequest
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +88,22 @@ def thumbnail(request: HttpRequest):
 
     if not uuid:
         return HttpResponseNotFound('<h1>No uuid specified</h1>')
+
+    if '.' in uuid or '/' in uuid:
+        # no funny business
+        logger.warning('uuid contains . or /: %s', uuid)
+        return HttpResponseBadRequest("uuid can't contain . or /")
+
     if not op.exists(hss.THUMBNAILS_ROOT):
         os.makedirs(hss.THUMBNAILS_ROOT)
-    output_file = op.join(hss.THUMBNAILS_ROOT, uuid + ".png")
+
+    output_file = op.abspath(op.join(hss.THUMBNAILS_ROOT, uuid + ".png"))
+    thumbnails_base = op.abspath(hss.THUMBNAILS_ROOT)
+
+    if output_file.find(thumbnails_base) != 0:
+        logger.warning('Thumbnail file is not in thumbnail_base: %s uuid: %s',
+                     output_file, uuid)
+        return HttpResponseBadRequest('Strange path')
 
     if not op.exists(output_file):
         loop = asyncio.new_event_loop()
