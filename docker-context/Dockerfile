@@ -30,7 +30,9 @@ ENV HTTPFS_FTP_DIR /data/media/ftp
 
 WORKDIR /higlass-server
 COPY requirements.txt ./
+COPY requirements-dev.txt ./
 RUN pip install -r requirements.txt
+RUN pip install -r requirements-dev.txt
 
 COPY docker-context/nginx.conf /etc/nginx/
 COPY docker-context/hgserver_nginx.conf /etc/nginx/sites-enabled/
