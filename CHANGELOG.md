@@ -1,4 +1,4 @@
-** Staged **
+v1.11.0
 
 - Link unfurling endpoints /link and /thumbnail
 
