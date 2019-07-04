@@ -115,7 +115,9 @@ if 'HTTPFS_FTP_DIR' in os.environ:
 else:
     HTTPFS_FTP_DIR = os.path.join(MEDIA_ROOT, 'ftp')
 
+THUMBNAILS_ROOT = os.path.join(MEDIA_ROOT, 'thumbnails')
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
+THUMBNAIL_RENDER_URL_BASE = '/app/'
 
 LOGGING = {
     'version': 1,
