@@ -145,7 +145,7 @@ async def screenshot(
     url = f'{base_url}?config={uuid}'
     page = await browser.newPage()
     await page.goto(url, {
-        'waitUntil': 'networkidle2',
+        'waitUntil': 'networkidle0',
     })
     await page.screenshot({'path': output_file})
     await browser.close()
