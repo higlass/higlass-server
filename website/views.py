@@ -43,7 +43,7 @@ def link(request):
 
     # Simple html page. Not a template just for simplicity's sake.
     # If it becomes more complex, we can make it into a template.
-    html = f"""<html>
+    html = f"""<html><head>
 <meta charset="utf-8">
 <meta name="author" content="Peter Kerpedjiev, Fritz Lekschas, Nezar Abdennur, Nils Gehlenborg">
 <meta name="description" content="Web-based visual exploration and comparison of Hi-C genome interaction maps and other genomic tracks">
@@ -62,10 +62,10 @@ def link(request):
 <meta property="og:image" content="{thumb_url}"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
 <meta name="theme-color" content="#0f5d92">
+<meta http-equiv="refresh" content="1; url='{redirect_url}'">
+
+</head>
     <body></body>
-    <script>
-        window.location.replace("{redirect_url}");
-    </script>
     </html>
     """
 
