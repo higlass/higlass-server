@@ -7,8 +7,11 @@ import os.path as op
 from pyppeteer import launch
 import tempfile
 
+import tilesets.models as tm
+
 import higlass_server.settings as hss
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpRequest, HttpResponse, \
     HttpResponseNotFound, HttpResponseBadRequest
 
@@ -34,6 +37,11 @@ def link(request):
     if not uuid:
         # if there's no uuid specified, return an empty page
         return HttpResponseNotFound('<h1>No uuid specified</h1>')
+
+    try:
+        obj = tm.ViewConf.objects.get(uuid=uuid)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound('<h1>No such uuid</h1>')
 
     # the url for the thumnbail
     thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
