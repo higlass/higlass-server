@@ -1,6 +1,10 @@
-v1.11.1
+v1.11.2
 
 - Check for the existence of a viewconf before creating the link
+
+v1.11.1
+
+- Switch to using networkidle0
 
 v1.11.0
 
