@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN conda install --yes cython numpy==1.14.0
 RUN conda install --yes --channel bioconda pysam htslib=1.3.2
-RUN conda install --yes -c conda-forge uwsgi
+RUN conda install --yes -c conda-forge uwsgi libiconv
 
 RUN pip install simple-httpfs>=0.1.3
 
