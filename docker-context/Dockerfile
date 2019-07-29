@@ -49,8 +49,7 @@ COPY docker-context/httpfs.sh ./
 EXPOSE 80
 
 ENV HIGLASS_SERVER_BASE_DIR /data
-VOLUME /data
-VOLUME /tmp
+RUN mkdir /data
 
 ARG WORKERS=2
 ENV WORKERS ${WORKERS}
