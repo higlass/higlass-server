@@ -115,7 +115,9 @@ if 'HTTPFS_FTP_DIR' in os.environ:
 else:
     HTTPFS_FTP_DIR = os.path.join(MEDIA_ROOT, 'ftp')
 
+THUMBNAILS_ROOT = os.path.join(MEDIA_ROOT, 'thumbnails')
 AWS_BUCKET_MOUNT_POINT = os.path.join(MEDIA_ROOT, 'aws')
+THUMBNAIL_RENDER_URL_BASE = '/app/'
 
 LOGGING = {
     'version': 1,
@@ -215,9 +217,9 @@ AUTHENTICATION_BACKENDS = (
 CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ALLOW_CREDENTIALS = False
 
-CORS_ORIGIN_WHITELIST = (
-    '134.174.140.208:9000'
-)
+CORS_ORIGIN_WHITELIST = [
+    'http://134.174.140.208:9000'
+]
 
 # CORS_ALLOW_HEADERS = default_headers
 
