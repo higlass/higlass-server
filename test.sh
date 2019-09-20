@@ -34,6 +34,8 @@ sample.bed.multires.mv5
 984627_PM16-00568-A_SM-9J5GB.beddb
 chromInfo_mm9.txt
 chromSizes_hg19_reordered.tsv
+SRR1770413.sorted.short.bam
+SRR1770413.sorted.short.bam.bai
 END
 )
 
