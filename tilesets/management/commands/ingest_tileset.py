@@ -39,6 +39,18 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
     django_file = None
     index_file = None
 
+    # bamfiles need to be ingested with an index, if it's not
+    # specified as a parameter, try to find it at filename + ".bai"
+    # and complain if it can't be found
+    if filetype == 'bam':
+        if indexfile is None:
+            indexfile = filename + '.bai'
+            if not op.exists(indexfile):
+                print(f'Index for bamfile {indexfile} not found. '+
+                    'Either specify explicitly using the --indexfile parameter ' +
+                    'or create it in the expected location.')
+                return
+
     # if we're ingesting a url, place it relative to the httpfs directories
     # and append two dots at the end
 
@@ -203,6 +215,7 @@ class Command(BaseCommand):
         # if the datatype is matrix
         # otherwise, coordSystem2 should be empty
         parser.add_argument('--filename', type=str)
+        parser.add_argument('--indexfile', type=str)
         parser.add_argument('--datatype', type=str)
         parser.add_argument('--filetype', type=str)
         parser.add_argument('--coordSystem', default='', type=str)

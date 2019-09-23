@@ -36,6 +36,8 @@ chromInfo_mm9.txt
 chromSizes_hg19_reordered.tsv
 SRR1770413.sorted.short.bam
 SRR1770413.sorted.short.bam.bai
+SRR1770413.different_index_filename.bai
+SRR1770413.mismatched_bai.bam
 END
 )
 

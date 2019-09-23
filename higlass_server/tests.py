@@ -1,5 +1,8 @@
 import unittest
+import slugid
 import subprocess
+
+import tilesets.models as tm
 
 class CommandlineTest(unittest.TestCase):
     def setUp(self):
@@ -11,9 +14,45 @@ class CommandlineTest(unittest.TestCase):
         output = subprocess.check_output(command , shell=True).decode('utf-8').strip()
         for output_re in output_res:
             self.assertRegexpMatches(output, output_re)
+        return output
 
     def test_hello(self):
         self.assertRun('echo "hello?"', [r'hello'])
+
+    def test_bamfile_upload_with_index(self):
+        settings = 'higlass_server.settings_test'
+        uid = slugid.nice()
+
+        self.assertRun('python manage.py ingest_tileset' +
+        ' --filename data/SRR1770413.mismatched_bai.bam' +
+        ' --indexfile data/SRR1770413.different_index_filename.bai' +
+        ' --datatype reads' +
+        ' --filetype bam' +
+        ' --uid '+uid+' --settings='+settings)
+
+        output = self.assertRun('python manage.py shell ' +
+            '--settings ' + settings +
+            ' --command="' +
+            'import tilesets.models as tm; '+
+            f'o = tm.Tileset.objects.get(uuid=\'{uid}\');'
+            'print(o.indexfile)"', '.bai$')
+
+    def test_bamfile_upload_without_index(self):
+        settings = 'higlass_server.settings_test'
+        uid = slugid.nice()
+
+        self.assertRun('python manage.py ingest_tileset' +
+        ' --filename data/SRR1770413.sorted.short.bam' +
+        ' --datatype reads' +
+        ' --filetype bam' +
+        ' --uid '+uid+' --settings='+settings)
+
+        output = self.assertRun('python manage.py shell ' +
+            '--settings ' + settings +
+            ' --command="' +
+            'import tilesets.models as tm; '+
+            f'o = tm.Tileset.objects.get(uuid=\'{uid}\');'
+            'print(o.indexfile)"', '.bai$')
 
     def test_cli_upload(self):
         cooler = 'dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool'
