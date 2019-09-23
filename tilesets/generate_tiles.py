@@ -4,7 +4,7 @@ import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
 
-import clodius.tiles.bamfile as ctbf
+import clodius.tiles.bam as ctb
 import clodius.tiles.beddb as hgbe
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.cooler as hgco
@@ -170,18 +170,18 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
 
 def get_chromsizes(tileset):
     '''
-    Get a set of chromsizes matching the coordSystem of this 
+    Get a set of chromsizes matching the coordSystem of this
     tileset.
 
-    Parameters 
+    Parameters
     ----------
     tileset: A tileset DJango model object
 
-    Returns 
+    Returns
     -------
     chromsizes: [[chrom, sizes]]
         A set of chromsizes to be used with this bigWig file.
-        None if no chromsizes tileset with this coordSystem 
+        None if no chromsizes tileset with this coordSystem
         exists or if two exist with this coordSystem.
     '''
     if tileset.coordSystem is None or len(tileset.coordSystem) == None:

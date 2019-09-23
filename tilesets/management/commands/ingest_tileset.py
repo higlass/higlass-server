@@ -27,7 +27,8 @@ def remote_to_local(filename, no_upload):
 
     return (filename, no_upload)
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name='',
+def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='',
+        uid=None, name=None, no_upload=False, project_name='',
         indexfile=None, temporary=False, **ignored):
     uid = uid or slugid.nice()
     name = name or op.split(filename)[1]
