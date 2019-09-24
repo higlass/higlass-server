@@ -698,7 +698,6 @@ def register_url(request):
     Returns:
         HttpResponse code for the request, 200 if the action is successful
     '''
-    print("body:", request.body.decode('utf8'))
     body = json.loads(request.body.decode('utf8'))
 
     url = body.get('fileurl', '')
@@ -708,10 +707,10 @@ def register_url(request):
 
     index_url = None
     filetype = body.get('filetype', None)
-    if filetype == 'bamfile':
+    if filetype == 'bam':
         index_url = body.get('indexurl', None)
         if not index_url:
-            return JsonResponse({ 'error': 'bamfile filetype requires an indexurl field'})
+            return JsonResponse({ 'error': 'bam filetype requires an indexurl field'})
 
     """
     # validate the url to ensure we didn't get garbage
