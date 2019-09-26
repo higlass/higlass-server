@@ -30,7 +30,7 @@ class CommandlineTest(unittest.TestCase):
         ' --filetype bam' +
         ' --uid '+uid+' --settings='+settings)
 
-        output = self.assertRun('python manage.py shell ' +
+        self.assertRun('python manage.py shell ' +
             '--settings ' + settings +
             ' --command="' +
             'import tilesets.models as tm; '+
@@ -47,7 +47,7 @@ class CommandlineTest(unittest.TestCase):
         ' --filetype bam' +
         ' --uid '+uid+' --settings='+settings)
 
-        output = self.assertRun('python manage.py shell ' +
+        self.assertRun('python manage.py shell ' +
             '--settings ' + settings +
             ' --command="' +
             'import tilesets.models as tm; '+
