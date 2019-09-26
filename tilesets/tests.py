@@ -51,8 +51,8 @@ def media_file_exists(filename):
     -------
     The return value. True for success, False otherwise.
     '''
-    return False if not op.exists(media_file(filename)) else True 
-           
+    return False if not op.exists(media_file(filename)) else True
+
 
 def add_file(filename, sub_dir='uploads/data'):
     '''
@@ -347,6 +347,33 @@ class TileTests(dt.TestCase):
         result = tgt.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
 
         assert(len(result) == 1)
+
+class BamTests(dt.TestCase):
+    def test_get_tile(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        bam_file = open('data/SRR1770413.mismatched_bai.bam', 'rb')
+        bai_file = open('data/SRR1770413.different_index_filename.bai', 'rb')
+
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                bam_file.name, bam_file.read()
+            ),
+            indexfile=dcfu.SimpleUploadedFile(
+                bai_file.name, bai_file.read()
+            ),
+            filetype='bam',
+            datatype='reads',
+            coordSystem="unknown",
+            owner=self.user1,
+            uuid='a'
+        )
+
+        ret = self.client.get('/api/v1/tiles/?d=a.9.0')
+        content = json.loads(ret.content.decode('utf-8'))
+
+        assert len(content['a.9.0']) > 10
 
 class MultivecTests(dt.TestCase):
     def test_get_tile(self):
@@ -643,11 +670,11 @@ class PermissionsTest(dt.TestCase):
             assert(response.status_code == 201)
 
             ret = json.loads(response.content.decode('utf-8'))
-            
+
             # update media filename for whatever name the server ended up using (i.e., in case of duplicates, a random suffix is added)
             assert('datafile' in ret)
             fname = op.basename(ret['datafile'])
-            
+
             # test that said media file exists
             assert(media_file_exists(fname))
 
@@ -657,10 +684,10 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
-            
+
             # the media file should still exist
             assert(media_file_exists(fname))
-            
+
 
             # user2 should not be able to rename the tileset created by user1
             resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -670,7 +697,7 @@ class PermissionsTest(dt.TestCase):
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
             assert(media_file_exists(fname))
-            
+
 
             # user1 should be able to rename or modify their tileset
             resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -679,7 +706,7 @@ class PermissionsTest(dt.TestCase):
             # apply GET on uuid to ensure that tileset has the newly modified name
             resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
             assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
-            
+
             # the media file should still exist with the same name
             assert(media_file_exists(fname))
 
