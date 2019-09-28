@@ -370,10 +370,19 @@ class BamTests(dt.TestCase):
             uuid='a'
         )
 
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        content = json.loads(ret.content.decode('utf-8'))
+        assert content['a']['max_width'] > 8e6
+
         ret = self.client.get('/api/v1/tiles/?d=a.9.0')
         content = json.loads(ret.content.decode('utf-8'))
 
         assert len(content['a.9.0']) > 10
+
+        ret = self.client.get('/api/v1/tiles/?d=a.0.0')
+        content = json.loads(ret.content.decode('utf-8'))
+
+        assert 'error' in content['a.0.0']
 
 class MultivecTests(dt.TestCase):
     def test_get_tile(self):

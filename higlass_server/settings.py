@@ -36,6 +36,12 @@ if 'HIGLASS_CACHE_DIR' in os.environ:
 else:
     CACHE_DIR = None
 
+
+if 'MAX_BAM_TILE_WIDTH' in os.environ:
+    MAX_BAM_TILE_WIDTH = int(os.environ['MAX_BAM_TILE_WIDTH'])
+else:
+    MAX_BAM_TILE_WIDTH = int(1e5)
+
 local_settings_file_path = os.path.join(
     BASE_DIR, 'config.json'
 )

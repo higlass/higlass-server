@@ -25,6 +25,7 @@ import itertools as it
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
 
+import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.multivec as hgmu
@@ -620,6 +621,10 @@ def tileset_info(request):
             )
         elif tileset_object.filetype == 'geodb':
             tileset_infos[tileset_uuid] = hggo.tileset_info(
+                tileset_object.datafile.path
+            )
+        elif tileset_object.filetype == 'bam':
+            tileset_infos[tileset_uuid] = ctb.tileset_info(
                 tileset_object.datafile.path
             )
         else:

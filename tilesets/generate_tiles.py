@@ -512,8 +512,12 @@ def generate_tiles(tileset_tile_ids):
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     elif tileset.filetype == 'bam':
-        print('tileset.indexfile', tileset.indexfile.path)
-        return ctb.tiles(tileset.datafile.path, tile_ids, index_filename=tileset.indexfile.path)
+        return ctb.tiles(
+            tileset.datafile.path,
+            tile_ids,
+            index_filename=tileset.indexfile.path,
+            max_tile_width=hss.MAX_BAM_TILE_WIDTH
+        )
     else:
         filetype = tileset.filetype
         filepath = tileset.datafile.path
