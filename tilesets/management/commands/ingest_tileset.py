@@ -69,8 +69,8 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         if indexfile:
             if (not op.isfile(op.join(settings.MEDIA_ROOT, indexfile)) and
                 not op.islink(op.join(settings.MEDIA_ROOT, indexfile)) and
-                not any([filename.startswith('http/'), filename.startswith('https/'), filename.startswith('ftp/')])):
-                raise CommandError('File does not exist under media root')
+                not any([indexfile.startswith('http/'), indexfile.startswith('https/'), indexfile.startswith('ftp/')])):
+                raise CommandError('Index file does not exist under media root')
             indexfile = op.join(settings.MEDIA_ROOT, indexfile)
             index_file = indexfile
     else:
