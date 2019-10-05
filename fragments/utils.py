@@ -240,7 +240,6 @@ def get_cooler(f, zoomout_level=0):
     try:
         # Check for new fancy way of storing resolutions
         f = f['resolutions'] if 'resolutions' in f else f
-
         zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
@@ -731,6 +730,7 @@ def get_frag_by_loc_from_imtiles(
 
         # Extract image tiles
         tiles = []
+        error_extracting_tiles = False
         for y in tiles_y_range:
             for x in tiles_x_range:
                 try:
@@ -739,8 +739,12 @@ def get_frag_by_loc_from_imtiles(
                         (zoom_level, y, x)
                     ).fetchone()[0])))
                 except sqlite3.OperationalError:
+                    error_extracting_tiles = True
                     ims.append(None)
-                    continue
+                    break
+
+        if error_extracting_tiles:
+            continue
 
         im_snip = get_frag_from_image_tiles(
             tiles,
