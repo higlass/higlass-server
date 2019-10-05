@@ -20,5 +20,7 @@ scikit-learn==0.19.1
 slugid==1.0.7
 bumpversion==0.5.3
 redis==2.10.5
+imageio==2.3.0
+matplotlib==2.2.3
 clodius==0.10.8
 simple-httpfs>=0.1.3

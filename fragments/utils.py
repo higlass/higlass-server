@@ -12,7 +12,7 @@ import requests
 import math
 
 from random import random
-from io import BytesIO, StringIO
+from io import BytesIO
 from PIL import Image
 from sklearn.cluster import KMeans
 from scipy.ndimage.interpolation import zoom
@@ -39,6 +39,9 @@ logger = logging.getLogger(__name__)
 # Methods
 
 def grey_to_rgb(arr, to_rgba=False):
+    if np.ndim(arr) == 3:
+        return arr * 255
+
     if to_rgba:
         rgb = np.zeros(arr.shape + (4,))
         rgb[:, :, 3] = 255
@@ -46,8 +49,8 @@ def grey_to_rgb(arr, to_rgba=False):
         rgb = np.zeros(arr.shape + (3,))
 
     rgb[:, :, 0] = 255 - arr * 255
-    rgb[:, :, 1] = rgb[:,:,0]
-    rgb[:, :, 2] = rgb[:,:,0]
+    rgb[:, :, 1] = rgb[:, :, 0]
+    rgb[:, :, 2] = rgb[:, :, 0]
 
     return rgb
 
@@ -55,7 +58,7 @@ def grey_to_rgb(arr, to_rgba=False):
 def blob_to_zip(blobs, to_resp=False):
     b = BytesIO()
 
-    zf = ZipFile(b, 'w')
+    zf = ZipFile('out.zip', 'w')
 
     for blob in blobs:
         zf.writestr(blob['name'], blob['bytes'])
@@ -237,7 +240,6 @@ def get_cooler(f, zoomout_level=0):
     try:
         # Check for new fancy way of storing resolutions
         f = f['resolutions'] if 'resolutions' in f else f
-
         zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
@@ -263,6 +265,17 @@ def get_cooler(f, zoomout_level=0):
     return c
 
 
+def get_base_bin_size(cooler_file):
+    with h5py.File(cooler_file, 'r') as f:
+        for k in f.keys():
+            print('zoomlevel', k, 'binsize', f[k].attrs['bin-size'])
+        return min(f[k].attrs['bin-size'] for k in f.keys())
+
+
+def get_clostest_zoomout_level(base_bin_size, in_dim, out_dim):
+    return math.floor(math.log2(in_dim / (out_dim * base_bin_size)))
+
+
 def get_frag_by_loc_from_cool(
     cooler_file,
     loci,
@@ -274,6 +287,7 @@ def get_frag_by_loc_from_cool(
     ignore_diags=0,
     no_normalize=False,
     aggregate=False,
+    log=False,
 ):
     with h5py.File(cooler_file, 'r') as f:
         c = get_cooler(f, zoomout_level)
@@ -294,7 +308,8 @@ def get_frag_by_loc_from_cool(
             percentile=percentile,
             ignore_diags=ignore_diags,
             no_normalize=no_normalize,
-            aggregate=aggregate
+            aggregate=aggregate,
+            log=log,
         )
 
     return fragments
@@ -610,6 +625,12 @@ def get_frag_from_image_tiles(
     start2_rel = from_y - tile_start2_id * tile_size
     end2_rel = to_y - tile_start2_id * tile_size
 
+    # Make sure that image snippets are smaller or equal to 1024px
+    if end1_rel - start1_rel > 1024:
+        raise SnippetTooLarge()
+    if end2_rel - start2_rel > 1024:
+        raise SnippetTooLarge()
+
     # Notice the shape: height x width x channel
     return np.array(im.crop((start1_rel, start2_rel, end1_rel, end2_rel)))
 
@@ -620,9 +641,16 @@ def get_frag_by_loc_from_imtiles(
     zoom_level=0,
     padding=0,
     tile_size=256,
-    no_cache=False
+    no_cache=False,
+    imtiles_file_secondary=None,
 ):
-    db = None
+    db_primary = sqlite3.connect(imtiles_file)
+    db_secondary = (
+        sqlite3.connect(imtiles_file_secondary)
+        if imtiles_file_secondary
+        else sqlite3.connect(imtiles_file)
+    )
+
     div = 1
     width = 0
     height = 0
@@ -632,7 +660,8 @@ def get_frag_by_loc_from_imtiles(
     got_info = False
 
     for locus in loci:
-        id = locus[-1]
+        id = locus[-2]
+        local_id = locus[-1]
 
         if not no_cache:
             im_snip = None
@@ -645,8 +674,7 @@ def get_frag_by_loc_from_imtiles(
                 pass
 
         if not got_info:
-            db = sqlite3.connect(imtiles_file)
-            info = db.execute('SELECT * FROM tileset_info').fetchone()
+            info = db_primary.execute('SELECT * FROM tileset_info').fetchone()
 
             max_zoom = info[6]
             max_width = info[8]
@@ -667,6 +695,24 @@ def get_frag_by_loc_from_imtiles(
             ims.append(None)
             continue
 
+        # Get preloaded image thumbnail of snippet if available
+        if local_id is not None:
+            try:
+                q = db_primary.execute(
+                    'SELECT image FROM images WHERE id=? AND z=?',
+                    (local_id, zoom_level)
+                ).fetchone()
+
+                if q is not None:
+                    im_snip = q[0]
+                    ims.append(im_snip)
+                    continue
+            except sqlite3.OperationalError:
+                # Maybe the inset track's source is not the preloaded
+                # annotation file but an original image tileset. Hence, lets
+                # try to load
+                pass
+
         # Get tile ids
         tile_start1_id = start1 // tile_size
         tile_end1_id = end1 // tile_size
@@ -684,12 +730,21 @@ def get_frag_by_loc_from_imtiles(
 
         # Extract image tiles
         tiles = []
+        error_extracting_tiles = False
         for y in tiles_y_range:
             for x in tiles_x_range:
-                tiles.append(Image.open(BytesIO(db.execute(
-                    'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
-                    (zoom_level, y, x)
-                ).fetchone()[0])))
+                try:
+                    tiles.append(Image.open(BytesIO(db_secondary.execute(
+                        'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
+                        (zoom_level, y, x)
+                    ).fetchone()[0])))
+                except sqlite3.OperationalError:
+                    error_extracting_tiles = True
+                    ims.append(None)
+                    break
+
+        if error_extracting_tiles:
+            continue
 
         im_snip = get_frag_from_image_tiles(
             tiles,
@@ -710,10 +765,15 @@ def get_frag_by_loc_from_imtiles(
                 np.save(b, im_snip)
                 rdb.set('im_snip_%s' % id, b.getvalue(), 60 * 30)
 
+        if local_id is not None:
+            # The snippet did not seem to have been preloaded at that zoom
+            # level. For consistency we convert it to png right away.
+            im_snip = np_to_png(im_snip)
+
         ims.append(im_snip)
 
-    if db:
-        db.close()
+    db_primary.close()
+    db_secondary.close()
 
     return ims
 
@@ -724,8 +784,13 @@ def get_frag_by_loc_from_osm(
     zoom_level=0,
     padding=0,
     tile_size=256,
-    no_cache=False
+    no_cache=False,
+    imtiles_file_secondary=None,
 ):
+    # `imtiles_file_secondary` is not needed but we need the parameter for
+    # compatibility reasons
+    db = sqlite3.connect(imtiles_file)
+
     width = 360
     height = 180
 
@@ -738,7 +803,8 @@ def get_frag_by_loc_from_osm(
     s = CacheControl(requests.Session())
 
     for locus in loci:
-        id = locus[-1]
+        id = locus[-2]
+        local_id = locus[-1]
 
         if not no_cache:
             osm_snip = None
@@ -765,6 +831,18 @@ def get_frag_by_loc_from_osm(
         ):
             ims.append(None)
             continue
+
+        # Load prefetched image thumbnail of snippet if available
+        if local_id is not None:
+            q = db.execute(
+                'SELECT image FROM images WHERE id=? AND z=?',
+                (local_id, zoom_level)
+            ).fetchone()
+
+            if q is not None:
+                osm_snip = q[0]
+                ims.append(osm_snip)
+                continue
 
         # Get tile ids
         start1, start2 = get_tile_pos_from_lng_lat(
@@ -837,7 +915,14 @@ def get_frag_by_loc_from_osm(
                 np.save(b, osm_snip)
                 rdb.set('osm_snip_%s' % id, b.getvalue(), 60 * 30)
 
+        if local_id is not None:
+            # The snippet did not seem to have been preloaded at this zoom
+            # level. For coinsistency we convert it to png right away.
+            osm_snip = np_to_png(osm_snip)
+
         ims.append(osm_snip)
+
+    db.close()
 
     return ims
 
@@ -936,12 +1021,13 @@ def collect_frags(
     percentile=100.0,
     ignore_diags=0,
     no_normalize=False,
-    aggregate=False
+    aggregate=False,
+    log=False,
 ):
     fragments = []
 
     for locus in loci:
-        last_loc = len(locus) - 2
+        last_loc = len(locus) - 3
         fragments.append(get_frag(
             c,
             resolution,
@@ -952,7 +1038,8 @@ def collect_frags(
             balanced=balanced,
             percentile=percentile,
             ignore_diags=ignore_diags,
-            no_normalize=no_normalize
+            no_normalize=no_normalize,
+            log=log,
         ))
 
     return fragments
@@ -1044,7 +1131,8 @@ def get_frag(
     balanced: bool = True,
     percentile: float = 100.0,
     ignore_diags: int = 0,
-    no_normalize: bool = False
+    no_normalize: bool = False,
+    log: bool = False,
 ) -> np.ndarray:
     """
     Retrieves a matrix fragment.
@@ -1088,6 +1176,8 @@ def get_frag(
         no_normalize:
             If `true` the returned matrix is not normalized.
             Defaults to `False`.
+        log:
+            If `true` log transform snippet.
 
     Returns:
 
@@ -1154,8 +1244,10 @@ def get_frag(
         abs_dim2 = height
 
     # Maximum width / height is 512
-    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
-    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
+    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM:
+        raise SnippetTooLarge()
+    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM:
+        raise SnippetTooLarge()
 
     # Finally, adjust to negative values.
     # Since relative bin IDs are adjusted by the start this will lead to a
@@ -1301,6 +1393,9 @@ def get_frag(
     # Normalize by maximum
     if not no_normalize and max_val > 0:
         frag /= max_val
+
+    if log:
+        frag = np.log10((frag * 9) + 1)
 
     # Set the ignored diagonal to the maximum
     if ignored_idx:

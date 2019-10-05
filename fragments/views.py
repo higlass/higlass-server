@@ -5,7 +5,8 @@ import json
 import logging
 import numpy as np
 import pybase64
-from PIL import Image
+from imageio import imread
+from matplotlib import cm
 try:
     import cPickle as pickle
 except:
@@ -15,7 +16,6 @@ import higlass_server.settings as hss
 
 from rest_framework.authentication import BasicAuthentication
 from .drf_disable_csrf import CsrfExemptSessionAuthentication
-from io import BytesIO
 from os import path
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, authentication_classes
@@ -26,6 +26,8 @@ from fragments.utils import (
     calc_measure_noise,
     calc_measure_sharpness,
     aggregate_frags,
+    get_base_bin_size,
+    get_clostest_zoomout_level,
     get_frag_by_loc_from_cool,
     get_frag_by_loc_from_imtiles,
     get_frag_by_loc_from_osm,
@@ -34,7 +36,7 @@ from fragments.utils import (
     get_rep_frags,
     rel_loci_2_obj,
     np_to_png,
-    write_png,
+    # write_png,
     grey_to_rgb,
     blob_to_zip
 )
@@ -155,6 +157,30 @@ GET_FRAG_PARAMS = {
             'fragments.'
         )
     },
+    'log': {
+        'short': 'lg',
+        'dtype': 'bool',
+        'default': False,
+        'help': (
+            'Log transform snippet'
+        )
+    },
+    'colormap': {
+        'short': 'cm',
+        'dtype': 'str',
+        'default': '',
+        'help': (
+            'Matplotlib colormap'
+        )
+    },
+    'dtype': {
+        'short': 'dt',
+        'dtype': 'str',
+        'default': 'cooler',
+        'help': (
+            'Type of snippet. Can either be `cooler` or `image`. '
+        )
+    },
 }
 
 
@@ -202,7 +228,7 @@ def get_fragments_by_loci(request):
 
     try:
         forced_rep_idx = request.data.get('representativeIndices', None)
-    except Exception as e:
+    except Exception:
         forced_rep_idx = None
         pass
 
@@ -216,7 +242,7 @@ def get_fragments_by_loci(request):
     4: start2         dataset
     5: end2           zoomLevel
     6: dataset        dim*
-    7: zoomOutLevel
+    7: zoomOutLevel   id*
     8: dim*
 
     *) Optional
@@ -237,11 +263,19 @@ def get_fragments_by_loci(request):
     max_previews = params['max-previews']
     encoding = params['encoding']
     representatives = params['representatives']
+    log_scale = params['log']
+    colormap = params['colormap']
+    dtype = params['dtype']
 
-    # Check if requesting a snippet from a `.cool` cooler file
-    is_cool = len(loci) and len(loci[0]) > 7
-    tileset_idx = 6 if is_cool else 4
+    is_image = dtype == 'image'
+    is_cool = not is_image
+    tileset_idx = (
+        4 if (len(loci) and len(loci[0]) < 8) or is_image else 6
+    )
     zoom_level_idx = tileset_idx + 1
+    snippet_id_idx = (
+        7 if is_image and len(loci) and len(loci[0]) == 8 else None
+    )
 
     filetype = None
     new_filetype = None
@@ -249,12 +283,18 @@ def get_fragments_by_loci(request):
     previews_2d = []
     ts_cache = {}
     mat_idx = None
+    ts_secondary = {}
 
     i = 0
     loci_lists = {}
     loci_ids = []
+    base_bin_sizes = {}
     try:
         for locus in loci:
+            # if is_image and snippet_id_idx:
+            #     # Chop of preload id
+            #     locus = locus[:-1]
+
             tileset_file = ''
 
             if locus[tileset_idx]:
@@ -265,14 +305,31 @@ def get_fragments_by_loci(request):
                     tileset_file = path.join('data', locus[tileset_idx])
                 else:
                     try:
+                        # One can specify 2 tilesets, a primary and a secondary
+                        # tileset. The secondary tileset is only needed when
+                        # dealing with preloaded annotation dbs. In that case
+                        # the secondary tileset refers to the original tileset
+                        # such that fragments can be cut out on the fly if
+                        # needed (not all zoom levels might have been
+                        # preloaded)
+                        tilesets = locus[tileset_idx].split(',')
                         tileset = Tileset.objects.get(
-                            uuid=locus[tileset_idx]
+                            uuid=tilesets[0]
                         )
-                        tileset_file = tileset.datafile.path
+
+                        tileset_file = tileset.datafile.url
+
+                        tileset_file_secondary = None
+                        if len(tilesets) > 1 and len(tilesets[1]) > 0:
+                            tileset_file_secondary = Tileset.objects.get(
+                                uuid=tilesets[1]
+                            ).datafile.url
+
                         ts_cache[locus[tileset_idx]] = {
                             "obj": tileset,
                             "path": tileset_file
                         }
+                        ts_secondary[tileset_file] = tileset_file_secondary
 
                     except AttributeError:
                         return JsonResponse({
@@ -293,6 +350,49 @@ def get_fragments_by_loci(request):
                 return JsonResponse({
                     'error': 'Tileset not specified',
                 }, status=400)
+
+            # Determine file type
+            if new_filetype is None:
+                new_filetype = (
+                    tileset.filetype
+                    if tileset
+                    else tileset_file[tileset_file.rfind('.') + 1:]
+                )
+
+            if filetype is None:
+                filetype = new_filetype
+
+            if filetype != new_filetype:
+                return JsonResponse({
+                    'error': (
+                        'Multiple file types per query are not supported yet.'
+                    )
+                }, status=400)
+
+            if tileset_file not in loci_lists:
+                loci_lists[tileset_file] = {}
+
+            # Determine clostest zoomout level if zoomout level is set ot `-1`
+            if locus[zoom_level_idx] == -1:
+                if tileset_file not in base_bin_sizes:
+                    if filetype == 'cooler' or filetype == 'cool':
+                        base_bin_sizes[tileset_file] = get_base_bin_size(
+                            tileset_file
+                        )
+                    else:
+                        base_bin_sizes[tileset_file] = 1.0
+
+                if is_image:
+                    in_dim = max(locus[1] - locus[0], locus[3] - locus[2])
+                else:
+                    in_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+
+                locus[zoom_level_idx] = get_clostest_zoomout_level(
+                    base_bin_sizes[tileset_file], in_dim, dims
+                )
+
+            if locus[zoom_level_idx] not in loci_lists[tileset_file]:
+                loci_lists[tileset_file][locus[zoom_level_idx]] = []
 
             # Get the dimensions of the snippets (i.e., width and height in px)
             inset_dim = (
@@ -319,11 +419,14 @@ def get_fragments_by_loci(request):
                     # get base resolution of cooler file
                     max_zoom = f.attrs['max-zoom']
                     bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
             else:
                 bin_size = 1
 
-            # Get max abs dim in base pairs
-            max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[1] - locus[0], locus[3] - locus[2])
 
             # Find closest zoom level if `zoomout_level < 0`
             zoomout_level = (
@@ -336,28 +439,12 @@ def get_fragments_by_loci(request):
                 loci_lists[tileset_file][zoomout_level] = []
 
             locus_id = '.'.join(map(str, locus))
+            local_id = locus[snippet_id_idx] if snippet_id_idx else None
 
-            loci_lists[tileset_file][zoomout_level].append(
-                locus[0:tileset_idx] + [i, inset_dim, locus_id]
+            loci_lists[tileset_file][locus[zoom_level_idx]].append(
+                locus[0:tileset_idx] + [i, inset_dim, locus_id, local_id]
             )
             loci_ids.append(locus_id)
-
-            if new_filetype is None:
-                new_filetype = (
-                    tileset.filetype
-                    if tileset
-                    else tileset_file[tileset_file.rfind('.') + 1:]
-                )
-
-            if filetype is None:
-                filetype = new_filetype
-
-            if filetype != new_filetype:
-                return JsonResponse({
-                    'error': (
-                        'Multiple file types per query are not supported yet.'
-                    )
-                }, status=400)
 
             i += 1
 
@@ -384,7 +471,9 @@ def get_fragments_by_loci(request):
         str(aggregation_method) +
         str(max_previews) +
         str(encoding) +
-        str(representatives)
+        str(representatives) +
+        str(log_scale) +
+        str(dtype)
     )
     uuid = hashlib.md5(dump.encode('utf-8')).hexdigest()
 
@@ -414,6 +503,7 @@ def get_fragments_by_loci(request):
                         ignore_diags=ignore_diags,
                         no_normalize=no_normalize,
                         aggregate=aggregate,
+                        log=log_scale,
                     )
 
                     for i, matrix in enumerate(raw_matrices):
@@ -421,15 +511,21 @@ def get_fragments_by_loci(request):
                         matrices[idx] = matrix
                         data_types[idx] = 'matrix'
 
-                if filetype == 'imtiles' or filetype == 'osm-image':
+                if (
+                    filetype == 'imtiles' or
+                    filetype == 'osm-image' or
+                    filetype == 'geodb' or
+                    filetype == '2dannodb'
+                ):
                     extractor = (
-                        get_frag_by_loc_from_imtiles
-                        if filetype == 'imtiles'
-                        else get_frag_by_loc_from_osm
+                        get_frag_by_loc_from_osm
+                        if filetype in ['osm-image', 'geodb']
+                        else get_frag_by_loc_from_imtiles
                     )
 
                     sub_ims = extractor(
                         imtiles_file=dataset,
+                        imtiles_file_secondary=ts_secondary[dataset],
                         loci=loci_lists[dataset][zoomout_level],
                         zoom_level=zoomout_level,
                         padding=float(padding),
@@ -478,6 +574,11 @@ def get_fragments_by_loci(request):
             mat_idx = forced_rep_idx
             data_types = [data_types[0]] * len(forced_rep_idx)
         else:
+            im_cache = None
+            if isinstance(matrices[0], (bytes, bytearray)):
+                im_cache = matrices
+                matrices = [imread(im) for im in matrices]
+
             try:
                 rep_frags, rep_idx = get_rep_frags(
                     matrices, loci, loci_ids, representatives, no_cache
@@ -491,6 +592,19 @@ def get_fragments_by_loci(request):
                     'error': 'Could get representative fragments.',
                     'error_message': str(ex)
                 }, status=500)
+
+            if im_cache:
+                matrices = [im_cache[i] for i in mat_idx]
+
+    if (
+        colormap and
+        not isinstance(matrices[0], (bytes, bytearray))
+    ):
+        try:
+            for i, matrix in enumerate(matrices):
+                matrices[i] = getattr(cm, colormap)(matrix)
+        except Exception:
+            pass
 
     if encoding != 'b64' and encoding != 'image':
         # Adjust precision and convert to list
@@ -520,7 +634,12 @@ def get_fragments_by_loci(request):
                 except:
                     pass
 
-            mat_b64 = pybase64.b64encode(np_to_png(matrix)).decode('ascii')
+            if isinstance(matrix, (bytes, bytearray)):
+                png = matrix
+            else:
+                png = np_to_png(matrix)
+
+            mat_b64 = pybase64.b64encode(png).decode('ascii')
 
             if not no_cache:
                 try:
@@ -564,10 +683,12 @@ def get_fragments_by_loci(request):
 
     if encoding == 'image':
         if len(matrices) == 1:
-            return HttpResponse(
-                np_to_png(grey_to_rgb(matrices[0], to_rgba=True)),
-                content_type='image/png'
-            )
+            if isinstance(matrices[0], (bytes, bytearray)):
+                png = matrices[0]
+            else:
+                png = np_to_png(grey_to_rgb(matrices[0], to_rgba=True))
+
+            return HttpResponse(png, content_type='image/png')
         else:
             ims = []
             for i, matrix in enumerate(matrices):
@@ -592,7 +713,9 @@ def fragments_by_chr(request):
             cooler_file = path.join('data', cooler_file)
         else:
             try:
-                cooler_file = Tileset.objects.get(uuid=cooler_file).datafile.path
+                cooler_file = Tileset.objects.get(
+                    uuid=cooler_file
+                ).datafile.path
             except AttributeError:
                 return JsonResponse({
                     'error': 'Cooler file not in database',
@@ -675,7 +798,7 @@ def fragments_by_chr(request):
 
     # Get fragments
     try:
-        matrices = get_frag_by_loc(
+        matrices = get_frag_by_loc_from_cool(
             cooler_file,
             loci_rel_chroms,
             zoomout_level=zoomout_level
