@@ -378,7 +378,8 @@ class BamTests(dt.TestCase):
         ret = self.client.get('/api/v1/tiles/?d=a.9.0')
         content = json.loads(ret.content.decode('utf-8'))
 
-        assert len(content['a.9.0']) > 10
+        # data is stored in a columnar fashion under the heading names
+        assert len(content['a.9.0']['id']) > 10
 
         ret = self.client.get('/api/v1/tiles/?d=a.0.0')
         content = json.loads(ret.content.decode('utf-8'))
@@ -436,7 +437,7 @@ class BamTests(dt.TestCase):
         assert response.status_code == 200
 
         cont = json.loads(response.content)
-        assert len(cont[f'{uid}.9.0']) > 10
+        assert len(cont[f'{uid}.9.0']['id']) > 10
 
 
 class MultivecTests(dt.TestCase):
