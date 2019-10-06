@@ -37,7 +37,6 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         raise CommandError('Filetype has to be specified')
 
     django_file = None
-    index_file = None
 
     # bamfiles need to be ingested with an index, if it's not
     # specified as a parameter, try to find it at filename + ".bai"
@@ -72,21 +71,20 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
                 not any([indexfile.startswith('http/'), indexfile.startswith('https/'), indexfile.startswith('ftp/')])):
                 raise CommandError('Index file does not exist under media root')
             indexfile = op.join(settings.MEDIA_ROOT, indexfile)
-            index_file = indexfile
     else:
         if os.path.islink(filename):
             django_file = File(open(os.readlink(filename),'rb'))
             if indexfile:
-                index_file = File(open(os.readlink(indexfile, 'rb')))
+                indexfile = File(open(os.readlink(indexfile, 'rb')))
         else:
             django_file = File(open(filename,'rb'))
             if indexfile:
-                index_file = File(open(indexfile, 'rb'))
+                indexfile = File(open(indexfile, 'rb'))
 
         # remove the filepath of the filename
         django_file.name = op.split(django_file.name)[1]
-        if index_file:
-            index_file.name = op.split(index_file.name)[1]
+        if indexfile:
+            indexfile.name = op.split(indexfile.name)[1]
 
     if filetype.lower() == 'bigwig':
         coordSystem = check_for_chromsizes(filename, coordSystem)
@@ -100,7 +98,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
 
     return tm.Tileset.objects.create(
         datafile=django_file,
-        indexfile=index_file,
+        indexfile=indexfile,
         filetype=filetype,
         datatype=datatype,
         coordSystem=coordSystem,
