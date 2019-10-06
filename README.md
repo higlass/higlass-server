@@ -15,7 +15,7 @@ _Note: that the HiGlass Server itself only provides an API, and does not serve a
 
 **Prerequirements**:
 
-- Python v3
+- Python `>=v3.6`
 
 ### Docker
 
