@@ -13,6 +13,7 @@ v1.11.1
 v1.11.0
 
 - Link unfurling endpoints /link and /thumbnail
+- **BREAKING CHANGE:** You need at least Python `v3.6` or higher
 
 v1.10.2
 

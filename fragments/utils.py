@@ -235,9 +235,15 @@ def get_cooler(f, zoomout_level=0):
     c = None
 
     try:
-        # Check for new fancy way of storing resolutions
-        f = f['resolutions'] if 'resolutions' in f else f
+        # Cooler v2
+        # In this case `zoomout_level` is the resolution
+        # See fragments/views.py line 431
+        return cooler.Cooler(f['resolutions/{}'.format(zoomout_level)])
+    except:
+        pass
 
+    try:
+        # v1
         zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
@@ -1099,15 +1105,13 @@ def get_frag(
     # Restrict padding to be [0, 100]%
     padding = min(100, max(0, padding)) / 100
 
-    # Normalize chromosome names
-    if not chrom1.startswith('chr'):
-        chrom1 = 'chr{}'.format(chrom1)
-    if not chrom2.startswith('chr'):
-        chrom2 = 'chr{}'.format(chrom2)
-
-    # Get chromosome offset
-    offset1 = offsets[chrom1]
-    offset2 = offsets[chrom2]
+    try:
+        offset1 = offsets[chrom1]
+        offset2 = offsets[chrom2]
+    except KeyError:
+        # One more try before we will fail miserably
+        offset1 = offsets['chr{}'.format(chrom1)]
+        offset2 = offsets['chr{}'.format(chrom2)]
 
     start_bin1 = offset1 + int(round(float(start1) / resolution))
     end_bin1 = offset1 + int(round(float(end1) / resolution)) + 1
@@ -1115,7 +1119,7 @@ def get_frag(
     start_bin2 = offset2 + int(round(float(start2) / resolution))
     end_bin2 = offset2 + int(round(float(end2) / resolution)) + 1
 
-    # Apply percental padding
+    # Apply percentile padding
     padding1 = int(round(((end_bin1 - start_bin1) / 2) * padding))
     padding2 = int(round(((end_bin2 - start_bin2) / 2) * padding))
     start_bin1 -= padding1
@@ -1140,9 +1144,9 @@ def get_frag(
         start_bin2 -= padding2
         end_bin2 += padding2
 
-    # In case the final dimension does not math the desired domension we
+    # In case the final dimension does not math the desired dimension we
     # increase the end bin. This can be caused when the padding is not
-    # divisable by 2, since the padding is rounded to the nearest integer.
+    # divisible by 2, since the padding is rounded to the nearest integer.
     abs_dim1 = abs(start_bin1 - end_bin1)
     if abs_dim1 < width:
         end_bin1 += width - abs_dim1
