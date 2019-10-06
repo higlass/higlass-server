@@ -315,22 +315,52 @@ def get_fragments_by_loci(request):
                 loci_lists[tileset_file] = {}
 
             if is_cool:
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
+
                 with h5py.File(tileset_file, 'r') as f:
-                    # get base resolution of cooler file
-                    max_zoom = f.attrs['max-zoom']
-                    bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+                    # get base resolution (bin size) of cooler file
+                    if 'resolutions' in f:
+                        # v2
+                        resolutions = sorted(
+                            [int(key) for key in f['resolutions'].keys()]
+                        )
+                        closest_res = 0
+                        for i, res in enumerate(resolutions):
+                            if (max_abs_dim / out_dim) - res < 0:
+                                closest_res = resolutions[max(0, i - 1)]
+                                break
+                        zoomout_level = (
+                            locus[zoom_level_idx]
+                            if locus[zoom_level_idx] >= 0
+                            else closest_res
+                        )
+                    else:
+                        # v1
+                        max_zoom = f.attrs['max-zoom']
+                        bin_size = int(f[str(max_zoom)].attrs['bin-size'])
+
+                        # Find closest zoom level if `zoomout_level < 0`
+                        # Assuming resolutions of powers of 2
+                        zoomout_level = (
+                            locus[zoom_level_idx]
+                            if locus[zoom_level_idx] >= 0
+                            else floor(log((max_abs_dim / bin_size) / out_dim, 2))
+                        )
+
             else:
+                # Get max abs dim in base pairs
+                max_abs_dim = max(locus[1] - locus[0], locus[3] - locus[2])
+
                 bin_size = 1
 
-            # Get max abs dim in base pairs
-            max_abs_dim = max(locus[2] - locus[1], locus[5] - locus[4])
-
-            # Find closest zoom level if `zoomout_level < 0`
-            zoomout_level = (
-                locus[zoom_level_idx]
-                if locus[zoom_level_idx] >= 0
-                else floor(log((max_abs_dim / bin_size) / out_dim, 2))
-            )
+                # Find closest zoom level if `zoomout_level < 0`
+                # Assuming resolutions of powers of 2
+                zoomout_level = (
+                    locus[zoom_level_idx]
+                    if locus[zoom_level_idx] >= 0
+                    else floor(log((max_abs_dim / bin_size) / out_dim, 2))
+                )
 
             if zoomout_level not in loci_lists[tileset_file]:
                 loci_lists[tileset_file][zoomout_level] = []
