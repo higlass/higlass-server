@@ -54,7 +54,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
     # if we're ingesting a url, place it relative to the httpfs directories
     # and append two dots at the end
 
-    (filename, no_upload) = remote_to_local(filename, no_upload)
+    filename, no_upload = remote_to_local(filename, no_upload)
     if indexfile:
         (indexfile, _) = remote_to_local(indexfile, no_upload)
 
