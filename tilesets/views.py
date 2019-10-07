@@ -627,6 +627,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = ctb.tileset_info(
                 tileset_object.datafile.path
             )
+            tileset_infos[tileset_uuid]['max_tile_width'] = hss.MAX_BAM_TILE_WIDTH
         else:
             # Unknown filetype
             tileset_infos[tileset_uuid] = {
