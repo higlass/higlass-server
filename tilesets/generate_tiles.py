@@ -4,6 +4,7 @@ import clodius.db_tiles as cdt
 import clodius.hdf_tiles as hdft
 import collections as col
 
+import clodius.tiles.bam as ctb
 import clodius.tiles.beddb as hgbe
 import clodius.tiles.bigwig as hgbi
 import clodius.tiles.cooler as hgco
@@ -19,6 +20,8 @@ import time
 import tempfile
 import tilesets.models as tm
 import tilesets.chromsizes  as tcs
+
+import higlass.tilesets as hgti
 
 import clodius.tiles.multivec as ctmu
 
@@ -167,18 +170,18 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
 
 def get_chromsizes(tileset):
     '''
-    Get a set of chromsizes matching the coordSystem of this 
+    Get a set of chromsizes matching the coordSystem of this
     tileset.
 
-    Parameters 
+    Parameters
     ----------
     tileset: A tileset DJango model object
 
-    Returns 
+    Returns
     -------
     chromsizes: [[chrom, sizes]]
         A set of chromsizes to be used with this bigWig file.
-        None if no chromsizes tileset with this coordSystem 
+        None if no chromsizes tileset with this coordSystem
         exists or if two exist with this coordSystem.
     '''
     if tileset.coordSystem is None or len(tileset.coordSystem) == None:
@@ -508,7 +511,20 @@ def generate_tiles(tileset_tile_ids):
                 ctmu.get_single_tile)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
+    elif tileset.filetype == 'bam':
+        return ctb.tiles(
+            tileset.datafile.path,
+            tile_ids,
+            index_filename=tileset.indexfile.path,
+            max_tile_width=hss.MAX_BAM_TILE_WIDTH
+        )
     else:
+        filetype = tileset.filetype
+        filepath = tileset.datafile.path
+
+        if filetype in hgti.by_filetype:
+            return hgti.by_filetype[filetype](filepath).tiles(tile_ids)
+
         return [(ti, {'error': 'Unknown tileset filetype: {}'.format(tileset.filetype)}) for ti in tile_ids]
 
 

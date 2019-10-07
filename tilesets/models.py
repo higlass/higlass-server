@@ -53,6 +53,9 @@ class Tileset(models.Model):
 
     # processed_file = models.TextField()
     datafile = models.FileField(upload_to='uploads')
+
+    # indexfile is used for bam files
+    indexfile = models.FileField(upload_to='uploads', default=None, null=True)
     filetype = models.TextField()
     datatype = models.TextField(default='unknown', blank=True, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE,

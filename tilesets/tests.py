@@ -20,6 +20,7 @@ import rest_framework.status as rfs
 import tilesets.models as tm
 import higlass_server.settings as hss
 import tilesets.generate_tiles as tgt
+import slugid
 
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,8 @@ def media_file_exists(filename):
     -------
     The return value. True for success, False otherwise.
     '''
-    return False if not op.exists(media_file(filename)) else True 
-           
+    return False if not op.exists(media_file(filename)) else True
+
 
 def add_file(filename, sub_dir='uploads/data'):
     '''
@@ -347,6 +348,97 @@ class TileTests(dt.TestCase):
         result = tgt.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
 
         assert(len(result) == 1)
+
+class BamTests(dt.TestCase):
+    def test_get_tile(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        bam_file = open('data/SRR1770413.mismatched_bai.bam', 'rb')
+        bai_file = open('data/SRR1770413.different_index_filename.bai', 'rb')
+
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                bam_file.name, bam_file.read()
+            ),
+            indexfile=dcfu.SimpleUploadedFile(
+                bai_file.name, bai_file.read()
+            ),
+            filetype='bam',
+            datatype='reads',
+            coordSystem="unknown",
+            owner=self.user1,
+            uuid='a'
+        )
+
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        content = json.loads(ret.content.decode('utf-8'))
+        assert content['a']['max_width'] > 8e6
+
+        ret = self.client.get('/api/v1/tiles/?d=a.9.0')
+        content = json.loads(ret.content.decode('utf-8'))
+
+        # data is stored in a columnar fashion under the heading names
+        assert len(content['a.9.0']['id']) > 10
+
+        ret = self.client.get('/api/v1/tiles/?d=a.0.0')
+        content = json.loads(ret.content.decode('utf-8'))
+
+        assert 'error' in content['a.0.0']
+
+    def test_register_bam_url(self):
+        '''
+        Registering a url allows the file to remain on a remote server and be accessed through the local higlass-server
+        '''
+
+        c = dt.Client()
+        c.login(username='user1', password='pass')
+
+        uid = slugid.nice()
+        # url = "https://s3.amazonaws.com/pkerp/public/wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.bigWig"
+
+        response = c.post(
+            '/api/v1/register_url/',
+            json.dumps({
+              "fileurl": 'https://s3.amazonaws.com/pkerp/public/SRR1770413.sorted.short.bam',
+              "indexurl": 'https://s3.amazonaws.com/pkerp/public/SRR1770413.sorted.short.bam.bai',
+              "uid": uid,
+              "name": uid,
+              "datatype": "reads",
+              "filetype": "bam",
+              "coordSystem": "hg19"
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(200, response.status_code, response.content)
+
+        response = c.get('/api/v1/tilesets/')
+        record_matches = [result for result in response.json()['results'] if result['uuid'] == uid]
+        assert len(record_matches) == 1
+        assert record_matches[0]['name'] == uid
+
+        obj = tm.Tileset.objects.get(uuid=uid)
+        assert "SRR1770413" in obj.datafile.path
+        assert obj.temporary == True
+
+        response = c.get(f'/api/v1/tileset_info/?d={uid}')
+        assert response.status_code == 200
+        response = c.get('/api/v1/tiles/?d={uuid}.0.0'.format(uuid=uid))
+        assert response.status_code == 200
+
+        response = c.get('/api/v1/tiles/?d={uuid}.0.0'.format(uuid=uid))
+        assert response.status_code == 200
+
+        cont = json.loads(response.content)
+        assert 'error' in cont[f'{uid}.0.0']
+
+        response = c.get('/api/v1/tiles/?d={uuid}.9.0'.format(uuid=uid))
+        assert response.status_code == 200
+
+        cont = json.loads(response.content)
+        assert len(cont[f'{uid}.9.0']['id']) > 10
+
 
 class MultivecTests(dt.TestCase):
     def test_get_tile(self):
@@ -643,11 +735,11 @@ class PermissionsTest(dt.TestCase):
             assert(response.status_code == 201)
 
             ret = json.loads(response.content.decode('utf-8'))
-            
+
             # update media filename for whatever name the server ended up using (i.e., in case of duplicates, a random suffix is added)
             assert('datafile' in ret)
             fname = op.basename(ret['datafile'])
-            
+
             # test that said media file exists
             assert(media_file_exists(fname))
 
@@ -657,10 +749,10 @@ class PermissionsTest(dt.TestCase):
             # user2 should not be able to delete the tileset created by user1
             resp = c2.delete('/api/v1/tilesets/' + ret['uuid'] + "/")
             assert(resp.status_code == 403)
-            
+
             # the media file should still exist
             assert(media_file_exists(fname))
-            
+
 
             # user2 should not be able to rename the tileset created by user1
             resp = c2.put('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -670,7 +762,7 @@ class PermissionsTest(dt.TestCase):
             resp = c1.get("/api/v1/tilesets/")
             assert(json.loads(resp.content.decode('utf-8'))['count'] == 1)
             assert(media_file_exists(fname))
-            
+
 
             # user1 should be able to rename or modify their tileset
             resp = c1.patch('/api/v1/tilesets/' + ret['uuid'] + "/", data='{"name":"newname"}', content_type='application/json')
@@ -679,7 +771,7 @@ class PermissionsTest(dt.TestCase):
             # apply GET on uuid to ensure that tileset has the newly modified name
             resp = c1.get("/api/v1/tilesets/" + ret['uuid'] + '/')
             assert(json.loads(resp.content.decode('utf-8'))['name'] == 'newname')
-            
+
             # the media file should still exist with the same name
             assert(media_file_exists(fname))
 

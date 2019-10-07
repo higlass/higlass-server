@@ -14,17 +14,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='', uid=None, name=None, no_upload=False, project_name='', temporary=False, **ignored):
-    uid = uid or slugid.nice().decode('utf-8')
-    name = name or op.split(filename)[1]
-
-    if not filetype:
-        raise CommandError('Filetype has to be specified')
-
-    django_file = None
-
-    # if we're ingesting a url, place it relative to the httpfs directories
-    # and append two dots at the end
+def remote_to_local(filename, no_upload):
     if filename[:7] == 'http://':
         filename = "{}..".format(filename.replace('http:/', 'http'))
         no_upload=True
@@ -35,6 +25,38 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         filename = "{}..".format(filename.replace('ftp:/', 'ftp'))
         no_upload=True
 
+    return (filename, no_upload)
+
+def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSystem2='',
+        uid=None, name=None, no_upload=False, project_name='',
+        indexfile=None, temporary=False, **ignored):
+    uid = uid or slugid.nice()
+    name = name or op.split(filename)[1]
+
+    if not filetype:
+        raise CommandError('Filetype has to be specified')
+
+    django_file = None
+
+    # bamfiles need to be ingested with an index, if it's not
+    # specified as a parameter, try to find it at filename + ".bai"
+    # and complain if it can't be found
+    if filetype == 'bam':
+        if indexfile is None:
+            indexfile = filename + '.bai'
+            if not op.exists(indexfile):
+                print(f'Index for bamfile {indexfile} not found. '+
+                    'Either specify explicitly using the --indexfile parameter ' +
+                    'or create it in the expected location.')
+                return
+
+    # if we're ingesting a url, place it relative to the httpfs directories
+    # and append two dots at the end
+
+    filename, no_upload = remote_to_local(filename, no_upload)
+    if indexfile:
+        indexfile, _ = remote_to_local(indexfile, no_upload)
+
     # it's a regular file on the filesystem, not a file being entered as a url
     if no_upload:
         if (not op.isfile(op.join(settings.MEDIA_ROOT, filename)) and
@@ -43,14 +65,26 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
             raise CommandError('File does not exist under media root')
         filename = op.join(settings.MEDIA_ROOT, filename)
         django_file = filename
+        if indexfile:
+            if (not op.isfile(op.join(settings.MEDIA_ROOT, indexfile)) and
+                not op.islink(op.join(settings.MEDIA_ROOT, indexfile)) and
+                not any([indexfile.startswith('http/'), indexfile.startswith('https/'), indexfile.startswith('ftp/')])):
+                raise CommandError('Index file does not exist under media root')
+            indexfile = op.join(settings.MEDIA_ROOT, indexfile)
     else:
         if os.path.islink(filename):
             django_file = File(open(os.readlink(filename),'rb'))
+            if indexfile:
+                indexfile = File(open(os.readlink(indexfile, 'rb')))
         else:
             django_file = File(open(filename,'rb'))
+            if indexfile:
+                indexfile = File(open(indexfile, 'rb'))
 
         # remove the filepath of the filename
         django_file.name = op.split(django_file.name)[1]
+        if indexfile:
+            indexfile.name = op.split(indexfile.name)[1]
 
     if filetype.lower() == 'bigwig':
         coordSystem = check_for_chromsizes(filename, coordSystem)
@@ -64,6 +98,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
 
     return tm.Tileset.objects.create(
         datafile=django_file,
+        indexfile=indexfile,
         filetype=filetype,
         datatype=datatype,
         coordSystem=coordSystem,
@@ -178,6 +213,7 @@ class Command(BaseCommand):
         # if the datatype is matrix
         # otherwise, coordSystem2 should be empty
         parser.add_argument('--filename', type=str)
+        parser.add_argument('--indexfile', type=str)
         parser.add_argument('--datatype', type=str)
         parser.add_argument('--filetype', type=str)
         parser.add_argument('--coordSystem', default='', type=str)

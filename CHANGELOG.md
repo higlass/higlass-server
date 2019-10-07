@@ -1,3 +1,7 @@
+v1.12.0
+
+- Added support for BAM files
+
 v1.11.2
 
 - Check for the existence of a viewconf before creating the link
