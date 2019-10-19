@@ -231,10 +231,12 @@ def rel_2_abs_loci(loci, chr_info):
     return list(map(absolutize_tuple, loci))
 
 
-def get_cooler(f, zoomout_level=0):
+def get_cooler(f, zoomout_level=None):
     c = None
 
     try:
+        resolutions = [int(x) for x in f['resolutions'].keys()]
+        zoomout_level = min(resolutions) if zoomout_level is None else zoomout_level
         # Cooler v2
         # In this case `zoomout_level` is the resolution
         # See fragments/views.py line 431
@@ -243,6 +245,7 @@ def get_cooler(f, zoomout_level=0):
         pass
 
     try:
+        zoomout_level = 0 if zoomout_level is None else zoomout_level
         # v1
         zoom_levels = np.array(list(f.keys()), dtype=int)
 
