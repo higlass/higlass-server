@@ -1,3 +1,7 @@
+Future version
+
+- Added support for bigBed files
+
 v1.12.0
 
 - Added support for BAM files

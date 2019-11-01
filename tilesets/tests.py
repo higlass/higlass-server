@@ -329,7 +329,33 @@ class IngestTests(dt.TestCase):
         assert(tile['min_value'] == 'NaN')
 
         #print("tile:", tile)
-
+        
+    def test_ingest_bigbed(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )  
+        upload_file = open('data/chromSizes_hg38_bbtest.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg38_bb",
+        )
+        
+        dcm.call_command('ingest_tileset',
+            filename = 'data/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb',
+            filetype='bigbed', datatype='gene-bed12-annotation',
+            uid='a',
+            coordSystem='hg38_bb')
+            
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        tileset_info = json.loads(ret.content.decode('utf-8'))
+        assert(tileset_info['a']['chromsizes'][0][0] == 'chr1')        
+        assert(len(tileset_info['a']['chromsizes']) == 24)
+        assert(tileset_info['a']['chromsizes'][23][0] == 'chrY')
 
 class TileTests(dt.TestCase):
     def test_partitioning(self):
@@ -883,7 +909,49 @@ class BigWigTest(dt.TestCase):
         # retrieve a tile that lies completely beyond the end of
         # the assembly
         ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content.decode('utf-8'))
+        
+        
+class BigBedTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
 
+        upload_file = open('data/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb', 'rb')
+        #x = upload_file.read()
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bigbed',
+            datatype='gene-bed12-annotation',
+            owner=self.user1,
+            coordSystem='hg38_bb',
+            coordSystem2='',
+            name="masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb",
+            uuid='bb')
+
+    def test_get_tileset_info(self):
+        c1 = dt.Client()
+        ret = json.loads(c1.get('/api/v1/tileset_info/?d=bb').content.decode('utf-8'))
+
+    def test_get_tiles(self):
+        '''
+        Try to retrieve some tiles from this file
+        '''
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+
+        # make sure that the dataset has been added
+        ret = json.loads(c1.get('/api/v1/tilesets/?d=bb').content.decode('utf-8'))
+        assert(ret['count'] == 1)
+
+        # try to retrieve the top level tile
+        # ret = json.loads(c1.get('/api/v1/tiles/?d=bw.0.0').content.decode('utf-8'))
+        # print("ret:", ret)
+
+        # try to retrieve a tile from within chr1
+        ret = json.loads(c1.get('/api/v1/tiles/?d=bb.14.13').content.decode('utf-8'))
+        assert(len(ret) == 1)
+        
 
 class CoolerTest(dt.TestCase):
     def setUp(self):
