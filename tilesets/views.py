@@ -485,10 +485,6 @@ def tiles(request):
             # error caching a tile
             # log the error and carry forward, this isn't critical
             logger.warn(ex)
-            
-        # reformat bigBed tileset data, so that it looks something like a beddb response
-        if tileset.filetype == 'bigbed':
-            tile_value = list(it.chain.from_iterable(tile_value))
 
         if tile_id in transform_id_to_original_id:
             original_tile_id = transform_id_to_original_id[tile_id]
@@ -600,7 +596,7 @@ def tileset_info(request):
             tileset_infos[tileset_uuid] = tsinfo
         elif tileset_object.filetype == 'bigbed':
             chromsizes = tgt.get_chromsizes(tileset_object)
-            tsinfo = hgbb.tileset_info(
+            tsinfo = hgbi.tileset_info(
                     tileset_object.datafile.path,
                     chromsizes
                 )
