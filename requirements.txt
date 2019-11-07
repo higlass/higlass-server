@@ -8,7 +8,7 @@ django-rest-swagger==2.2.0
 django==2.1.11
 djangorestframework==3.9.1
 h5py==2.6.0
-higlass-python==0.1.14
+higlass-python==0.2.1
 numba==0.37.0
 numpy==1.15.2
 pandas==0.23.4

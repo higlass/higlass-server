@@ -20,6 +20,7 @@ dependencies:
     - django==2.1.5
     - djangorestframework==3.7.3
     - h5py==2.6.0
+    - higlass-python==0.2.1
     - numpy
     - pandas==0.23.4
     - pybase64==0.2.1
