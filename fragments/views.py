@@ -301,9 +301,9 @@ def get_fragments_by_loci(request):
                     len(locus) >= zoom_level_idx + 2 and
                     locus[zoom_level_idx + 1]
                 )
-                else 0
+                else None
             )
-            out_dim = inset_dim | dims
+            out_dim = dims if inset_dim is None else inset_dim
 
             # Make sure out dim (in pixel) is not too large
             if (
