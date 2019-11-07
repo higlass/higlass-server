@@ -18,6 +18,7 @@ FILES=$(cat <<END
 $COOLER
 $HITILE
 Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool
+Dixon2012-J1-NcoI-R1-filtered.100kb.mcoolv2
 gene_annotations.short.db
 cnv_short.hibed
 arrowhead_domains_short.txt.multires.db
@@ -59,7 +60,7 @@ TILESETS_URL="http://localhost:$PORT/api/v1/tilesets/"
 until $(curl --output /dev/null --silent --fail --globoff $TILESETS_URL); do echo '.'; sleep 1; done
 # Server is needed for higlass_server tests
 
-python manage.py test -v 2 tilesets higlass_server --settings=$SETTINGS
+python manage.py test -v 2 tilesets higlass_server fragments --settings=$SETTINGS
 
 echo 'PASS!'
 
