@@ -246,8 +246,8 @@ def get_cooler(f, zoomout_level=None):
         resolution = resolutions[np.argsort([abs(r - resolution) for r in resolutions])[0]]
 
         return cooler.Cooler(f['resolutions/{}'.format(resolution)])
-    except:
-        pass
+    except Exception as e:
+        logger.exception(e)
 
 
     try:
@@ -268,7 +268,6 @@ def get_cooler(f, zoomout_level=None):
         return c
     except Exception as e:
         logger.exception(e)
-        pass  # failed loading zoomlevel of cooler file
 
     try:
         c = cooler.Cooler(f)
