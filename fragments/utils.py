@@ -235,18 +235,24 @@ def get_cooler(f, zoomout_level=None):
     c = None
 
     try:
-        resolutions = [int(x) for x in f['resolutions'].keys()]
-        zoomout_level = min(resolutions) if zoomout_level is None else zoomout_level
         # Cooler v2
         # In this case `zoomout_level` is the resolution
         # See fragments/views.py line 431
-        return cooler.Cooler(f['resolutions/{}'.format(zoomout_level)])
+
+        resolutions = [int(x) for x in f['resolutions'].keys()]
+        resolution = min(resolutions) if zoomout_level is None else zoomout_level
+
+        # Get the closest zoomlevel
+        resolution = resolutions[np.argsort([abs(r - resolution) for r in resolutions])[0]]
+
+        return cooler.Cooler(f['resolutions/{}'.format(resolution)])
     except:
         pass
 
+
     try:
-        zoomout_level = 0 if zoomout_level is None else zoomout_level
         # v1
+        zoomout_level = 0 if zoomout_level is None else zoomout_level
         zoom_levels = np.array(list(f.keys()), dtype=int)
 
         max_zoom = np.max(zoom_levels)
@@ -1110,10 +1116,14 @@ def get_frag(
 
     try:
         offset1 = offsets[chrom1]
-        offset2 = offsets[chrom2]
     except KeyError:
         # One more try before we will fail miserably
         offset1 = offsets['chr{}'.format(chrom1)]
+
+    try:
+        offset2 = offsets[chrom2]
+    except KeyError:
+        # One more try before we will fail miserably
         offset2 = offsets['chr{}'.format(chrom2)]
 
     start_bin1 = offset1 + int(round(float(start1) / resolution))
