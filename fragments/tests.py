@@ -108,8 +108,6 @@ class FragmentsTest(dt.TestCase):
 
             ret = json.loads(str(response.content, encoding='utf8'))
 
-            print("response.status_code", response.status_code)
-
             self.assertEqual(response.status_code, 400)
             self.assertTrue('error' in ret)
             self.assertTrue('error_message' in ret)
