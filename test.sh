@@ -16,9 +16,9 @@ HITILE=wgEncodeCaltechRnaSeqHuvecR1x75dTh1014IlnaPlusSignalRep2.hitile
 
 FILES=$(cat <<END
 $COOLER
+dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.mcoolv2
 $HITILE
 Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool
-Dixon2012-J1-NcoI-R1-filtered.100kb.mcoolv2
 gene_annotations.short.db
 cnv_short.hibed
 arrowhead_domains_short.txt.multires.db
