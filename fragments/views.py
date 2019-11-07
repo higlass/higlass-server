@@ -254,7 +254,6 @@ def get_fragments_by_loci(request):
     loci_lists = {}
     loci_ids = []
     try:
-        print('len loci', len(loci))
         for locus in loci:
             tileset_file = ''
 
@@ -307,10 +306,14 @@ def get_fragments_by_loci(request):
             out_dim = inset_dim | dims
 
             # Make sure out dim (in pixel) is not too large
-            if is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM:
-                raise SnippetTooLarge()
-            if not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM:
-                raise SnippetTooLarge()
+            if (
+                (is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM) or
+                (not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM)
+            ):
+                return JsonResponse({
+                    'error': 'Snippet too large',
+                    'error_message': str(SnippetTooLarge())
+                }, status=400)
 
             if tileset_file not in loci_lists:
                 loci_lists[tileset_file] = {}
