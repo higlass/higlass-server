@@ -101,7 +101,7 @@ class FragmentsTest(dt.TestCase):
             ]
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?dims=1000',
+                '/api/v1/fragments_by_loci/?dims=1025',
                 json.dumps(data),
                 content_type="application/json"
             )
