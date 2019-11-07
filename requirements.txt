@@ -22,5 +22,5 @@ slugid==2.0.0
 bumpversion==0.5.3
 redis==2.10.5
 clodius==0.11.3
-simple-httpfs>=0.1.3
+simple-httpfs==0.2.0
 pyppeteer>=0.0.25
