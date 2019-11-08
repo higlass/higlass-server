@@ -1,3 +1,7 @@
+v1.13.0
+
+- Add support from cooler v2 files for the fragments API
+
 v1.12.0
 
 - Added support for BAM files
