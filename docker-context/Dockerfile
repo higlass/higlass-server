@@ -52,6 +52,8 @@ ENV HIGLASS_SERVER_BASE_DIR /data
 VOLUME /data
 VOLUME /tmp
 
+COPY config.test.json /data/config.json
+
 ARG WORKERS=2
 ENV WORKERS ${WORKERS}
 RUN echo "WORKERS: $WORKERS"
