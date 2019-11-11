@@ -250,7 +250,7 @@ def get_fragments_by_loci(request):
     ts_cache = {}
     mat_idx = None
 
-    i = 0
+    total_valid_loci = 0
     loci_lists = {}
     loci_ids = []
     try:
@@ -301,15 +301,19 @@ def get_fragments_by_loci(request):
                     len(locus) >= zoom_level_idx + 2 and
                     locus[zoom_level_idx + 1]
                 )
-                else 0
+                else None
             )
-            out_dim = inset_dim | dims
+            out_dim = dims if inset_dim is None else inset_dim
 
             # Make sure out dim (in pixel) is not too large
-            if is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM:
-                raise SnippetTooLarge()
-            if not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM:
-                raise SnippetTooLarge()
+            if (
+                (is_cool and out_dim > hss.SNIPPET_MAT_MAX_OUT_DIM) or
+                (not is_cool and out_dim > hss.SNIPPET_IMG_MAX_OUT_DIM)
+            ):
+                return JsonResponse({
+                    'error': 'Snippet too large',
+                    'error_message': str(SnippetTooLarge())
+                }, status=400)
 
             if tileset_file not in loci_lists:
                 loci_lists[tileset_file] = {}
@@ -368,7 +372,7 @@ def get_fragments_by_loci(request):
             locus_id = '.'.join(map(str, locus))
 
             loci_lists[tileset_file][zoomout_level].append(
-                locus[0:tileset_idx] + [i, inset_dim, locus_id]
+                locus[0:tileset_idx] + [total_valid_loci, inset_dim, locus_id]
             )
             loci_ids.append(locus_id)
 
@@ -389,7 +393,7 @@ def get_fragments_by_loci(request):
                     )
                 }, status=400)
 
-            i += 1
+            total_valid_loci += 1
 
     except Exception as e:
         return JsonResponse({
@@ -427,8 +431,8 @@ def get_fragments_by_loci(request):
         except:
             pass
 
-    matrices = [None] * i
-    data_types = [None] * i
+    matrices = [None] * total_valid_loci
+    data_types = [None] * total_valid_loci
     try:
         for dataset in loci_lists:
             for zoomout_level in loci_lists[dataset]:
