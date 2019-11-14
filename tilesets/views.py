@@ -477,8 +477,7 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
-        tileset = tm.Tileset.objects.get(uuid=tileset_uuid)
-                    
+
         try:
             rdb.set(tile_id, pickle.dumps(tile_value))
         except Exception as ex:
