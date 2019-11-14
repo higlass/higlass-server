@@ -961,7 +961,7 @@ class CoolerTest(dt.TestCase):
 
         upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
                            'rb')
-        # x = upload_file.read()
+        x = upload_file.read()
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name,
                 upload_file.read()),
