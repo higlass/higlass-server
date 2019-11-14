@@ -560,8 +560,8 @@ class TilesetModelTest(dt.TestCase):
         )
         upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
         self.cooler = tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(upload_file.name,
-            upload_file.read()),
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()),
             filetype='cooler',
             owner=self.user1,
             uuid='x1x'
@@ -569,6 +569,25 @@ class TilesetModelTest(dt.TestCase):
 
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
+
+    def test_destroy_deletes_file(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.multires.cool', 'rb')
+        ts = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()),
+            filetype='cooler',
+            owner=self.user1,
+            uuid='x2x'
+        )
+        filepath = op.join(hss.MEDIA_ROOT, ts.datafile.name)
+        self.assertTrue(op.exists(filepath))
+
+        ts.delete()
+        self.assertFalse(op.exists(filepath))
+
 
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):

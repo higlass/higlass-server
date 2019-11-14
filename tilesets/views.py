@@ -774,12 +774,14 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             return JsonResponse({'error': 'The uuid parameter is undefined'}, status=400)
         try:
             instance = self.get_object()
-            self.perform_destroy(instance)
-            filename = instance.datafile.name
-            filepath = op.join(hss.MEDIA_ROOT, filename)
+
+            filepath = op.join(hss.MEDIA_ROOT, instance.datafile.name)
             if not op.isfile(filepath):
                 return JsonResponse({'error': 'Unable to locate tileset media file for deletion: {}'.format(filepath)}, status=500)
-            os.remove(filepath)
+
+            # model's post-destroy handler does the actual file deletion
+            self.perform_destroy(instance)
+
         except dh.Http404:
             return JsonResponse({'error': 'Unable to locate tileset instance for uuid: {}'.format(uuid)}, status=404)
         except dbm.ProtectedError as dbpe:
