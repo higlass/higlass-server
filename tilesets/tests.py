@@ -924,7 +924,7 @@ class BigBedTest(dt.TestCase):
         )
 
         upload_file = open('data/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb', 'rb')
-        x = upload_file.read()
+
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
             filetype='bigbed',
@@ -977,7 +977,7 @@ class CoolerTest(dt.TestCase):
 
         upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
                            'rb')
-        x = upload_file.read()
+
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name,
                 upload_file.read()),
