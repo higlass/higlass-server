@@ -86,7 +86,7 @@ def ingest(filename=None, datatype=None, filetype=None, coordSystem='', coordSys
         if indexfile:
             indexfile.name = op.split(indexfile.name)[1]
 
-    if filetype.lower() == 'bigwig':
+    if filetype.lower() == 'bigwig' or filetype.lower() == 'bigbed':
         coordSystem = check_for_chromsizes(filename, coordSystem)
 
     try:

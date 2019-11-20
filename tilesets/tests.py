@@ -54,7 +54,6 @@ def media_file_exists(filename):
     '''
     return False if not op.exists(media_file(filename)) else True
 
-
 def add_file(filename, sub_dir='uploads/data'):
     '''
     Add a file to the media directory and return its
@@ -221,6 +220,7 @@ def add_file(filename, sub_dir='uploads/data'):
                 '/api/v1/projects/{}/'.format(project["uuid"]),
         '''
 
+
 class IngestTests(dt.TestCase):
 
     def test_ingest_with_project(self):
@@ -329,6 +329,33 @@ class IngestTests(dt.TestCase):
         assert(tile['min_value'] == 'NaN')
 
         #print("tile:", tile)
+        
+    def test_ingest_bigbed(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )  
+        upload_file = open('data/chromSizes_hg38_bbtest.tsv', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            owner=self.user1,
+            coordSystem="hg38_bb",
+        )
+        
+        dcm.call_command('ingest_tileset',
+            filename = 'data/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb',
+            filetype='bigbed', datatype='gene-bed12-annotation',
+            uid='a',
+            coordSystem='hg38_bb')
+            
+        ret = self.client.get('/api/v1/tileset_info/?d=a')
+        tileset_info = json.loads(ret.content.decode('utf-8'))
+        assert(tileset_info['a']['chromsizes'][0][0] == 'chr1')        
+        assert(len(tileset_info['a']['chromsizes']) == 24)
+        assert(tileset_info['a']['chromsizes'][23][0] == 'chrY')
 
 
 class TileTests(dt.TestCase):
@@ -348,6 +375,7 @@ class TileTests(dt.TestCase):
         result = tgt.partition_by_adjacent_tiles(["a.5.0", "a.5.1", "a.5.2"])
 
         assert(len(result) == 1)
+
 
 class BamTests(dt.TestCase):
     def test_get_tile(self):
@@ -469,6 +497,7 @@ class MultivecTests(dt.TestCase):
         r = base64.decodestring(content['a.11.0']['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
+
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):
         self.user1 = dcam.User.objects.create_user(
@@ -570,6 +599,7 @@ class TilesetModelTest(dt.TestCase):
         cooler_string = str(self.cooler)
         self.assertTrue(cooler_string.find("name") > 0)
 
+
 class UnknownTilesetTypeTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -592,6 +622,7 @@ class UnknownTilesetTypeTest(dt.TestCase):
 
         # 32 bit:  349528
         # 16 bit:  174764
+
 
 class TilesizeTest(dt.TestCase):
     def setUp(self):
@@ -674,6 +705,7 @@ class ViewConfTest(dt.TestCase):
                 content_type="application/json"
             )
             assert(ret.status_code == 400)
+
 
 class PermissionsTest(dt.TestCase):
     def setUp(self):
@@ -885,6 +917,58 @@ class BigWigTest(dt.TestCase):
         ret = json.loads(c1.get('/api/v1/tiles/?d=bw.22.4194303').content.decode('utf-8'))
 
 
+class BigBedTest(dt.TestCase):
+    def setUp(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+
+        upload_file = open('data/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb', 'rb')
+
+        self.tileset = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype='bigbed',
+            datatype='gene-bed12-annotation',
+            owner=self.user1,
+            coordSystem='hg38_bb',
+            coordSystem2='',
+            name="masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb",
+            uuid='bb')
+
+    def test_get_tileset_info(self):
+        c1 = dt.Client()
+        try:
+            ret = json.loads(c1.get('/api/v1/tileset_info/?d=bb').content.decode('utf-8'))
+            assert(len(ret['bb']['chromsizes']) == 24)
+        except OSError:
+            pass
+
+    def test_get_tiles(self):
+        '''
+        Try to retrieve some tiles from this file
+        '''
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+
+        # make sure that the dataset has been added
+        try:
+            ret = json.loads(c1.get('/api/v1/tilesets/?d=bb').content.decode('utf-8'))
+            assert(ret['count'] == 1)
+        except OSError:
+            pass
+
+        # try to retrieve the top level tile
+        # ret = json.loads(c1.get('/api/v1/tiles/?d=bw.0.0').content.decode('utf-8'))
+        # print("ret:", ret)
+
+        # try to retrieve a tile from within chr1
+        try:
+            ret = json.loads(c1.get('/api/v1/tiles/?d=bb.14.13').content.decode('utf-8'))
+            assert(len(ret) == 1)
+        except OSError:
+            pass
+
+
 class CoolerTest(dt.TestCase):
     def setUp(self):
         self.user1 = dcam.User.objects.create_user(
@@ -893,7 +977,7 @@ class CoolerTest(dt.TestCase):
 
         upload_file = open('data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool',
                            'rb')
-        # x = upload_file.read()
+
         self.tileset = tm.Tileset.objects.create(
             datafile=dcfu.SimpleUploadedFile(upload_file.name,
                 upload_file.read()),
@@ -1171,6 +1255,7 @@ class CoolerTest(dt.TestCase):
         ret = self.client.get('/api/v1/tiles/?d=md.7.127.127')
         content = json.loads(ret.content.decode('utf-8'))
 
+
 class SuggestionsTest(dt.TestCase):
     '''
     Test gene suggestions
@@ -1206,6 +1291,7 @@ class SuggestionsTest(dt.TestCase):
 
         self.assertGreater(len(suggestions), 0)
         self.assertGreater(suggestions[0]['score'], suggestions[1]['score'])
+
 
 class FileUploadTest(dt.TestCase):
     '''
@@ -1465,6 +1551,7 @@ class BedDBTest(dt.TestCase):
             assert('uid' in x)
             assert('importance' in x)
             assert('fields' in x)
+
 
 class HiBedTest(dt.TestCase):
     '''

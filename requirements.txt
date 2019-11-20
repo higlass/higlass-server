@@ -20,6 +20,7 @@ requests==2.20.0
 scikit-learn==0.19.2
 slugid==2.0.0
 redis==2.10.5
-clodius==0.11.3
+clodius==0.12.0
 simple-httpfs==0.2.0
 pyppeteer==0.0.25
+

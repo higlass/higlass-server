@@ -28,6 +28,7 @@ import tilesets.generate_tiles as tgt
 import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
+import clodius.tiles.bigbed as hgbb
 import clodius.tiles.multivec as hgmu
 import clodius.tiles.time_interval as hgti
 import clodius.tiles.geo as hggo
@@ -187,6 +188,8 @@ def sizes(request):
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
             data = hgbi.chromsizes(chrom_sizes.datafile.path)
+        elif tgt.get_tileset_filetype(chrom_sizes) == 'bigbed':
+            data = hgbb.chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
             data = tcs.get_cooler_chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'chromsizes-tsv':
@@ -474,6 +477,7 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
+
         try:
             rdb.set(tile_id, pickle.dumps(tile_value))
         except Exception as ex:
@@ -580,6 +584,16 @@ def tileset_info(request):
                 "max_zoom": int(tileset_info['max_zoom'])
             }
         elif tileset_object.filetype == 'bigwig':
+            chromsizes = tgt.get_chromsizes(tileset_object)
+            tsinfo = hgbi.tileset_info(
+                    tileset_object.datafile.path,
+                    chromsizes
+                )
+            #print('tsinfo:', tsinfo)
+            if 'chromsizes' in tsinfo:
+                tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
+            tileset_infos[tileset_uuid] = tsinfo
+        elif tileset_object.filetype == 'bigbed':
             chromsizes = tgt.get_chromsizes(tileset_object)
             tsinfo = hgbi.tileset_info(
                     tileset_object.datafile.path,
