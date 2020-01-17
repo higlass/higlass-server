@@ -35,6 +35,7 @@ To install HiGlass Server manually follow the steps below. Note we strongly reco
 git clone https://github.com/higlass/higlass-server && cd higlass-server
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
+python manage.py migrate
 python manage.py runserver
 ```
 
