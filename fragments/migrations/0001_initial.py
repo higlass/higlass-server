@@ -10,32 +10,53 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='ChromInfo',
+            name="ChromInfo",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('uuid', models.CharField(default=slugid.slugid.nice, max_length=100, unique=True)),
-                ('datafile', models.TextField()),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                (
+                    "uuid",
+                    models.CharField(
+                        default=slugid.slugid.nice, max_length=100, unique=True
+                    ),
+                ),
+                ("datafile", models.TextField()),
             ],
-            options={
-                'ordering': ('created',),
-            },
+            options={"ordering": ("created",)},
         ),
         migrations.CreateModel(
-            name='ChromSizes',
+            name="ChromSizes",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('uuid', models.CharField(default=slugid.slugid.nice, max_length=100, unique=True)),
-                ('datafile', models.TextField()),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                (
+                    "uuid",
+                    models.CharField(
+                        default=slugid.slugid.nice, max_length=100, unique=True
+                    ),
+                ),
+                ("datafile", models.TextField()),
             ],
-            options={
-                'ordering': ('created',),
-            },
+            options={"ordering": ("created",)},
         ),
     ]

@@ -5,16 +5,9 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0007_auto_20181127_0254'),
-    ]
+    dependencies = [("tilesets", "0007_auto_20181127_0254")]
 
     operations = [
-        migrations.RemoveField(
-            model_name='tileset',
-            name='tags',
-        ),
-        migrations.DeleteModel(
-            name='Tag',
-        ),
+        migrations.RemoveField(model_name="tileset", name="tags"),
+        migrations.DeleteModel(name="Tag"),
     ]

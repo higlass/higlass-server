@@ -21,9 +21,7 @@ class EmptyRDB:
 def getRdb():
     if hss.REDIS_HOST is not None:
         try:
-            rdb = redis.Redis(
-                host=hss.REDIS_HOST,
-                port=hss.REDIS_PORT)
+            rdb = redis.Redis(host=hss.REDIS_HOST, port=hss.REDIS_PORT)
 
             # Test server connection
             rdb.ping()

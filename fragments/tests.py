@@ -10,35 +10,25 @@ from urllib.parse import urlencode
 
 class FragmentsTest(dt.TestCase):
     def setUp(self):
-        self.user1 = dcam.User.objects.create_user(
-            username='user1', password='pass'
-        )
+        self.user1 = dcam.User.objects.create_user(username="user1", password="pass")
         upload_file = open(
-            (
-                'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb'
-                '.multires.cool'
-            ),
-            'rb'
+            ("data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb" ".multires.cool"),
+            "rb",
         )
         tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(
-                upload_file.name, upload_file.read()
-            ),
-            filetype='cooler',
-            uuid='cool-v1',
-            owner=self.user1
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype="cooler",
+            uuid="cool-v1",
+            owner=self.user1,
         )
         upload_file = open(
-            'data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.mcoolv2',
-            'rb'
+            "data/dixon2012-h1hesc-hindiii-allreps-filtered.1000kb.mcoolv2", "rb"
         )
         tm.Tileset.objects.create(
-            datafile=dcfu.SimpleUploadedFile(
-                upload_file.name, upload_file.read()
-            ),
-            filetype='cooler',
-            uuid='cool-v2',
-            owner=self.user1
+            datafile=dcfu.SimpleUploadedFile(upload_file.name, upload_file.read()),
+            filetype="cooler",
+            uuid="cool-v2",
+            owner=self.user1,
         )
 
     def test_get_fragments(self):
@@ -47,30 +37,35 @@ class FragmentsTest(dt.TestCase):
             data = {
                 "loci": [
                     [
-                        "chr1", 1000000000, 2000000000,
-                        "1", 1000000000, 2000000000, f"cool-v{version}",
-                        zoom_res
+                        "chr1",
+                        1000000000,
+                        2000000000,
+                        "1",
+                        1000000000,
+                        2000000000,
+                        f"cool-v{version}",
+                        zoom_res,
                     ]
                 ]
             }
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?precision=2&dims=22',
+                "/api/v1/fragments_by_loci/?precision=2&dims=22",
                 json.dumps(data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
             self.assertEqual(response.status_code, 200)
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            self.assertEqual(len(ret['fragments']), 1)
+            self.assertEqual(len(ret["fragments"]), 1)
 
-            self.assertEqual(len(ret['fragments'][0]), 22)
+            self.assertEqual(len(ret["fragments"][0]), 22)
 
-            self.assertEqual(len(ret['fragments'][0][0]), 22)
+            self.assertEqual(len(ret["fragments"][0][0]), 22)
 
     def test_string_request_body(self):
         data = (
@@ -79,105 +74,102 @@ class FragmentsTest(dt.TestCase):
         )
 
         response = self.client.post(
-            '/api/v1/fragments_by_loci/?precision=2&dims=22',
+            "/api/v1/fragments_by_loci/?precision=2&dims=22",
             json.dumps(data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
-        ret = json.loads(str(response.content, encoding='utf8'))
+        ret = json.loads(str(response.content, encoding="utf8"))
 
         self.assertEqual(response.status_code, 400)
-        self.assertTrue('error' in ret)
-        self.assertTrue('error_message' in ret)
+        self.assertTrue("error" in ret)
+        self.assertTrue("error_message" in ret)
 
     def test_too_large_request(self):
         for version in [1, 2]:
             data = [
                 [
-                    "1", 1000000000, 2000000000,
-                    "1", 1000000000, 2000000000,
-                    f"cool-v{version}", 0
+                    "1",
+                    1000000000,
+                    2000000000,
+                    "1",
+                    1000000000,
+                    2000000000,
+                    f"cool-v{version}",
+                    0,
                 ]
             ]
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?dims=1025',
+                "/api/v1/fragments_by_loci/?dims=1025",
                 json.dumps(data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
             self.assertEqual(response.status_code, 400)
-            self.assertTrue('error' in ret)
-            self.assertTrue('error_message' in ret)
+            self.assertTrue("error" in ret)
+            self.assertTrue("error_message" in ret)
 
     def test_both_body_data_types(self):
         for version in [1, 2]:
             loci = [
                 [
-                    "chr1", 1000000000, 2000000000,
-                    "1", 1000000000, 2000000000,
-                    f"cool-v{version}", 0
+                    "chr1",
+                    1000000000,
+                    2000000000,
+                    "1",
+                    1000000000,
+                    2000000000,
+                    f"cool-v{version}",
+                    0,
                 ]
             ]
 
-            obj = {
-                "loci": loci
-            }
+            obj = {"loci": loci}
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?precision=2&dims=22',
+                "/api/v1/fragments_by_loci/?precision=2&dims=22",
                 json.dumps(obj),
-                content_type="application/json"
+                content_type="application/json",
             )
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            mat1 = np.array(ret['fragments'][0], float)
+            mat1 = np.array(ret["fragments"][0], float)
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?precision=2&dims=22',
+                "/api/v1/fragments_by_loci/?precision=2&dims=22",
                 json.dumps(loci),
-                content_type="application/json"
+                content_type="application/json",
             )
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            mat2 = np.array(ret['fragments'][0], float)
+            mat2 = np.array(ret["fragments"][0], float)
 
             self.assertTrue(np.array_equal(mat1, mat2))
 
     def test_negative_start_fragments(self):
         for version in [1, 2]:
-            data = [
-                [
-                    "1",
-                    0,
-                    1,
-                    "2",
-                    0,
-                    1,
-                    f"cool-v{version}",
-                    20
-                ]
-            ]
+            data = [["1", 0, 1, "2", 0, 1, f"cool-v{version}", 20]]
 
             dims = 60
             dims_h = (dims // 2) - 1
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/'
-                '?precision=2&dims={}&no-balance=1'.format(dims),
+                "/api/v1/fragments_by_loci/"
+                "?precision=2&dims={}&no-balance=1".format(dims),
                 json.dumps(data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
             self.assertEqual(response.status_code, 200)
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            mat = np.array(ret['fragments'][0], float)
+            mat = np.array(ret["fragments"][0], float)
 
             # Upper half should be empty
             self.assertTrue(np.sum(mat[0:dims_h]) == 0)
@@ -189,92 +181,66 @@ class FragmentsTest(dt.TestCase):
         for version in [1, 2]:
             data = {
                 "loci": [
-                    [
-                        "chr1",
-                        0,
-                        2000000000,
-                        "1",
-                        0,
-                        2000000000,
-                        f"cool-v{version}",
-                        0
-                    ]
+                    ["chr1", 0, 2000000000, "1", 0, 2000000000, f"cool-v{version}", 0]
                 ]
             }
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?precision=2&dims=44',
+                "/api/v1/fragments_by_loci/?precision=2&dims=44",
                 json.dumps(data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
             self.assertEqual(response.status_code, 200)
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            self.assertEqual(len(ret['fragments']), 1)
+            self.assertEqual(len(ret["fragments"]), 1)
 
-            self.assertEqual(len(ret['fragments'][0]), 44)
+            self.assertEqual(len(ret["fragments"][0]), 44)
 
-            self.assertEqual(len(ret['fragments'][0][0]), 44)
+            self.assertEqual(len(ret["fragments"][0][0]), 44)
 
     def test_domains_normalizing(self):
         for version in [1, 2]:
-            data = [
-                [
-                    "chr2",
-                    0,
-                    500000000,
-                    "2",
-                    0,
-                    500000000,
-                    f"cool-v{version}",
-                    0
-                ]
-            ]
+            data = [["chr2", 0, 500000000, "2", 0, 500000000, f"cool-v{version}", 0]]
 
             params = {
-                'dims': 60,
-                'precision': 3,
-                'padding': 2,
-                'ignore-diags': 2,
-                'percentile': 50
+                "dims": 60,
+                "precision": 3,
+                "padding": 2,
+                "ignore-diags": 2,
+                "percentile": 50,
             }
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?{}'.format(urlencode(params)),
+                "/api/v1/fragments_by_loci/?{}".format(urlencode(params)),
                 json.dumps(data),
-                content_type='application/json'
+                content_type="application/json",
             )
 
             self.assertEqual(response.status_code, 200)
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            mat = np.array(ret['fragments'][0], float)
+            mat = np.array(ret["fragments"][0], float)
 
             # Make sure matrix is not empty
             self.assertTrue(np.sum(mat) > 0)
 
             # Check that the diagonal is 1 (it's being ignored for normalizing
             # the data but set to 1 to visually make more sense)
-            diag = np.diag_indices(params['dims'])
-            self.assertEqual(np.sum(mat[diag]), params['dims'])
+            diag = np.diag_indices(params["dims"])
+            self.assertEqual(np.sum(mat[diag]), params["dims"])
             self.assertEqual(
-                np.sum(
-                    mat[((diag[0] - 1)[1:], diag[1][1:])]
-                ),
-                params['dims'] - 1
+                np.sum(mat[((diag[0] - 1)[1:], diag[1][1:])]), params["dims"] - 1
             )
             self.assertEqual(
-                np.sum(
-                    mat[((diag[0] + 1)[:-1], diag[1][:-1])]
-                ),
-                params['dims'] - 1
+                np.sum(mat[((diag[0] + 1)[:-1], diag[1][:-1])]), params["dims"] - 1
             )
 
             # Check precision of matrix
@@ -286,50 +252,50 @@ class FragmentsTest(dt.TestCase):
 
             # Get two more un-normalized matrices
             params1 = {
-                'dims': 60,
-                'precision': 3,
-                'padding': 2,
-                'ignore-diags': 2,
-                'percentile': 50.0,
-                'no-normalize': True
+                "dims": 60,
+                "precision": 3,
+                "padding": 2,
+                "ignore-diags": 2,
+                "percentile": 50.0,
+                "no-normalize": True,
             }
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?{}'.format(urlencode(params1)),
+                "/api/v1/fragments_by_loci/?{}".format(urlencode(params1)),
                 json.dumps(data),
-                content_type='application/json'
+                content_type="application/json",
             )
 
             self.assertEqual(response.status_code, 200)
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            mat1 = np.array(ret['fragments'][0], float)
+            mat1 = np.array(ret["fragments"][0], float)
 
             params2 = {
-                'dims': 60,
-                'precision': 3,
-                'padding': 2,
-                'ignore-diags': 2,
-                'percentile': 100.0,
-                'no-normalize': True
+                "dims": 60,
+                "precision": 3,
+                "padding": 2,
+                "ignore-diags": 2,
+                "percentile": 100.0,
+                "no-normalize": True,
             }
 
             response = self.client.post(
-                '/api/v1/fragments_by_loci/?{}'.format(urlencode(params2)),
+                "/api/v1/fragments_by_loci/?{}".format(urlencode(params2)),
                 json.dumps(data),
-                content_type='application/json'
+                content_type="application/json",
             )
 
             self.assertEqual(response.status_code, 200)
 
-            ret = json.loads(str(response.content, encoding='utf8'))
+            ret = json.loads(str(response.content, encoding="utf8"))
 
-            self.assertTrue('fragments' in ret)
+            self.assertTrue("fragments" in ret)
 
-            mat2 = np.array(ret['fragments'][0], float)
+            mat2 = np.array(ret["fragments"][0], float)
 
             # Make sure matrix is not empty
             self.assertTrue(np.sum(mat2) > 0)
@@ -338,9 +304,9 @@ class FragmentsTest(dt.TestCase):
 
             self.assertTrue(max2 > max1)
 
-            percentile = np.percentile(mat2, params['percentile'])
+            percentile = np.percentile(mat2, params["percentile"])
 
             self.assertEqual(
                 np.rint(max1 * 10000000) / 10000000,
-                np.rint(percentile * 10000000) / 10000000
+                np.rint(percentile * 10000000) / 10000000,
             )
