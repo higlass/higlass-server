@@ -5,19 +5,17 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0011_auto_20181228_2252'),
-    ]
+    dependencies = [("tilesets", "0011_auto_20181228_2252")]
 
     operations = [
         migrations.AddField(
-            model_name='tileset',
-            name='indexfile',
-            field=models.FileField(default=None, null=True, upload_to='uploads'),
+            model_name="tileset",
+            name="indexfile",
+            field=models.FileField(default=None, null=True, upload_to="uploads"),
         ),
         migrations.AlterField(
-            model_name='tileset',
-            name='coordSystem2',
-            field=models.TextField(blank=True, default=''),
+            model_name="tileset",
+            name="coordSystem2",
+            field=models.TextField(blank=True, default=""),
         ),
     ]

@@ -5,14 +5,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0009_tileset_temporary'),
-    ]
+    dependencies = [("tilesets", "0009_tileset_temporary")]
 
     operations = [
         migrations.AlterField(
-            model_name='tileset',
-            name='datatype',
-            field=models.TextField(blank=True, default='unknown'),
-        ),
+            model_name="tileset",
+            name="datatype",
+            field=models.TextField(blank=True, default="unknown"),
+        )
     ]

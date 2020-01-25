@@ -5,19 +5,19 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0003_viewconf_higlassversion'),
-    ]
+    dependencies = [("tilesets", "0003_viewconf_higlassversion")]
 
     operations = [
         migrations.AlterField(
-            model_name='tileset',
-            name='uuid',
-            field=models.CharField(default='asXQG1k1Rwe1sqzkuvEtvw', max_length=100, unique=True),
+            model_name="tileset",
+            name="uuid",
+            field=models.CharField(
+                default="asXQG1k1Rwe1sqzkuvEtvw", max_length=100, unique=True
+            ),
         ),
         migrations.AlterField(
-            model_name='viewconf',
-            name='higlassVersion',
-            field=models.CharField(default='', max_length=16),
+            model_name="viewconf",
+            name="higlassVersion",
+            field=models.CharField(default="", max_length=16),
         ),
     ]

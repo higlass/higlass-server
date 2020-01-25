@@ -12,13 +12,18 @@ import tilesets.models as tm
 import higlass_server.settings as hss
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpRequest, HttpResponse, \
-    HttpResponseNotFound, HttpResponseBadRequest
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseNotFound,
+    HttpResponseBadRequest,
+)
 
 logger = logging.getLogger(__name__)
 
+
 def link(request):
-    '''Generate a small page containing the metadata necessary for
+    """Generate a small page containing the metadata necessary for
     link unfurling by Slack or Twitter. The generated page will
     point to a screenshot of the rendered viewconf. The page will automatically
     redirect to the rendering so that if anybody clicks on this link
@@ -30,24 +35,24 @@ def link(request):
         request: The incoming http request.
     Returns:
         A response containing an html page with metadata
-    '''
+    """
     # the uuid of the viewconf to render
-    uuid = request.GET.get('d')
+    uuid = request.GET.get("d")
 
     if not uuid:
         # if there's no uuid specified, return an empty page
-        return HttpResponseNotFound('<h1>No uuid specified</h1>')
+        return HttpResponseNotFound("<h1>No uuid specified</h1>")
 
     try:
         obj = tm.ViewConf.objects.get(uuid=uuid)
     except ObjectDoesNotExist:
-        return HttpResponseNotFound('<h1>No such uuid</h1>')
+        return HttpResponseNotFound("<h1>No such uuid</h1>")
 
     # the url for the thumnbail
-    thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+    thumb_url = f"{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}"
 
     # the page to redirect to for interactive explorations
-    redirect_url=f'{request.scheme}://{request.get_host()}/app/?config={uuid}'
+    redirect_url = f"{request.scheme}://{request.get_host()}/app/?config={uuid}"
 
     # Simple html page. Not a template just for simplicity's sake.
     # If it becomes more complex, we can make it into a template.
@@ -79,8 +84,9 @@ def link(request):
 
     return HttpResponse(html)
 
+
 def thumbnail(request: HttpRequest):
-    '''Retrieve a thumbnail for the viewconf specified by the d=
+    """Retrieve a thumbnail for the viewconf specified by the d=
     parameter.
 
     Args:
@@ -89,17 +95,17 @@ def thumbnail(request: HttpRequest):
         A response of either 404 if there's no uuid provided or an
         image containing a screenshot of the rendered viewconf with
         that uuid.
-    '''
-    uuid = request.GET.get('d')
+    """
+    uuid = request.GET.get("d")
 
-    base_url = f'{request.scheme}://localhost/app/'
+    base_url = f"{request.scheme}://localhost/app/"
 
     if not uuid:
-        return HttpResponseNotFound('<h1>No uuid specified</h1>')
+        return HttpResponseNotFound("<h1>No uuid specified</h1>")
 
-    if '.' in uuid or '/' in uuid:
+    if "." in uuid or "/" in uuid:
         # no funny business
-        logger.warning('uuid contains . or /: %s', uuid)
+        logger.warning("uuid contains . or /: %s", uuid)
         return HttpResponseBadRequest("uuid can't contain . or /")
 
     if not op.exists(hss.THUMBNAILS_ROOT):
@@ -109,31 +115,23 @@ def thumbnail(request: HttpRequest):
     thumbnails_base = op.abspath(hss.THUMBNAILS_ROOT)
 
     if output_file.find(thumbnails_base) != 0:
-        logger.warning('Thumbnail file is not in thumbnail_base: %s uuid: %s',
-                     output_file, uuid)
-        return HttpResponseBadRequest('Strange path')
+        logger.warning(
+            "Thumbnail file is not in thumbnail_base: %s uuid: %s", output_file, uuid
+        )
+        return HttpResponseBadRequest("Strange path")
 
     if not op.exists(output_file):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(
-            screenshot(
-                base_url,
-                uuid,
-                output_file))
+        loop.run_until_complete(screenshot(base_url, uuid, output_file))
         loop.close()
 
-    with open(output_file, 'rb') as file:
-        return HttpResponse(
-            file.read(),
-            content_type="image/jpeg")
+    with open(output_file, "rb") as file:
+        return HttpResponse(file.read(), content_type="image/jpeg")
 
-async def screenshot(
-    base_url: str,
-    uuid: str,
-    output_file: str
-):
-    '''Take a screenshot of a rendered viewconf.
+
+async def screenshot(base_url: str, uuid: str, output_file: str):
+    """Take a screenshot of a rendered viewconf.
 
     Args:
         base_url: The url to use for rendering the viewconf
@@ -142,18 +140,16 @@ async def screenshot(
             the thumbnail.
     Returns:
         Nothing, just stores the screenshot at the given location.
-    '''
+    """
     browser = await launch(
         headless=True,
-        args=['--no-sandbox'],
+        args=["--no-sandbox"],
         handleSIGINT=False,
         handleSIGTERM=False,
-        handleSIGHUP=False
+        handleSIGHUP=False,
     )
-    url = f'{base_url}?config={uuid}'
+    url = f"{base_url}?config={uuid}"
     page = await browser.newPage()
-    await page.goto(url, {
-        'waitUntil': 'networkidle0',
-    })
-    await page.screenshot({'path': output_file})
+    await page.goto(url, {"waitUntil": "networkidle0"})
+    await page.screenshot({"path": output_file})
     await browser.close()

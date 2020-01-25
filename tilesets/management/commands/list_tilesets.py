@@ -13,4 +13,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for tileset in tm.Tileset.objects.all():
-            print('tileset:', tileset)
+            print("tileset:", tileset)

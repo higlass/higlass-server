@@ -19,7 +19,7 @@ from django.conf import settings
 
 urlpatterns = [
     url(settings.ADMIN_URL, admin.site.urls),
-    url(r'^api/v1/', include('tilesets.urls')),
-    url(r'^api/v1/', include('fragments.urls')),
-    url(r'^', include('website.urls')),
+    url(r"^api/v1/", include("tilesets.urls")),
+    url(r"^api/v1/", include("fragments.urls")),
+    url(r"^", include("website.urls")),
 ]

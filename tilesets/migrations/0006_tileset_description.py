@@ -5,14 +5,10 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0005_auto_20181127_0239'),
-    ]
+    dependencies = [("tilesets", "0005_auto_20181127_0239")]
 
     operations = [
         migrations.AddField(
-            model_name='tileset',
-            name='description',
-            field=models.TextField(blank=True),
-        ),
+            model_name="tileset", name="description", field=models.TextField(blank=True)
+        )
     ]

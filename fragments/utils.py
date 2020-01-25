@@ -1,6 +1,4 @@
-from __future__ import (
-    absolute_import, division, print_function, unicode_literals
-)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import cooler
 import h5py
@@ -38,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Methods
 
+
 def grey_to_rgb(arr, to_rgba=False):
     if to_rgba:
         rgb = np.zeros(arr.shape + (4,))
@@ -46,8 +45,8 @@ def grey_to_rgb(arr, to_rgba=False):
         rgb = np.zeros(arr.shape + (3,))
 
     rgb[:, :, 0] = 255 - arr * 255
-    rgb[:, :, 1] = rgb[:,:,0]
-    rgb[:, :, 2] = rgb[:,:,0]
+    rgb[:, :, 1] = rgb[:, :, 0]
+    rgb[:, :, 2] = rgb[:, :, 0]
 
     return rgb
 
@@ -55,16 +54,16 @@ def grey_to_rgb(arr, to_rgba=False):
 def blob_to_zip(blobs, to_resp=False):
     b = BytesIO()
 
-    zf = ZipFile(b, 'w')
+    zf = ZipFile(b, "w")
 
     for blob in blobs:
-        zf.writestr(blob['name'], blob['bytes'])
+        zf.writestr(blob["name"], blob["bytes"])
 
     zf.close()
 
     if to_resp:
-        resp = HttpResponse(b.getvalue(), content_type='application/zip')
-        resp['Content-Disposition'] = 'attachment; filename=snippets.zip'
+        resp = HttpResponse(b.getvalue(), content_type="application/zip")
+        resp["Content-Disposition"] = "attachment; filename=snippets.zip"
 
         return resp
 
@@ -76,27 +75,24 @@ def np_to_png(arr, comp=5):
 
     # Add alpha values
     if arr.shape[2] == 3:
-        out = np.ones(
-            (sz[0], sz[1], sz[2] + 1)
-        )
+        out = np.ones((sz[0], sz[1], sz[2] + 1))
         out[:, :, 3] = 255
         out[:, :, 0:3] = arr
     else:
         out = arr
 
     return write_png(
-        np.flipud(out).astype('uint8').flatten('C').tobytes(),
-        sz[1],
-        sz[0],
-        comp
+        np.flipud(out).astype("uint8").flatten("C").tobytes(), sz[1], sz[0], comp
     )
 
 
 def png_pack(png_tag, data):
     chunk_head = png_tag + data
-    return (struct.pack("!I", len(data)) +
-            chunk_head +
-            struct.pack("!I", 0xFFFFFFFF & zlib.crc32(chunk_head)))
+    return (
+        struct.pack("!I", len(data))
+        + chunk_head
+        + struct.pack("!I", 0xFFFFFFFF & zlib.crc32(chunk_head))
+    )
 
 
 def write_png(buf, width, height, comp=9):
@@ -106,16 +102,19 @@ def write_png(buf, width, height, comp=9):
 
     # reverse the vertical line order and add null bytes at the start
     width_byte_4 = width * 4
-    raw_data = b''.join(
-        b'\x00' + buf[span:span + width_byte_4]
-        for span in np.arange((height - 1) * width_byte_4, -1, - width_byte_4)
+    raw_data = b"".join(
+        b"\x00" + buf[span : span + width_byte_4]
+        for span in np.arange((height - 1) * width_byte_4, -1, -width_byte_4)
     )
 
-    return b''.join([
-        b'\x89PNG\r\n\x1a\n',
-        png_pack(b'IHDR', struct.pack("!2I5B", width, height, 8, 6, 0, 0, 0)),
-        png_pack(b'IDAT', zlib.compress(raw_data, comp)),
-        png_pack(b'IEND', b'')])
+    return b"".join(
+        [
+            b"\x89PNG\r\n\x1a\n",
+            png_pack(b"IHDR", struct.pack("!2I5B", width, height, 8, 6, 0, 0, 0)),
+            png_pack(b"IDAT", zlib.compress(raw_data, comp)),
+            png_pack(b"IEND", b""),
+        ]
+    )
 
 
 def get_params(request, param_def):
@@ -139,25 +138,20 @@ def get_params(request, param_def):
         dict -- Dictionary of parameter name<>values pairs
     """
     p = {}
-    dtype = {
-        'int': int,
-        'float': float,
-        'bool': bool,
-        'str': str,
-    }
+    dtype = {"int": int, "float": float, "bool": bool, "str": str}
 
     for key in param_def.keys():
 
-        p[key] = request.GET.get(param_def[key]['short'])
+        p[key] = request.GET.get(param_def[key]["short"])
         p[key] = p[key] if p[key] else request.GET.get(key)
-        p[key] = p[key] if p[key] else param_def[key]['default']
-        p[key] = dtype[param_def[key]['dtype']](p[key])
+        p[key] = p[key] if p[key] else param_def[key]["default"]
+        p[key] = dtype[param_def[key]["dtype"]](p[key])
 
     return p
 
 
 def get_chrom_names_cumul_len(c):
-    '''
+    """
     Get the chromosome names and cumulative lengths:
 
     Args:
@@ -167,7 +161,7 @@ def get_chrom_names_cumul_len(c):
     Return:
 
     (names, sizes, lengths) -> (list(string), dict, np.array(int))
-    '''
+    """
 
     chrom_sizes = {}
     chrom_cum_lengths = [0]
@@ -190,43 +184,41 @@ def get_chrom_names_cumul_len(c):
 
 
 def get_intra_chr_loops_from_looplist(loop_list, chr=0):
-    loops = pd.DataFrame.from_csv(loop_list, sep='\t', header=0)
+    loops = pd.DataFrame.from_csv(loop_list, sep="\t", header=0)
 
     s_chr = str(chr)
 
     if chr > 0:
-        loops = loops[loops['chr2'] == s_chr].loc[s_chr]
+        loops = loops[loops["chr2"] == s_chr].loc[s_chr]
 
     chrs = np.zeros((loops.shape[0], 2), dtype=object)
 
-    chrs[:, 0] = loops['chr2']
-    chrs[:, 1] = loops['chr2']
+    chrs[:, 0] = loops["chr2"]
+    chrs[:, 1] = loops["chr2"]
 
     return (loops.as_matrix()[:, [0, 1, 3, 4]], chrs)
 
 
 def rel_2_abs_loci(loci, chr_info):
-    '''
+    """
     chr_info[0] = chromosome names
     chr_info[1] = chromosome lengths
     chr_info[2] = cumulative lengths
     chr_info[3] = chromosome ids
-    '''
+    """
+
     def absolutize(chr, x, y):
         chrom = str(chr)
 
-        if not chrom.startswith('chr'):
-            chrom = 'chr{}'.format(chrom)
+        if not chrom.startswith("chr"):
+            chrom = "chr{}".format(chrom)
 
         offset = chr_info[2][chr_info[3][chrom]]
 
         return (offset + x, offset + y)
 
     def absolutize_tuple(tuple):
-        return (
-            absolutize(*tuple[0:3]) +
-            absolutize(*tuple[3:6])
-        )
+        return absolutize(*tuple[0:3]) + absolutize(*tuple[3:6])
 
     return list(map(absolutize_tuple, loci))
 
@@ -239,18 +231,19 @@ def get_cooler(f, zoomout_level=None):
         # In this case `zoomout_level` is the resolution
         # See fragments/views.py line 431
 
-        resolutions = [int(x) for x in f['resolutions'].keys()]
+        resolutions = [int(x) for x in f["resolutions"].keys()]
         resolution = min(resolutions) if zoomout_level is None else zoomout_level
 
         # Get the closest zoomlevel
-        resolution = resolutions[np.argsort([abs(r - resolution) for r in resolutions])[0]]
+        resolution = resolutions[
+            np.argsort([abs(r - resolution) for r in resolutions])[0]
+        ]
 
-        return cooler.Cooler(f['resolutions/{}'.format(resolution)])
+        return cooler.Cooler(f["resolutions/{}".format(resolution)])
     except:
         # We're not logging this exception as the user might just try to open
         # a cooler v1 file
         pass
-
 
     try:
         # v1
@@ -262,10 +255,10 @@ def get_cooler(f, zoomout_level=None):
 
         zoom_level = max_zoom - max(zoomout_level, 0)
 
-        if (zoom_level >= min_zoom and zoom_level <= max_zoom):
+        if zoom_level >= min_zoom and zoom_level <= max_zoom:
             c = cooler.Cooler(f[str(zoom_level)])
         else:
-            c = cooler.Cooler(f['0'])
+            c = cooler.Cooler(f["0"])
 
         return c
     except Exception as e:
@@ -291,11 +284,11 @@ def get_frag_by_loc_from_cool(
     no_normalize=False,
     aggregate=False,
 ):
-    with h5py.File(cooler_file, 'r') as f:
+    with h5py.File(cooler_file, "r") as f:
         c = get_cooler(f, zoomout_level)
 
         # Calculate the offsets once
-        resolution = c.info['bin-size']
+        resolution = c.info["bin-size"]
         chromsizes = np.ceil(c.chromsizes / resolution).astype(int)
         offsets = np.cumsum(chromsizes) - chromsizes
 
@@ -310,7 +303,7 @@ def get_frag_by_loc_from_cool(
             percentile=percentile,
             ignore_diags=ignore_diags,
             no_normalize=no_normalize,
-            aggregate=aggregate
+            aggregate=aggregate,
         )
 
     return fragments
@@ -368,12 +361,12 @@ def get_scale_frags_to_same_size(frags, loci_ids, out_size=-1, no_cache=False):
         out = np.zeros([len(frags), dim_x, dim_y])
 
     for i, frag in enumerate(frags):
-        id = loci_ids[i] + '.' + '.'.join(map(str, out.shape[1:]))
+        id = loci_ids[i] + "." + ".".join(map(str, out.shape[1:]))
 
         if not no_cache:
             frag_ds = None
             try:
-                frag_ds = np.load(BytesIO(rdb.get('im_snip_ds_%s' % id)))
+                frag_ds = np.load(BytesIO(rdb.get("im_snip_ds_%s" % id)))
                 if frag_ds is not None:
                     out[i] = frag_ds
                     continue
@@ -402,7 +395,7 @@ def get_scale_frags_to_same_size(frags, loci_ids, out_size=-1, no_cache=False):
         if not no_cache:
             with BytesIO() as b:
                 np.save(b, frag)
-                rdb.set('im_snip_ds_%s' % id, b.getvalue(), 60 * 30)
+                rdb.set("im_snip_ds_%s" % id, b.getvalue(), 60 * 30)
 
         out[i] = frag
 
@@ -430,9 +423,7 @@ def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
 
         return [frags[i] for i in idx], idx
 
-    out, _, _ = get_scale_frags_to_same_size(
-        frags, loci_ids, 32, no_cache
-    )
+    out, _, _ = get_scale_frags_to_same_size(frags, loci_ids, 32, no_cache)
 
     # Get largest frag based on world coords
     largest_a = 0
@@ -447,9 +438,7 @@ def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
 
     # Sum each x,y and c (channel) value up per f (fragment) and take the
     # sqaure root to get the L2 norm
-    dist_to_mean = np.sqrt(
-        np.einsum('fxyc,fxyc->f', diff_mean_frags, diff_mean_frags)
-    )
+    dist_to_mean = np.sqrt(np.einsum("fxyc,fxyc->f", diff_mean_frags, diff_mean_frags))
 
     # Get the fragment closest to the mean
     # Get the index of the i-th smallest value i=0 == smallest value
@@ -461,24 +450,24 @@ def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
     for i in range(len(dist_to_mean) - 1, -1, -1):
         farthest_mean_frag_idx = np.argpartition(dist_to_mean, i)[i]
         if (
-            farthest_mean_frag_idx != largest_frag_idx and
-            farthest_mean_frag_idx != closest_mean_frag_idx
+            farthest_mean_frag_idx != largest_frag_idx
+            and farthest_mean_frag_idx != closest_mean_frag_idx
         ):
             break
 
     # Distance to farthest away frag
     diff_farthest_frags = out - out[np.argmax(dist_to_mean)]
     dist_to_farthest = np.sqrt(
-        np.einsum('fxyc,fxyc->f', diff_farthest_frags, diff_farthest_frags)
+        np.einsum("fxyc,fxyc->f", diff_farthest_frags, diff_farthest_frags)
     )
 
     # Get the frag farthest away from the frag farthest away from the mean
     for i in range(len(dist_to_farthest) - 1, -1, -1):
         farthest_farthest_frag_idx = np.argpartition(dist_to_farthest, i)[i]
         if (
-            farthest_farthest_frag_idx != largest_frag_idx and
-            farthest_farthest_frag_idx != closest_mean_frag_idx and
-            farthest_farthest_frag_idx != farthest_mean_frag_idx
+            farthest_farthest_frag_idx != largest_frag_idx
+            and farthest_farthest_frag_idx != closest_mean_frag_idx
+            and farthest_farthest_frag_idx != farthest_mean_frag_idx
         ):
             break
 
@@ -486,25 +475,20 @@ def get_rep_frags(frags, loci, loci_ids, num_reps=4, no_cache=False):
         frags[largest_frag_idx],
         frags[closest_mean_frag_idx],
         frags[farthest_mean_frag_idx],
-        frags[farthest_farthest_frag_idx]
+        frags[farthest_farthest_frag_idx],
     ]
 
     idx = [
         largest_frag_idx,
         closest_mean_frag_idx,
         farthest_mean_frag_idx,
-        farthest_farthest_frag_idx
+        farthest_farthest_frag_idx,
     ]
 
     return frags, idx
 
 
-def aggregate_frags(
-    frags,
-    loci_ids,
-    method='mean',
-    max_previews=8,
-):
+def aggregate_frags(frags, loci_ids, method="mean", max_previews=8):
     """Aggregate multiple fragments into one
 
     Arguments:
@@ -534,7 +518,7 @@ def aggregate_frags(
 
     previews_2d = []
 
-    if method == 'median':
+    if method == "median":
         aggregate = np.nanmedian(out, axis=0)
         if len(frags) > max_previews:
             for i in range(max_previews):
@@ -545,30 +529,26 @@ def aggregate_frags(
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
 
-    elif method == 'std':
+    elif method == "std":
         aggregate = np.nanstd(out, axis=0)
         if len(frags) > max_previews:
             for i in range(max_previews):
-                previews[i] = np.nanstd(
-                    out[np.where(clusters.labels_ == i)], axis=1
-                )[0]
+                previews[i] = np.nanstd(out[np.where(clusters.labels_ == i)], axis=1)[0]
         else:
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
 
-    elif method == 'var':
+    elif method == "var":
         aggregate = np.nanvar(out, axis=0)
         if len(frags) > max_previews:
             for i in range(max_previews):
-                previews[i] = np.nanvar(
-                    out[np.where(clusters.labels_ == i)], axis=1
-                )[0]
+                previews[i] = np.nanvar(out[np.where(clusters.labels_ == i)], axis=1)[0]
         else:
             previews = np.nanmedian(out, axis=1)
         return aggregate, previews
 
-    elif method != 'mean':
-        print('Unknown aggregation method: {}'.format(method))
+    elif method != "mean":
+        print("Unknown aggregation method: {}".format(method))
 
     aggregate = np.nanmean(out, axis=0)
     if max_previews > 0:
@@ -578,9 +558,9 @@ def aggregate_frags(
                 previews[i] = np.nanmean(
                     out[np.where(clusters.labels_ == i)[0]], axis=1
                 )[0]
-                previews_2d.append(np.nanmean(
-                    out[np.where(clusters.labels_ == i)], axis=0
-                ))
+                previews_2d.append(
+                    np.nanmean(out[np.where(clusters.labels_ == i)], axis=0)
+                )
         else:
             previews = np.nanmedian(out, axis=1)
             previews_2d = frags
@@ -601,14 +581,13 @@ def get_frag_from_image_tiles(
     from_x,
     to_x,
     from_y,
-    to_y
+    to_y,
 ):
     im = (
         tiles[0]
         if len(tiles) == 1
         else Image.new(
-            'RGB',
-            (tile_size * len(tiles_x_range), tile_size * len(tiles_y_range))
+            "RGB", (tile_size * len(tiles_x_range), tile_size * len(tiles_y_range))
         )
     )
 
@@ -631,12 +610,7 @@ def get_frag_from_image_tiles(
 
 
 def get_frag_by_loc_from_imtiles(
-    imtiles_file,
-    loci,
-    zoom_level=0,
-    padding=0,
-    tile_size=256,
-    no_cache=False
+    imtiles_file, loci, zoom_level=0, padding=0, tile_size=256, no_cache=False
 ):
     db = None
     div = 1
@@ -653,7 +627,7 @@ def get_frag_by_loc_from_imtiles(
         if not no_cache:
             im_snip = None
             try:
-                im_snip = np.load(BytesIO(rdb.get('im_snip_%s' % id)))
+                im_snip = np.load(BytesIO(rdb.get("im_snip_%s" % id)))
                 if im_snip is not None:
                     ims.append(im_snip)
                     continue
@@ -662,7 +636,7 @@ def get_frag_by_loc_from_imtiles(
 
         if not got_info:
             db = sqlite3.connect(imtiles_file)
-            info = db.execute('SELECT * FROM tileset_info').fetchone()
+            info = db.execute("SELECT * FROM tileset_info").fetchone()
 
             max_zoom = info[6]
             max_width = info[8]
@@ -702,10 +676,16 @@ def get_frag_by_loc_from_imtiles(
         tiles = []
         for y in tiles_y_range:
             for x in tiles_x_range:
-                tiles.append(Image.open(BytesIO(db.execute(
-                    'SELECT image FROM tiles WHERE z=? AND y=? AND x=?',
-                    (zoom_level, y, x)
-                ).fetchone()[0])))
+                tiles.append(
+                    Image.open(
+                        BytesIO(
+                            db.execute(
+                                "SELECT image FROM tiles WHERE z=? AND y=? AND x=?",
+                                (zoom_level, y, x),
+                            ).fetchone()[0]
+                        )
+                    )
+                )
 
         im_snip = get_frag_from_image_tiles(
             tiles,
@@ -717,14 +697,14 @@ def get_frag_by_loc_from_imtiles(
             start1,
             end1,
             start2,
-            end2
+            end2,
         )
 
         # Cache for 30 min
         if not no_cache:
             with BytesIO() as b:
                 np.save(b, im_snip)
-                rdb.set('im_snip_%s' % id, b.getvalue(), 60 * 30)
+                rdb.set("im_snip_%s" % id, b.getvalue(), 60 * 30)
 
         ims.append(im_snip)
 
@@ -735,21 +715,16 @@ def get_frag_by_loc_from_imtiles(
 
 
 def get_frag_by_loc_from_osm(
-    imtiles_file,
-    loci,
-    zoom_level=0,
-    padding=0,
-    tile_size=256,
-    no_cache=False
+    imtiles_file, loci, zoom_level=0, padding=0, tile_size=256, no_cache=False
 ):
     width = 360
     height = 180
 
     ims = []
 
-    prefixes = ['a', 'b', 'c']
+    prefixes = ["a", "b", "c"]
     prefix_idx = math.floor(random() * len(prefixes))
-    osm_src = 'http://{}.tile.openstreetmap.org'.format(prefixes[prefix_idx])
+    osm_src = "http://{}.tile.openstreetmap.org".format(prefixes[prefix_idx])
 
     s = CacheControl(requests.Session())
 
@@ -759,7 +734,7 @@ def get_frag_by_loc_from_osm(
         if not no_cache:
             osm_snip = None
             try:
-                osm_snip = np.load(BytesIO(rdb.get('osm_snip_%s' % id)))
+                osm_snip = np.load(BytesIO(rdb.get("osm_snip_%s" % id)))
                 if osm_snip is not None:
                     ims.append(osm_snip)
                     continue
@@ -772,23 +747,14 @@ def get_frag_by_loc_from_osm(
         end_lat = locus[3]
 
         if not is_within(
-            start_lng + 180,
-            end_lng + 180,
-            end_lat + 90,
-            start_lat + 90,
-            width,
-            height
+            start_lng + 180, end_lng + 180, end_lat + 90, start_lat + 90, width, height
         ):
             ims.append(None)
             continue
 
         # Get tile ids
-        start1, start2 = get_tile_pos_from_lng_lat(
-            start_lng, start_lat, zoom_level
-        )
-        end1, end2 = get_tile_pos_from_lng_lat(
-            end_lng, end_lat, zoom_level
-        )
+        start1, start2 = get_tile_pos_from_lng_lat(start_lng, start_lat, zoom_level)
+        end1, end2 = get_tile_pos_from_lng_lat(end_lng, end_lat, zoom_level)
 
         xPad = padding * (end1 - start1)
         yPad = padding * (start2 - end2)
@@ -821,17 +787,12 @@ def get_frag_by_loc_from_osm(
         tiles = []
         for y in tiles_y_range:
             for x in tiles_x_range:
-                src = (
-                    '{}/{}/{}/{}.png'
-                    .format(osm_src, zoom_level, x, y)
-                )
+                src = "{}/{}/{}/{}.png".format(osm_src, zoom_level, x, y)
 
                 r = s.get(src)
 
                 if r.status_code == 200:
-                    tiles.append(Image.open(
-                        BytesIO(r.content)
-                    ).convert('RGB'))
+                    tiles.append(Image.open(BytesIO(r.content)).convert("RGB"))
                 else:
                     tiles.append(None)
 
@@ -845,13 +806,13 @@ def get_frag_by_loc_from_osm(
             start1,
             end1,
             start2,
-            end2
+            end2,
         )
 
         if not no_cache:
             with BytesIO() as b:
                 np.save(b, osm_snip)
-                rdb.set('osm_snip_%s' % id, b.getvalue(), 60 * 30)
+                rdb.set("osm_snip_%s" % id, b.getvalue(), 60 * 30)
 
         ims.append(osm_snip)
 
@@ -863,26 +824,26 @@ def is_within(start1, end1, start2, end2, width, height):
 
 
 def calc_measure_dtd(matrix, locus):
-    '''
+    """
     Calculate the distance to the diagonal
-    '''
-    return np.abs(locus['end1'] - locus['start2'])
+    """
+    return np.abs(locus["end1"] - locus["start2"])
 
 
 def calc_measure_size(matrix, locus, bin_size=1):
-    '''
+    """
     Calculate the size of the snippet
-    '''
+    """
     return (
-        np.abs(locus['start1'] - locus['end1']) *
-        np.abs(locus['start2'] - locus['end2'])
+        np.abs(locus["start1"] - locus["end1"])
+        * np.abs(locus["start2"] - locus["end2"])
     ) / bin_size
 
 
 def calc_measure_noise(matrix):
-    '''
+    """
     Estimate the noise level of the input matrix using the standard deviation
-    '''
+    """
     low_quality_bins = np.where(matrix == -1)
 
     # Assign 0 for now to avoid influencing the standard deviation
@@ -918,10 +879,9 @@ def calc_measure_sharpness(matrix):
     for i in range(dim):
         for j in range(dim):
 
-            var += (
-                ((i - (middle + i // m)) ** 2 + (j - middle + i // m) ** 2) *
-                matrix[i, j]
-            )
+            var += ((i - (middle + i // m)) ** 2 + (j - middle + i // m) ** 2) * matrix[
+                i, j
+            ]
 
     # Ressign -1 to low quality bins
     matrix[low_quality_bins] = -1
@@ -930,7 +890,7 @@ def calc_measure_sharpness(matrix):
 
 
 def get_bin_size(cooler_file, zoomout_level=-1):
-    with h5py.File(cooler_file, 'r') as f:
+    with h5py.File(cooler_file, "r") as f:
         c = get_cooler(f, zoomout_level)
 
         return c.util.get_binsize()
@@ -952,24 +912,26 @@ def collect_frags(
     percentile=100.0,
     ignore_diags=0,
     no_normalize=False,
-    aggregate=False
+    aggregate=False,
 ):
     fragments = []
 
     for locus in loci:
         last_loc = len(locus) - 2
-        fragments.append(get_frag(
-            c,
-            resolution,
-            offsets,
-            *locus[:6],
-            width=locus[last_loc] if locus[last_loc] else dim,
-            padding=padding,
-            balanced=balanced,
-            percentile=percentile,
-            ignore_diags=ignore_diags,
-            no_normalize=no_normalize
-        ))
+        fragments.append(
+            get_frag(
+                c,
+                resolution,
+                offsets,
+                *locus[:6],
+                width=locus[last_loc] if locus[last_loc] else dim,
+                padding=padding,
+                balanced=balanced,
+                percentile=percentile,
+                ignore_diags=ignore_diags,
+                no_normalize=no_normalize
+            )
+        )
 
     return fragments
 
@@ -993,7 +955,7 @@ def get_chroms(abs_pos, chr_info=None, cooler_file=None, zoomout_level=-1):
     chroms = np.zeros((abs_pos.shape[0], 2), dtype=object)
 
     if chr_info is None:
-        with h5py.File(cooler_file, 'r') as f:
+        with h5py.File(cooler_file, "r") as f:
             c = get_cooler(f, zoomout_level)
             chr_info = get_chrom_names_cumul_len(c)
 
@@ -1010,22 +972,26 @@ def rel_loci_2_obj(loci_rel_chroms):
 
     i = 0
     for locus in loci_rel_chroms:
-        loci.append({
-            'chrom1': loci_rel_chroms[i, 0],
-            'start1': loci_rel_chroms[i, 1],
-            'end1': loci_rel_chroms[i, 2],
-            'strand1': (
-                'coding' if loci_rel_chroms[i, 1] < loci_rel_chroms[i, 2] else
-                'noncoding'
-            ),
-            'chrom2': loci_rel_chroms[i, 3],
-            'start2': loci_rel_chroms[i, 4],
-            'end2': loci_rel_chroms[i, 5],
-            'strand2': (
-                'coding' if loci_rel_chroms[i, 1] < loci_rel_chroms[i, 2] else
-                'noncoding'
-            )
-        })
+        loci.append(
+            {
+                "chrom1": loci_rel_chroms[i, 0],
+                "start1": loci_rel_chroms[i, 1],
+                "end1": loci_rel_chroms[i, 2],
+                "strand1": (
+                    "coding"
+                    if loci_rel_chroms[i, 1] < loci_rel_chroms[i, 2]
+                    else "noncoding"
+                ),
+                "chrom2": loci_rel_chroms[i, 3],
+                "start2": loci_rel_chroms[i, 4],
+                "end2": loci_rel_chroms[i, 5],
+                "strand2": (
+                    "coding"
+                    if loci_rel_chroms[i, 1] < loci_rel_chroms[i, 2]
+                    else "noncoding"
+                ),
+            }
+        )
         i += 1
 
     return loci
@@ -1035,7 +1001,7 @@ def abs_coord_2_bin(c, pos, chr_info):
     try:
         chr_id = np.flatnonzero(chr_info[2] > pos)[0] - 1
     except IndexError:
-        return c.info['nbins']
+        return c.info["nbins"]
 
     chrom = chr_info[0][chr_id]
     relPos = pos - chr_info[2][chr_id]
@@ -1060,7 +1026,7 @@ def get_frag(
     balanced: bool = True,
     percentile: float = 100.0,
     ignore_diags: int = 0,
-    no_normalize: bool = False
+    no_normalize: bool = False,
 ) -> np.ndarray:
     """
     Retrieves a matrix fragment.
@@ -1119,13 +1085,13 @@ def get_frag(
         offset1 = offsets[chrom1]
     except KeyError:
         # One more try before we will fail miserably
-        offset1 = offsets['chr{}'.format(chrom1)]
+        offset1 = offsets["chr{}".format(chrom1)]
 
     try:
         offset2 = offsets[chrom2]
     except KeyError:
         # One more try before we will fail miserably
-        offset2 = offsets['chr{}'.format(chrom2)]
+        offset2 = offsets["chr{}".format(chrom2)]
 
     start_bin1 = offset1 + int(round(float(start1) / resolution))
     end_bin1 = offset1 + int(round(float(end1) / resolution)) + 1
@@ -1172,8 +1138,10 @@ def get_frag(
         abs_dim2 = height
 
     # Maximum width / height is 512
-    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
-    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM: raise SnippetTooLarge()
+    if abs_dim1 > hss.SNIPPET_MAT_MAX_DATA_DIM:
+        raise SnippetTooLarge()
+    if abs_dim2 > hss.SNIPPET_MAT_MAX_DATA_DIM:
+        raise SnippetTooLarge()
 
     # Finally, adjust to negative values.
     # Since relative bin IDs are adjusted by the start this will lead to a
@@ -1182,31 +1150,31 @@ def get_frag(
     real_start_bin2 = start_bin2 if start_bin2 >= 0 else 0
 
     # Get the data
-    data = c.matrix(
-        as_pixels=True, balance=False, max_chunk=np.inf
-    )[real_start_bin1:end_bin1, real_start_bin2:end_bin2]
+    data = c.matrix(as_pixels=True, balance=False, max_chunk=np.inf)[
+        real_start_bin1:end_bin1, real_start_bin2:end_bin2
+    ]
 
     # Annotate pixels for balancing
-    bins = c.bins(convert_enum=False)[['weight']]
+    bins = c.bins(convert_enum=False)[["weight"]]
     data = cooler.annotate(data, bins, replace=False)
 
     # Calculate relative bin IDs
-    rel_bin1 = np.add(data['bin1_id'].values, -start_bin1)
-    rel_bin2 = np.add(data['bin2_id'].values, -start_bin2)
+    rel_bin1 = np.add(data["bin1_id"].values, -start_bin1)
+    rel_bin2 = np.add(data["bin2_id"].values, -start_bin2)
 
     # Balance counts
     if balanced:
-        values = data['count'].values.astype(np.float32)
-        values *= data['weight1'].values * data['weight2'].values
+        values = data["count"].values.astype(np.float32)
+        values *= data["weight1"].values * data["weight2"].values
     else:
-        values = data['count'].values
+        values = data["count"].values
 
     # Get pixel IDs for the upper triangle
     idx1 = np.add(np.multiply(rel_bin1, abs_dim1), rel_bin2)
 
     # Mirror matrix
-    idx2_1 = np.add(data['bin2_id'].values, -start_bin1)
-    idx2_2 = np.add(data['bin1_id'].values, -start_bin2)
+    idx2_1 = np.add(data["bin2_id"].values, -start_bin1)
+    idx2_2 = np.add(data["bin1_id"].values, -start_bin2)
     idx2 = np.add(np.multiply(idx2_1, abs_dim1), idx2_2)
     validBins = np.where((idx2_1 < abs_dim1) & (idx2_2 >= 0))
 
@@ -1215,11 +1183,9 @@ def get_frag(
     if ignore_diags > 0:
         try:
             diags_start_idx = np.min(
-                np.where(data['bin1_id'].values == data['bin2_id'].values)
+                np.where(data["bin1_id"].values == data["bin2_id"].values)
             )
-            diags_start_row = (
-                rel_bin1[diags_start_idx] - rel_bin2[diags_start_idx]
-            )
+            diags_start_row = rel_bin1[diags_start_idx] - rel_bin2[diags_start_idx]
         except ValueError:
             pass
 
@@ -1243,9 +1209,7 @@ def get_frag(
     scale_x = width / frag.shape[0]
     if frag.shape[0] > width or frag.shape[1] > height:
         scaledFrag = np.zeros((width, height), float)
-        frag = scaledFrag + zoomArray(
-            frag, scaledFrag.shape, order=1
-        )
+        frag = scaledFrag + zoomArray(frag, scaledFrag.shape, order=1)
         scaled = True
 
     # Normalize by minimum
@@ -1262,9 +1226,7 @@ def get_frag(
 
             idx = np.diag_indices(width)
             scaled_idx = (
-                idx
-                if scaled_row == 0
-                else [idx[0][scaled_row:], idx[0][:-scaled_row]]
+                idx if scaled_row == 0 else [idx[0][scaled_row:], idx[0][:-scaled_row]]
             )
 
             for i in range(ignore_diags):
@@ -1279,28 +1241,22 @@ def get_frag(
                     off = 0 if dist_to_diag >= 0 else i - scaled_row
 
                     # Above diagonal
-                    frag[
-                        ((scaled_idx[0] - i)[off:], (scaled_idx[1])[off:])
-                    ] = -1
+                    frag[((scaled_idx[0] - i)[off:], (scaled_idx[1])[off:])] = -1
 
                     # Extra cutoff at the bottom right
                     frag[
                         (
                             range(
-                                scaled_idx[0][-1] - i,
-                                scaled_idx[0][-1] + 1 + dist_neg,
+                                scaled_idx[0][-1] - i, scaled_idx[0][-1] + 1 + dist_neg
                             ),
                             range(
-                                scaled_idx[1][-1],
-                                scaled_idx[1][-1] + i + 1 + dist_neg
-                            )
+                                scaled_idx[1][-1], scaled_idx[1][-1] + i + 1 + dist_neg
+                            ),
                         )
                     ] = -1
 
                     # Below diagonal
-                    frag[
-                        ((scaled_idx[0] + i)[:-i], (scaled_idx[1])[:-i])
-                    ] = -1
+                    frag[((scaled_idx[0] + i)[:-i], (scaled_idx[1])[:-i])] = -1
 
             # Save the final selection of ignored cells for fast access
             # later and set those values to `0` now.
@@ -1308,9 +1264,7 @@ def get_frag(
             frag[ignored_idx] = 0
 
         else:
-            logger.warn(
-                'Ignoring the diagonal only supported for squared features'
-            )
+            logger.warn("Ignoring the diagonal only supported for squared features")
 
     # Capp by percentile
     max_val = np.percentile(frag, percentile)
@@ -1331,9 +1285,7 @@ def get_frag(
     return frag
 
 
-def zoomArray(
-    inArray, finalShape, sameSum=False, zoomFunction=zoom, **zoomKwargs
-):
+def zoomArray(inArray, finalShape, sameSum=False, zoomFunction=zoom, **zoomKwargs):
     """
     Normally, one can use scipy.ndimage.zoom to do array/image rescaling.
     However, scipy.ndimage.zoom does not coarsegrain images well. It basically
@@ -1388,7 +1340,7 @@ def zoomArray(
         if mult != 1:
             sh = list(rescaled.shape)
             assert sh[ind] % mult == 0
-            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1:]
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1 :]
             rescaled.shape = newshape
             rescaled = np.mean(rescaled, axis=ind + 1)
     assert rescaled.shape == finalShape

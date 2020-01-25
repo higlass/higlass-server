@@ -7,14 +7,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0002_auto_20170223_1629'),
-    ]
+    dependencies = [("tilesets", "0002_auto_20170223_1629")]
 
     operations = [
         migrations.AddField(
-            model_name='viewconf',
-            name='higlassVersion',
-            field=models.CharField(default='', max_length=5),
-        ),
+            model_name="viewconf",
+            name="higlassVersion",
+            field=models.CharField(default="", max_length=5),
+        )
     ]

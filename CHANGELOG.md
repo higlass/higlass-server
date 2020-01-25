@@ -1,4 +1,4 @@
-Future version
+v1.14.0
 
 - Added support for bigBed files
 

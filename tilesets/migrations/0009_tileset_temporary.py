@@ -5,14 +5,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('tilesets', '0008_auto_20181129_1304'),
-    ]
+    dependencies = [("tilesets", "0008_auto_20181129_1304")]
 
     operations = [
         migrations.AddField(
-            model_name='tileset',
-            name='temporary',
+            model_name="tileset",
+            name="temporary",
             field=models.BooleanField(default=False),
-        ),
+        )
     ]
