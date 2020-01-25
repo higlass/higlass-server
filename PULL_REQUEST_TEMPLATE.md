@@ -8,7 +8,7 @@ Fixes #\_\_\_
 
 ## Checklist
 
--   [ ] Unit tests added or updated
--   [ ] Documentation added or updated
--   [ ] Updated CHANGELOG.md
--   [ ] Run black
+- [ ] Unit tests added or updated
+- [ ] Documentation added or updated
+- [ ] Updated CHANGELOG.md
+- [ ] Run black
