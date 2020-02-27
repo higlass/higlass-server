@@ -31,10 +31,28 @@ docker run -d --cap-add SYS_ADMIN --device /dev/fuse --security-opt apparmor:unc
 
 To install HiGlass Server manually follow the steps below. Note we strongly recommend to create a virtual environment using [Virtualenvwrapper](https://pypi.python.org/pypi/virtualenvwrapper) for example. Skip step 2 if you don't work with virtual environments.
 
+#### Manually with virtualenvwrapper
+
 ```bash
 git clone https://github.com/higlass/higlass-server && cd higlass-server
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
+python manage.py runserver
+```
+
+#### Manually with conda
+
+First install the mac dependencies:
+
+- `brew install hdf5`
+- `brew install libpng`
+- `brew install jpeg`
+- [FUSE for Mac](https://osxfuse.github.io/)
+
+```
+conda env create -f environment.yml
+conda activate higlass-server
+python manage.py migrate
 python manage.py runserver
 ```
 
