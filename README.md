@@ -57,8 +57,10 @@ To enable the register_url api endpoint, HiGlass depends on a project called htt
 ```bash
 pip install simple-httpfs
 
-simple-httpfs.py media/http
-simple-httpfs.py media/https
+mkdir -p media/http
+mkdir -p media/https
+simple-httpfs media/http
+simple-httpfs media/https
 ```
 
 Or simply use `./unit_tests.sh`.
