@@ -33,8 +33,23 @@ To install HiGlass Server manually follow the steps below. Note we strongly reco
 
 ```bash
 git clone https://github.com/higlass/higlass-server && cd higlass-server
+```
+
+#### Manually with virtualenvwrapper
+
+```bash
 mkvirtualenv -a $(pwd) -p $(which python3) higlass-server && workon higlass-server
 pip install --upgrade -r ./requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+#### Manually with conda
+
+```bash
+conda env create -f environment.yml
+conda activate higlass-server
+python manage.py migrate
 python manage.py runserver
 ```
 
@@ -42,8 +57,10 @@ To enable the register_url api endpoint, HiGlass depends on a project called htt
 ```bash
 pip install simple-httpfs
 
-simple-httpfs.py media/http
-simple-httpfs.py media/https
+mkdir -p media/http
+mkdir -p media/https
+simple-httpfs media/http
+simple-httpfs media/https
 ```
 
 Or simply use `./unit_tests.sh`.
@@ -105,6 +122,14 @@ bumpversion patch
 ## Troubleshooting
 
 **pybbi installation fails on macOS**: Check out https://github.com/nvictus/pybbi/issues/2
+
+### macOS 10.15 dependencies
+
+- `brew install hdf5`
+- `brew install libpng`
+- `brew install jpeg`
+- [FUSE for Mac](https://osxfuse.github.io/)
+
 
 ## License
 

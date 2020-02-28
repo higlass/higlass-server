@@ -1,6 +1,7 @@
 Future version
 
 - Added support for bigBed files
+- Update readme installation instructions and troubleshooting instructions for macOS 10.15
 
 v1.13.0
 
