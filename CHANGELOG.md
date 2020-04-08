@@ -1,8 +1,11 @@
+v1.14.1
+
+- Always consider proxy headers (X-Forwarded-Host, X-Forwarded-Proto) for redirect URL construction
+
 v1.14.0
 
 - Added support for bigBed files
 - Update readme installation instructions and troubleshooting instructions for macOS 10.15
-- Always consider proxy headers (X-Forwarded-Host, X-Forwarded-Proto) for redirect URL construction
 
 v1.13.0
 
