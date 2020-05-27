@@ -109,7 +109,7 @@ def extract_tileset_uid(tile_id):
 def get_tileset_filetype(tileset):
     return tileset.filetype
 
-def generate_1d_tiles(filename, tile_ids, get_data_function):
+def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
     '''
     Generate a set of tiles for the given tile_ids.
 
@@ -122,12 +122,23 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
         to be retrieved
     get_data_function: lambda
         A function which retrieves the data for this tile
+    agg_info: `dict`
+        A dict containing keys `agg_groups` (2D array), `agg_func` (str).
 
     Returns
     -------
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+
+    agg_func_map = {
+        "sum": lambda x: np.sum(x, axis=0),
+        "mean": lambda x: np.mean(x, axis=0),
+        "median": lambda x: np.median(x, axis=0),
+        "std": lambda x: np.std(x, axis=0),
+        "var": lambda x: np.var(x, axis=0)
+    }
+
     generated_tiles = []
 
     for tile_id in tile_ids:
@@ -135,6 +146,12 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
         tile_position = list(map(int, tile_id_parts[1:3]))
 
         dense = get_data_function(filename, tile_position)
+
+        if agg_info != None:
+            agg_func_name = agg_info["agg_func"]
+            agg_group_arr = agg_info["agg_groups"]
+            assert(agg_func_name in agg_func_map)
+            dense = np.array(list(map(agg_func_map[agg_func_name], [ dense[arr] for arr in agg_group_arr ])))
 
         if len(dense):
             max_dense = max(dense.reshape(-1,))
@@ -488,7 +505,7 @@ def generate_tiles(tileset_tile_ids):
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids, raw = tileset_tile_ids
+    tileset, tile_ids, raw, agg_info = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
@@ -512,7 +529,8 @@ def generate_tiles(tileset_tile_ids):
         return generate_1d_tiles(
                 tileset.datafile.path,
                 tile_ids,
-                ctmu.get_single_tile)
+                ctmu.get_single_tile,
+                agg_info)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     elif tileset.filetype == 'bam':

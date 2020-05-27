@@ -1,4 +1,4 @@
-pybbi==0.2.0
+pybbi==0.2.2
 bumpversion==0.5.3
 CacheControl==0.12.4
 cooler==0.8.6

@@ -51,6 +51,7 @@ import rest_framework.status as rfs
 
 import slugid
 import urllib
+import hashlib
 
 try:
     import cPickle as pickle
@@ -376,7 +377,7 @@ def add_transform_type(tile_id):
     return new_tile_id
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def tiles(request):
     '''Retrieve a set of tiles
 
@@ -393,6 +394,23 @@ def tiles(request):
             (tile_id, tile_data) items.
 
     '''
+    tileset_to_agg_info = dict()
+    if request.method == 'POST':
+        # If this is a POST request, get the aggregation groups from the request body.
+        try:
+            tileset_to_agg_info = json.loads(request.body.decode('utf-8'))
+            for tileset_id, agg_info in tileset_to_agg_info.items():
+                assert("agg_groups" in agg_info.keys())
+                assert("agg_func" in agg_info.keys())
+                agg_groups = agg_info["agg_groups"]
+                agg_func_name = agg_info["agg_func"]
+                agg_hash = '.' + hashlib.md5(json.dumps(agg_groups).encode('utf-8')).hexdigest() + '.' + agg_func_name
+                tileset_to_agg_info[tileset_id]["agg_hash"] = agg_hash
+        except:
+            return JsonResponse({
+                'error': 'Unable to parse request body as JSON'
+            }, status=rfs.HTTP_400_BAD_REQUEST)
+
     # create a set so that we don't fetch the same tile multiple times
     tileids_to_fetch = set(request.GET.getlist("d"))
     # with ProcessPoolExecutor() as executor:
@@ -435,7 +453,11 @@ def tiles(request):
         # see if the tile is cached
         tile_value = None
         try:
-            tile_value = rdb.get(tile_id)
+            if tileset_uuid in tileset_to_agg_info:
+                agg_info = tileset_to_agg_info[tileset_uuid]
+                tile_value = rdb.get(tile_id + agg_info["agg_func"])
+            else:
+                tile_value = rdb.get(tile_id)
         except Exception as ex:
             # there was an error accessing the cache server
             # log the error and carry forward fetching the tile
@@ -454,7 +476,7 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw, tileset_to_agg_info.get(t.uuid, None)) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
     #pool = mp.Pool(6)
 
@@ -477,9 +499,13 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
-
+        tileset_uuid = tgt.extract_tileset_uid(tile_id)
         try:
-            rdb.set(tile_id, pickle.dumps(tile_value))
+            if tileset_uuid in tileset_to_agg_info:
+                agg_info = tileset_to_agg_info[tileset_uuid]
+                rdb.set(tile_id + agg_info["agg_func"], pickle.dumps(tile_value))
+            else:
+                rdb.set(tile_id, pickle.dumps(tile_value))
         except Exception as ex:
             # error caching a tile
             # log the error and carry forward, this isn't critical
