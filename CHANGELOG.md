@@ -3,6 +3,7 @@ Future version
 - Added support for bigBed files
 - Update readme installation instructions and troubleshooting instructions for macOS 10.15
 - Always consider proxy headers (X-Forwarded-Host, X-Forwarded-Proto) for redirect URL construction
+- Added support for server-side aggregation of multivec tiles by sending a `POST` request to the `/tiles` endpoint, where the body contains a JSON object mapping tileset UIDs to objects with properties `agg_groups` (a 2D array where each subarray is a group of rows to aggregate) and `agg_func` (the name of an aggregation function).
 
 v1.13.0
 
