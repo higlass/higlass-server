@@ -1,4 +1,4 @@
-name: cistrome-explorer-higlass-server
+name: higlass-server
 channels:
   - conda-forge
   - bioconda
