@@ -515,14 +515,18 @@ class MultivecTests(dt.TestCase):
             uuid='chr21_KL'
         )
 
-        body = {
-            'chr21_KL': {
-                'agg_groups': [[0, 1], [2, 3, 4], [5, 6]],
-                'agg_func': 'sum'
+        body = [
+            {
+                "tilesetUid": "chr21_KL",
+                "tileIds": ["0.0", "0.1"],
+                "options": {
+                    "aggGroups": [[0, 1], [2, 3, 4], [5, 6]],
+                    "aggFunc": "sum"
+                }
             }
-        }
+        ]
 
-        ret = self.client.post('/api/v1/tiles/?d=chr21_KL.0.0', json.dumps(body), content_type="application/json")
+        ret = self.client.post('/api/v1/tiles/', json.dumps(body), content_type="application/json")
         assert ret.status_code == 200
         content = json.loads(ret.content.decode('utf-8'))
         r = base64.decodestring(content['chr21_KL.0.0']['dense'].encode('utf-8'))

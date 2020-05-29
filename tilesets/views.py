@@ -24,6 +24,7 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
+import tilesets.validate_json as tvj
 
 import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
@@ -52,6 +53,8 @@ import rest_framework.status as rfs
 import slugid
 import urllib
 import hashlib
+from jsonschema import validate as json_validate
+from jsonschema.exceptions import ValidationError as JsonValidationError
 
 try:
     import cPickle as pickle
@@ -398,55 +401,32 @@ def tiles(request):
     tileset_to_options = dict()
 
     if request.method == 'POST':
-        # If this is a POST request, parse the request body.
+        # This is a POST request, so try to parse the request body as JSON.
         try:
             body = json.loads(request.body.decode('utf-8'))
         except:
             return JsonResponse({
                 'error': 'Unable to parse request body as JSON.'
             }, status=rfs.HTTP_400_BAD_REQUEST)
-        # Validate the contents of the JSON request body.
-        if type(body) is not list:
-            return JsonResponse({
-                'error': 'Expected request body to be a JSON array.'
-            }, status=rfs.HTTP_400_BAD_REQUEST)
-        # Iterate over each tileset in the request body array.
-        for tileset_info in body:
-            # Ensure that the array consists of JSON objects with the expected properties.
-            if type(tileset_info) is not dict:
-                return JsonResponse({
-                    'error': 'Expected request body array items to be objects.'
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if "tilesetUid" not in tileset_info:
-                return JsonResponse({
-                    'error': "Expected tileset info object to have property 'tilesetUid'."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if type(tileset_info["tilesetUid"]) is not str:
-                return JsonResponse({
-                    'error': "Expected tileset property 'tilesetUid' type to be string."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if "tileIds" not in tileset_info:
-                return JsonResponse({
-                    'error': "Expected tileset info object to have property 'tileIds'."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if type(tileset_info["tileIds"]) is not list:
-                return JsonResponse({
-                    'error': "Expected tileset property 'tileIds' type to be array."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if "options" not in tileset_info:
-                return JsonResponse({
-                    'error': "Expected tileset info object to have property 'options'."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
-            if type(tileset_info["options"]) is not dict:
-                return JsonResponse({
-                    'error': "Expected tileset info property 'options' type to be object."
-                }, status=rfs.HTTP_400_BAD_REQUEST)
 
-            tileset_uid = tileset_info["tilesetUid"] # can assume it exists and is str
-            tile_ids = tileset_info["tileIds"] # can assume it exists and is list
-            tileset_options = tileset_info["options"] # can assume it exists and is dict
+        # Validate against the JSON schema.
+        try:
+            json_validate(instance=body, schema=tvj.tiles_post_schema)
+        except JsonValidationError as e:
+            return JsonResponse({
+                'error': f"Invalid request body: {e.message}.",
+            }, status=rfs.HTTP_400_BAD_REQUEST)
+
+        # Iterate over tilesets to obtain the associated tile IDs and options.
+        for tileset_info in body:
+            tileset_uid = tileset_info["tilesetUid"]
+            # Prepend the tileset UID to each tile ID suffix.
+            tile_ids = [ f"{tileset_uid}.{tile_id}" for tile_id in tileset_info["tileIds"] ]
             tileids_to_fetch.update(tile_ids)
+
+            tileset_options = tileset_info["options"]
             tileset_to_options[tileset_uid] = tileset_options
+            # Hash the options object so that the tile can be cached.
             tileset_to_options[tileset_uid]["options_hash"] = hashlib.md5(json.dumps(tileset_options).encode('utf-8')).hexdigest()
 
     elif request.method == 'GET':
