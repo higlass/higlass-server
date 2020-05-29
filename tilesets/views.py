@@ -400,6 +400,8 @@ def tiles(request):
     tileids_to_fetch = set()
     tileset_to_options = dict()
 
+    TILE_LIMIT = 1000
+
     if request.method == 'POST':
         # This is a POST request, so try to parse the request body as JSON.
         try:
@@ -432,6 +434,11 @@ def tiles(request):
     elif request.method == 'GET':
         # create a set so that we don't fetch the same tile multiple times
         tileids_to_fetch = set(request.GET.getlist("d"))
+    
+    if len(tileids_to_fetch) > TILE_LIMIT:
+        return JsonResponse({
+            'error': "Too many tiles were requested.",
+        }, status=rfs.HTTP_400_BAD_REQUEST)
     
     # with ProcessPoolExecutor() as executor:
     #       res = executor.map(parallelize, hargs)
