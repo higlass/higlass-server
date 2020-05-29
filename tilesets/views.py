@@ -24,7 +24,7 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
-import tilesets.validate_json as tvj
+import tilesets.json_schemas as tjs
 
 import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
@@ -411,7 +411,7 @@ def tiles(request):
 
         # Validate against the JSON schema.
         try:
-            json_validate(instance=body, schema=tvj.tiles_post_schema)
+            json_validate(instance=body, schema=tjs.tiles_post_schema)
         except JsonValidationError as e:
             return JsonResponse({
                 'error': f"Invalid request body: {e.message}.",
