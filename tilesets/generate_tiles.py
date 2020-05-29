@@ -109,7 +109,7 @@ def extract_tileset_uid(tile_id):
 def get_tileset_filetype(tileset):
     return tileset.filetype
 
-def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
+def generate_1d_tiles(filename, tile_ids, get_data_function, tileset_options):
     '''
     Generate a set of tiles for the given tile_ids.
 
@@ -122,8 +122,8 @@ def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
         to be retrieved
     get_data_function: lambda
         A function which retrieves the data for this tile
-    agg_info: `dict`
-        A dict containing keys `agg_groups` (2D array), `agg_func` (str).
+    tileset_options: dict or None
+        An optional dict containing options, including aggregation options.
 
     Returns
     -------
@@ -149,12 +149,11 @@ def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
 
         dense = get_data_function(filename, tile_position)
 
-        if agg_info != None:
-            agg_func_name = agg_info["agg_func"]
-            agg_group_arr = [ x if type(x) == list else [x] for x in agg_info["agg_groups"] ]
-            assert(agg_func_name in agg_func_map)
+        if tileset_options != None and "aggGroups" in tileset_options and "aggFunc" in tileset_options:
+            agg_func_name = tileset_options["aggFunc"]
+            agg_group_arr = [ x if type(x) == list else [x] for x in tileset_options["aggGroups"] ]
             dense = np.array(list(map(agg_func_map[agg_func_name], [ dense[arr] for arr in agg_group_arr ])))
-
+        
         if len(dense):
             max_dense = max(dense.reshape(-1,))
             min_dense = min(dense.reshape(-1,))
@@ -505,17 +504,15 @@ def generate_tiles(tileset_tile_ids):
         to be retrieved
     raw: str or False
         The value of the GET request parameter `raw`.
-    agg_info: dict or None
-        A dict containing the keys `agg_groups` and `agg_func`,
-        where `agg_groups` is a 2D array of integers
-        and `agg_func` is a string name of an aggregation function.
+    tileset_options: dict or None
+        An optional dict containing tileset options, including aggregation options.
 
     Returns
     -------
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids, raw, agg_info = tileset_tile_ids
+    tileset, tile_ids, raw, tileset_options = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
@@ -540,7 +537,7 @@ def generate_tiles(tileset_tile_ids):
                 tileset.datafile.path,
                 tile_ids,
                 ctmu.get_single_tile,
-                agg_info)
+                tileset_options)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     elif tileset.filetype == 'bam':

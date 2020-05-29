@@ -18,6 +18,7 @@ dependencies:
     - djangorestframework==3.9.1
     - h5py==2.6.0
     - higlass-python==0.2.1
+    - jsonschema==3.2.0
     - numba==0.46.0
     - numpy==1.17.3
     - pandas==0.23.4

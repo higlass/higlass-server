@@ -394,25 +394,65 @@ def tiles(request):
             (tile_id, tile_data) items.
 
     '''
-    tileset_to_agg_info = dict()
+    tileids_to_fetch = set()
+    tileset_to_options = dict()
+
     if request.method == 'POST':
-        # If this is a POST request, get the aggregation groups from the request body.
+        # If this is a POST request, parse the request body.
         try:
-            tileset_to_agg_info = json.loads(request.body.decode('utf-8'))
-            for tileset_id, agg_info in tileset_to_agg_info.items():
-                assert("agg_groups" in agg_info.keys())
-                assert("agg_func" in agg_info.keys())
-                agg_groups = agg_info["agg_groups"]
-                agg_func_name = agg_info["agg_func"]
-                agg_hash = '.' + hashlib.md5(json.dumps(agg_groups).encode('utf-8')).hexdigest() + '.' + agg_func_name
-                tileset_to_agg_info[tileset_id]["agg_hash"] = agg_hash
+            body = json.loads(request.body.decode('utf-8'))
         except:
             return JsonResponse({
-                'error': 'Unable to parse request body as JSON'
+                'error': 'Unable to parse request body as JSON.'
             }, status=rfs.HTTP_400_BAD_REQUEST)
+        # Validate the contents of the JSON request body.
+        if type(body) is not list:
+            return JsonResponse({
+                'error': 'Expected request body to be a JSON array.'
+            }, status=rfs.HTTP_400_BAD_REQUEST)
+        # Iterate over each tileset in the request body array.
+        for tileset_info in body:
+            # Ensure that the array consists of JSON objects with the expected properties.
+            if type(tileset_info) is not dict:
+                return JsonResponse({
+                    'error': 'Expected request body array items to be objects.'
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if "tilesetUid" not in tileset_info:
+                return JsonResponse({
+                    'error': "Expected tileset info object to have property 'tilesetUid'."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if type(tileset_info["tilesetUid"]) is not str:
+                return JsonResponse({
+                    'error': "Expected tileset property 'tilesetUid' type to be string."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if "tileIds" not in tileset_info:
+                return JsonResponse({
+                    'error': "Expected tileset info object to have property 'tileIds'."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if type(tileset_info["tileIds"]) is not list:
+                return JsonResponse({
+                    'error': "Expected tileset property 'tileIds' type to be array."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if "options" not in tileset_info:
+                return JsonResponse({
+                    'error': "Expected tileset info object to have property 'options'."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
+            if type(tileset_info["options"]) is not dict:
+                return JsonResponse({
+                    'error': "Expected tileset info property 'options' type to be object."
+                }, status=rfs.HTTP_400_BAD_REQUEST)
 
-    # create a set so that we don't fetch the same tile multiple times
-    tileids_to_fetch = set(request.GET.getlist("d"))
+            tileset_uid = tileset_info["tilesetUid"] # can assume it exists and is str
+            tile_ids = tileset_info["tileIds"] # can assume it exists and is list
+            tileset_options = tileset_info["options"] # can assume it exists and is dict
+            tileids_to_fetch.update(tile_ids)
+            tileset_to_options[tileset_uid] = tileset_options
+            tileset_to_options[tileset_uid]["options_hash"] = hashlib.md5(json.dumps(tileset_options).encode('utf-8')).hexdigest()
+
+    elif request.method == 'GET':
+        # create a set so that we don't fetch the same tile multiple times
+        tileids_to_fetch = set(request.GET.getlist("d"))
+    
     # with ProcessPoolExecutor() as executor:
     #       res = executor.map(parallelize, hargs)
     '''
@@ -453,9 +493,9 @@ def tiles(request):
         # see if the tile is cached
         tile_value = None
         try:
-            if tileset_uuid in tileset_to_agg_info:
-                agg_info = tileset_to_agg_info[tileset_uuid]
-                tile_value = rdb.get(tile_id + agg_info["agg_func"])
+            if tileset_uuid in tileset_to_options:
+                tileset_options = tileset_to_options[tileset_uuid]
+                tile_value = rdb.get(tile_id + tileset_options["options_hash"])
             else:
                 tile_value = rdb.get(tile_id)
         except Exception as ex:
@@ -476,7 +516,7 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw, tileset_to_agg_info.get(t.uuid, None)) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw, tileset_to_options.get(t.uuid, None)) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
     #pool = mp.Pool(6)
 
@@ -501,9 +541,9 @@ def tiles(request):
     for (tile_id, tile_value) in generated_tiles:
         tileset_uuid = tgt.extract_tileset_uid(tile_id)
         try:
-            if tileset_uuid in tileset_to_agg_info:
-                agg_info = tileset_to_agg_info[tileset_uuid]
-                rdb.set(tile_id + agg_info["agg_func"], pickle.dumps(tile_value))
+            if tileset_uuid in tileset_to_options:
+                tileset_options = tileset_to_options[tileset_uuid]
+                rdb.set(tile_id + tileset_options["options_hash"], pickle.dumps(tile_value))
             else:
                 rdb.set(tile_id, pickle.dumps(tile_value))
         except Exception as ex:
