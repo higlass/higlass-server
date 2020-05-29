@@ -136,7 +136,9 @@ def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
         "mean": lambda x: np.mean(x, axis=0),
         "median": lambda x: np.median(x, axis=0),
         "std": lambda x: np.std(x, axis=0),
-        "var": lambda x: np.var(x, axis=0)
+        "var": lambda x: np.var(x, axis=0),
+        "max": lambda x: np.amax(x, axis=0),
+        "min": lambda x: np.amin(x, axis=0),
     }
 
     generated_tiles = []
@@ -149,7 +151,7 @@ def generate_1d_tiles(filename, tile_ids, get_data_function, agg_info):
 
         if agg_info != None:
             agg_func_name = agg_info["agg_func"]
-            agg_group_arr = agg_info["agg_groups"]
+            agg_group_arr = [ x if type(x) == list else [x] for x in agg_info["agg_groups"] ]
             assert(agg_func_name in agg_func_map)
             dense = np.array(list(map(agg_func_map[agg_func_name], [ dense[arr] for arr in agg_group_arr ])))
 
@@ -494,11 +496,19 @@ def generate_tiles(tileset_tile_ids):
 
     Parameters
     ----------
+    tileset_tile_ids: tuple
+        A four-tuple containing the following parameters.
     tileset: tilesets.models.Tileset object
         The tileset that the tile ids should be retrieved from
     tile_ids: [str,...]
         A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
         to be retrieved
+    raw: str or False
+        The value of the GET request parameter `raw`.
+    agg_info: dict or None
+        A dict containing the keys `agg_groups` and `agg_func`,
+        where `agg_groups` is a 2D array of integers
+        and `agg_func` is a string name of an aggregation function.
 
     Returns
     -------
