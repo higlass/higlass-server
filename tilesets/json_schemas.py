@@ -25,6 +25,7 @@ tiles_post_schema = {
     "type": "array",
     "items": {
         "type": "object",
+        "required": ["tilesetUid", "tileIds"],
         "properties": {
             "tilesetUid": { "type": "string" },
             "tileIds": { "type": "array", "items": { "type": "string" }},

@@ -499,7 +499,7 @@ class MultivecTests(dt.TestCase):
 
         assert q.shape[0] == 512
 
-    def test_get_tile_with_aggregation(self):
+    def test_get_tiles_via_post_with_aggregation(self):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
         )
@@ -1004,6 +1004,24 @@ class BigBedTest(dt.TestCase):
             assert(len(ret) == 1)
         except OSError:
             pass
+
+    def test_get_tiles_via_post(self):
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+
+        body = [
+            {
+                "tilesetUid": "bb",
+                "tileIds": ["14.12"]
+            }
+        ]
+
+        ret = c1.post('/api/v1/tiles/', json.dumps(body), content_type="application/json")
+        assert ret.status_code == 200
+        content = json.loads(ret.content.decode('utf-8'))
+        content_len = len(content['bb.14.12'])
+
+        assert content_len == 200
 
 
 class CoolerTest(dt.TestCase):

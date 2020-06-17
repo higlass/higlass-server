@@ -426,10 +426,12 @@ def tiles(request):
             tile_ids = [ f"{tileset_uid}.{tile_id}" for tile_id in tileset_info["tileIds"] ]
             tileids_to_fetch.update(tile_ids)
 
-            tileset_options = tileset_info["options"]
-            tileset_to_options[tileset_uid] = tileset_options
-            # Hash the options object so that the tile can be cached.
-            tileset_to_options[tileset_uid]["options_hash"] = hashlib.md5(json.dumps(tileset_options).encode('utf-8')).hexdigest()
+            tileset_options = tileset_info.get("options", None)
+            # The "options" property is optional.
+            if type(tileset_options) == dict:
+                tileset_to_options[tileset_uid] = tileset_options
+                # Hash the options object so that the tile can be cached.
+                tileset_to_options[tileset_uid]["options_hash"] = hashlib.md5(json.dumps(tileset_options).encode('utf-8')).hexdigest()
 
     elif request.method == 'GET':
         # create a set so that we don't fetch the same tile multiple times
