@@ -497,6 +497,43 @@ class MultivecTests(dt.TestCase):
         r = base64.decodestring(content['a.11.0']['dense'].encode('utf-8'))
         q = np.frombuffer(r, dtype=np.float16)
 
+        assert q.shape[0] == 512
+
+    def test_get_tiles_via_post_with_aggregation(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chr21.KL.bed.multires.mv5', 'rb')
+        mv = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='multivec',
+            datatype='multivec',
+            coordSystem="hg38",
+            owner=self.user1,
+            uuid='chr21_KL'
+        )
+
+        body = [
+            {
+                "tilesetUid": "chr21_KL",
+                "tileIds": ["0.0", "0.1"],
+                "options": {
+                    "aggGroups": [[0, 1], [2, 3, 4], [5, 6]],
+                    "aggFunc": "sum"
+                }
+            }
+        ]
+
+        ret = self.client.post('/api/v1/tiles/', json.dumps(body), content_type="application/json")
+        assert ret.status_code == 200
+        content = json.loads(ret.content.decode('utf-8'))
+        r = base64.decodestring(content['chr21_KL.0.0']['dense'].encode('utf-8'))
+        q = np.frombuffer(r, dtype=np.float16)
+
+        assert q.shape[0] == 768
+
 
 class ChromosomeSizes(dt.TestCase):
     def test_list_chromsizes(self):
@@ -967,6 +1004,24 @@ class BigBedTest(dt.TestCase):
             assert(len(ret) == 1)
         except OSError:
             pass
+
+    def test_get_tiles_via_post(self):
+        c1 = dt.Client()
+        c1.login(username='user1', password='pass')
+
+        body = [
+            {
+                "tilesetUid": "bb",
+                "tileIds": ["14.12"]
+            }
+        ]
+
+        ret = c1.post('/api/v1/tiles/', json.dumps(body), content_type="application/json")
+        assert ret.status_code == 200
+        content = json.loads(ret.content.decode('utf-8'))
+        content_len = len(content['bb.14.12'])
+
+        assert content_len == 200
 
 
 class CoolerTest(dt.TestCase):

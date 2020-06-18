@@ -28,3 +28,4 @@ static/
 hgs-static/
 
 config.json
+.envrc

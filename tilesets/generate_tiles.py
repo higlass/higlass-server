@@ -109,7 +109,7 @@ def extract_tileset_uid(tile_id):
 def get_tileset_filetype(tileset):
     return tileset.filetype
 
-def generate_1d_tiles(filename, tile_ids, get_data_function):
+def generate_1d_tiles(filename, tile_ids, get_data_function, tileset_options):
     '''
     Generate a set of tiles for the given tile_ids.
 
@@ -122,12 +122,25 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
         to be retrieved
     get_data_function: lambda
         A function which retrieves the data for this tile
+    tileset_options: dict or None
+        An optional dict containing options, including aggregation options.
 
     Returns
     -------
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
+
+    agg_func_map = {
+        "sum": lambda x: np.sum(x, axis=0),
+        "mean": lambda x: np.mean(x, axis=0),
+        "median": lambda x: np.median(x, axis=0),
+        "std": lambda x: np.std(x, axis=0),
+        "var": lambda x: np.var(x, axis=0),
+        "max": lambda x: np.amax(x, axis=0),
+        "min": lambda x: np.amin(x, axis=0),
+    }
+
     generated_tiles = []
 
     for tile_id in tile_ids:
@@ -136,6 +149,11 @@ def generate_1d_tiles(filename, tile_ids, get_data_function):
 
         dense = get_data_function(filename, tile_position)
 
+        if tileset_options != None and "aggGroups" in tileset_options and "aggFunc" in tileset_options:
+            agg_func_name = tileset_options["aggFunc"]
+            agg_group_arr = [ x if type(x) == list else [x] for x in tileset_options["aggGroups"] ]
+            dense = np.array(list(map(agg_func_map[agg_func_name], [ dense[arr] for arr in agg_group_arr ])))
+        
         if len(dense):
             max_dense = max(dense.reshape(-1,))
             min_dense = min(dense.reshape(-1,))
@@ -477,18 +495,24 @@ def generate_tiles(tileset_tile_ids):
 
     Parameters
     ----------
+    tileset_tile_ids: tuple
+        A four-tuple containing the following parameters.
     tileset: tilesets.models.Tileset object
         The tileset that the tile ids should be retrieved from
     tile_ids: [str,...]
         A list of tile_ids (e.g. xyx.0.0.1) identifying the tiles
         to be retrieved
+    raw: str or False
+        The value of the GET request parameter `raw`.
+    tileset_options: dict or None
+        An optional dict containing tileset options, including aggregation options.
 
     Returns
     -------
     tile_list: [(tile_id, tile_data),...]
         A list of tile_id, tile_data tuples
     '''
-    tileset, tile_ids, raw = tileset_tile_ids
+    tileset, tile_ids, raw, tileset_options = tileset_tile_ids
 
     if tileset.filetype == 'hitile':
         return generate_hitile_tiles(tileset, tile_ids)
@@ -512,7 +536,8 @@ def generate_tiles(tileset_tile_ids):
         return generate_1d_tiles(
                 tileset.datafile.path,
                 tile_ids,
-                ctmu.get_single_tile)
+                ctmu.get_single_tile,
+                tileset_options)
     elif tileset.filetype == 'imtiles':
         return hgim.get_tiles(tileset.datafile.path, tile_ids, raw)
     elif tileset.filetype == 'bam':

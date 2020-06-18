@@ -24,6 +24,7 @@ import itertools as it
 
 import tilesets.chromsizes as tcs
 import tilesets.generate_tiles as tgt
+import tilesets.json_schemas as tjs
 
 import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
@@ -51,6 +52,9 @@ import rest_framework.status as rfs
 
 import slugid
 import urllib
+import hashlib
+from jsonschema import validate as json_validate
+from jsonschema.exceptions import ValidationError as JsonValidationError
 
 try:
     import cPickle as pickle
@@ -376,7 +380,7 @@ def add_transform_type(tile_id):
     return new_tile_id
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def tiles(request):
     '''Retrieve a set of tiles
 
@@ -393,8 +397,51 @@ def tiles(request):
             (tile_id, tile_data) items.
 
     '''
-    # create a set so that we don't fetch the same tile multiple times
-    tileids_to_fetch = set(request.GET.getlist("d"))
+    tileids_to_fetch = set()
+    tileset_to_options = dict()
+
+    TILE_LIMIT = 1000
+
+    if request.method == 'POST':
+        # This is a POST request, so try to parse the request body as JSON.
+        try:
+            body = json.loads(request.body.decode('utf-8'))
+        except:
+            return JsonResponse({
+                'error': 'Unable to parse request body as JSON.'
+            }, status=rfs.HTTP_400_BAD_REQUEST)
+
+        # Validate against the JSON schema.
+        try:
+            json_validate(instance=body, schema=tjs.tiles_post_schema)
+        except JsonValidationError as e:
+            return JsonResponse({
+                'error': f"Invalid request body: {e.message}.",
+            }, status=rfs.HTTP_400_BAD_REQUEST)
+
+        # Iterate over tilesets to obtain the associated tile IDs and options.
+        for tileset_info in body:
+            tileset_uid = tileset_info["tilesetUid"]
+            # Prepend the tileset UID to each tile ID suffix.
+            tile_ids = [ f"{tileset_uid}.{tile_id}" for tile_id in tileset_info["tileIds"] ]
+            tileids_to_fetch.update(tile_ids)
+
+            tileset_options = tileset_info.get("options", None)
+            # The "options" property is optional.
+            if type(tileset_options) == dict:
+                tileset_to_options[tileset_uid] = tileset_options
+                # Hash the options object so that the tile can be cached.
+                tileset_to_options[tileset_uid]["options_hash"] = hashlib.md5(json.dumps(tileset_options).encode('utf-8')).hexdigest()
+
+    elif request.method == 'GET':
+        # create a set so that we don't fetch the same tile multiple times
+        tileids_to_fetch = set(request.GET.getlist("d"))
+    
+    if len(tileids_to_fetch) > TILE_LIMIT:
+        return JsonResponse({
+            'error': "Too many tiles were requested.",
+        }, status=rfs.HTTP_400_BAD_REQUEST)
+    
     # with ProcessPoolExecutor() as executor:
     #       res = executor.map(parallelize, hargs)
     '''
@@ -435,7 +482,11 @@ def tiles(request):
         # see if the tile is cached
         tile_value = None
         try:
-            tile_value = rdb.get(tile_id)
+            if tileset_uuid in tileset_to_options:
+                tileset_options = tileset_to_options[tileset_uuid]
+                tile_value = rdb.get(tile_id + tileset_options["options_hash"])
+            else:
+                tile_value = rdb.get(tile_id)
         except Exception as ex:
             # there was an error accessing the cache server
             # log the error and carry forward fetching the tile
@@ -454,7 +505,7 @@ def tiles(request):
 
     # fetch the tiles
     tilesets = [tilesets[tu] for tu in tileids_by_tileset]
-    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw) for t in tilesets if ((not t.private) or request.user == t.owner)]
+    accessible_tilesets = [(t, tileids_by_tileset[t.uuid], raw, tileset_to_options.get(t.uuid, None)) for t in tilesets if ((not t.private) or request.user == t.owner)]
 
     #pool = mp.Pool(6)
 
@@ -477,9 +528,13 @@ def tiles(request):
     tiles_to_return = {}
 
     for (tile_id, tile_value) in generated_tiles:
-
+        tileset_uuid = tgt.extract_tileset_uid(tile_id)
         try:
-            rdb.set(tile_id, pickle.dumps(tile_value))
+            if tileset_uuid in tileset_to_options:
+                tileset_options = tileset_to_options[tileset_uuid]
+                rdb.set(tile_id + tileset_options["options_hash"], pickle.dumps(tile_value))
+            else:
+                rdb.set(tile_id, pickle.dumps(tile_value))
         except Exception as ex:
             # error caching a tile
             # log the error and carry forward, this isn't critical
