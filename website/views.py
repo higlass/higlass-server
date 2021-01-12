@@ -43,8 +43,9 @@ def link(request):
     except ObjectDoesNotExist:
         return HttpResponseNotFound('<h1>No such uuid</h1>')
 
-    # the url for the thumnbail
-    thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+    # Temporarily deactivate the thumbnail generation (crashes the server)
+    # thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+    thumb_url='https://higlass.io/tileicon.png'
 
     # the page to redirect to for interactive explorations
     redirect_url=f'{request.scheme}://{request.get_host()}/app/?config={uuid}'
