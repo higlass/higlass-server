@@ -43,8 +43,12 @@ def link(request):
     except ObjectDoesNotExist:
         return HttpResponseNotFound('<h1>No such uuid</h1>')
 
-    # the url for the thumnbail
-    thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+    # Temporarily deactivate the thumbnail generation (crashes the server)
+    # thumb_url=f'{request.scheme}://{request.get_host()}/thumbnail/?d={uuid}'
+    # Removed META tags:
+    # <meta itemprop="image" content="{thumb_url}">
+    # <meta name="twitter:image:src" content="{thumb_url}">
+    # <meta property="og:image" content="{thumb_url}"/>
 
     # the page to redirect to for interactive explorations
     redirect_url=f'{request.scheme}://{request.get_host()}/app/?config={uuid}'
@@ -58,16 +62,14 @@ def link(request):
 <meta name="keywords" content="3D genome, genomics, genome browser, Hi-C, 4DN, matrix visualization, cooler, Peter Kerpedjiev, Fritz Lekschas, Nils Gehlenborg, Harvard Medical School, Department of Biomedical Informatics">
 <meta itemprop="name" content="HiGlass">
 <meta itemprop="description" content="Web-based visual exploration and comparison of Hi-C genome interaction maps and other genomic tracks">
-<meta itemprop="image" content="{thumb_url}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@higlass_io">
 <meta name="twitter:title" content="HiGlass">
 <meta name="twitter:description" content="Web-based visual exploration and comparison of Hi-C genome interaction maps and other genomic tracks">
-<meta name="twitter:creator" content="@flekschas"><meta name="twitter:image:src" content="{thumb_url}">
+<meta name="twitter:creator" content="@flekschas">
 <meta property="og:title" content="HiGlass"/>
 <meta property="og:description" content="Web-based visual exploration and comparison of Hi-C genome interaction maps and other genomic tracks"/>
 <meta property="og:type" content="website"/><meta property="og:url" content="https://higlass.io"/>
-<meta property="og:image" content="{thumb_url}"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
 <meta name="theme-color" content="#0f5d92">
     <body></body>
