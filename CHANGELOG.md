@@ -1,4 +1,8 @@
-Future version
+v1.14.2
+
+- Turn off thumbnail generation
+
+v1.14.*
 
 - Added support for bigBed files
 - Update readme installation instructions and troubleshooting instructions for macOS 10.15
