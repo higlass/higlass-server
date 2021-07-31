@@ -7,6 +7,7 @@ import collections as col
 import clodius.tiles.bam as ctb
 import clodius.tiles.beddb as hgbe
 import clodius.tiles.bigwig as hgbi
+import clodius.tiles.fasta as hgfa
 import clodius.tiles.bigbed as hgbb
 import clodius.tiles.cooler as hgco
 import clodius.tiles.geo as hggo
@@ -529,6 +530,9 @@ def generate_tiles(tileset_tile_ids):
     elif tileset.filetype == 'bigwig':
         chromsizes = get_chromsizes(tileset)
         return hgbi.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
+    elif tileset.filetype == 'fasta':
+        chromsizes = get_chromsizes(tileset)
+        return hgfa.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
     elif tileset.filetype == 'bigbed':
         chromsizes = get_chromsizes(tileset)
         return hgbb.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)

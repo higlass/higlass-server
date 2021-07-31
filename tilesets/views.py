@@ -29,6 +29,7 @@ import tilesets.json_schemas as tjs
 import clodius.tiles.bam as ctb
 import clodius.tiles.cooler as hgco
 import clodius.tiles.bigwig as hgbi
+import clodius.tiles.fasta as hgfa
 import clodius.tiles.bigbed as hgbb
 import clodius.tiles.multivec as hgmu
 import clodius.tiles.time_interval as hgti
@@ -192,6 +193,8 @@ def sizes(request):
     try:
         if tgt.get_tileset_filetype(chrom_sizes) == 'bigwig':
             data = hgbi.chromsizes(chrom_sizes.datafile.path)
+        elif tgt.get_tileset_filetype(chrom_sizes) == 'fasta':
+            data = hgfa.chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'bigbed':
             data = hgbb.chromsizes(chrom_sizes.datafile.path)
         elif tgt.get_tileset_filetype(chrom_sizes) == 'cooler':
@@ -641,6 +644,16 @@ def tileset_info(request):
         elif tileset_object.filetype == 'bigwig':
             chromsizes = tgt.get_chromsizes(tileset_object)
             tsinfo = hgbi.tileset_info(
+                    tileset_object.datafile.path,
+                    chromsizes
+                )
+            #print('tsinfo:', tsinfo)
+            if 'chromsizes' in tsinfo:
+                tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
+            tileset_infos[tileset_uuid] = tsinfo
+        elif tileset_object.filetype == 'fasta':
+            chromsizes = tgt.get_chromsizes(tileset_object)
+            tsinfo = hgfa.tileset_info(
                     tileset_object.datafile.path,
                     chromsizes
                 )
