@@ -532,7 +532,12 @@ def generate_tiles(tileset_tile_ids):
         return hgbi.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
     elif tileset.filetype == 'fasta':
         chromsizes = get_chromsizes(tileset)
-        return hgfa.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)
+        return hgfa.tiles(
+            tileset.datafile.path,
+            tile_ids,
+            chromsizes=chromsizes,
+            max_tile_width=hss.MAX_FASTA_TILE_WIDTH
+        )
     elif tileset.filetype == 'bigbed':
         chromsizes = get_chromsizes(tileset)
         return hgbb.tiles(tileset.datafile.path, tile_ids, chromsizes=chromsizes)

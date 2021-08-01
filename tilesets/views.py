@@ -661,6 +661,7 @@ def tileset_info(request):
             if 'chromsizes' in tsinfo:
                 tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
             tileset_infos[tileset_uuid] = tsinfo
+            tileset_infos[tileset_uuid]['max_tile_width'] = hss.MAX_FASTA_TILE_WIDTH
         elif tileset_object.filetype == 'bigbed':
             chromsizes = tgt.get_chromsizes(tileset_object)
             tsinfo = hgbi.tileset_info(
