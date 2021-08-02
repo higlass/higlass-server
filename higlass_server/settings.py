@@ -42,6 +42,11 @@ if 'MAX_BAM_TILE_WIDTH' in os.environ:
 else:
     MAX_BAM_TILE_WIDTH = int(1e5)
 
+if 'MAX_FASTA_TILE_WIDTH' in os.environ:
+    MAX_FASTA_TILE_WIDTH = int(os.environ['MAX_FASTA_TILE_WIDTH'])
+else:
+    MAX_FASTA_TILE_WIDTH = int(1e5)
+
 local_settings_file_path = os.path.join(
     BASE_DIR, 'config.json'
 )
