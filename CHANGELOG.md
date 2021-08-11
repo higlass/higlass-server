@@ -1,3 +1,7 @@
+v1.14.3
+
+- Bump clodius version
+
 v1.14.2
 
 - Turn off thumbnail generation
