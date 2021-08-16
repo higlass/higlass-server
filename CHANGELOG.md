@@ -1,3 +1,7 @@
+v1.14.4
+
+- Bump h5py requirement version
+
 v1.14.3
 
 - Bump clodius version
