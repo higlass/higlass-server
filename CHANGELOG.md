@@ -1,3 +1,8 @@
+v1.14.5
+
+- Don't require indexfile field in Tileset model
+- Don't require higlassVersion field in Viewconf model
+
 v1.14.4
 
 - Bump h5py requirement version
