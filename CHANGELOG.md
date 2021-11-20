@@ -1,4 +1,21 @@
-Future version
+v1.14.5
+
+- Don't require indexfile field in Tileset model
+- Don't require higlassVersion field in Viewconf model
+
+v1.14.4
+
+- Bump h5py requirement version
+
+v1.14.3
+
+- Bump clodius version
+
+v1.14.2
+
+- Turn off thumbnail generation
+
+v1.14.*
 
 - Added support for bigBed files
 - Update readme installation instructions and troubleshooting instructions for macOS 10.15
