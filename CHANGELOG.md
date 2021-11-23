@@ -1,3 +1,7 @@
+v1.14.6
+
+- Fix bug where url tilesets could not be deleted
+
 v1.14.5
 
 - Don't require indexfile field in Tileset model
