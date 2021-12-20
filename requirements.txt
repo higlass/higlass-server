@@ -6,7 +6,7 @@ django-cors-headers==3.0.2
 django-guardian==1.5.1
 django-rest-swagger==2.2.0
 django==2.2.25
-djangorestframework==3.9.1
+djangorestframework==3.11.2
 h5py>=3.0.0
 higlass-python==0.2.1
 jsonschema==3.2.0
