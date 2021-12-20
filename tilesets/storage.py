@@ -78,7 +78,7 @@ def HashedFilenameMetaStorage(storage_class):
                 # File already exists, so we can safely do nothing
                 # because their contents match.
                 pass
-            except OSError, e:
+            except OSError as e:
                 if e.errno == EEXIST:
                     # We have a safe storage layer and file exists.
                     pass
