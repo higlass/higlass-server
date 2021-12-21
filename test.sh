@@ -43,14 +43,14 @@ END
 )
 
 for FILE in $FILES; do
-  [ -e data/$FILE ] || wget -P data/ https://s3.amazonaws.com/pkerp/public/$FILE
+  [ -e data/$FILE ] || wget -NP data/ https://s3.amazonaws.com/pkerp/public/$FILE
 done
 
 #
 # bigBed
 #
-wget -P data/ https://s3.amazonaws.com/areynolds/public/chromSizes_hg38_bbtest.tsv
-wget -P data/ https://s3.amazonaws.com/areynolds/public/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb
+wget -NP data/ https://s3.amazonaws.com/areynolds/public/chromSizes_hg38_bbtest.tsv
+wget -NP data/ https://s3.amazonaws.com/areynolds/public/masterlist_DHSs_733samples_WM20180608_all_mean_signal_colorsMax.bed.bb
 
 echo 'foo bar' > data/tiny.txt
 

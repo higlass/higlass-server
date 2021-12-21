@@ -17,6 +17,7 @@ import h5py
 import itertools as it
 import numpy as np
 import os
+import os.path as op
 import shutil
 import time
 import tempfile
