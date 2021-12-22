@@ -8,7 +8,7 @@ django-rest-swagger==2.2.0
 django==2.2.25
 djangorestframework==3.11.2
 h5py>=3.0.0
-higlass-python==0.2.1
+higlass-python==0.4.6
 jsonschema==3.2.0
 numba==0.46.0
 numpy==1.17.3
@@ -20,7 +20,7 @@ requests==2.26.0
 scikit-learn==0.19.2
 slugid==2.0.0
 redis==2.10.5
-clodius==0.17.0
+clodius==0.18.0
 simple-httpfs==0.2.0
 pyppeteer==0.0.25
 urllib3==1.26.7
