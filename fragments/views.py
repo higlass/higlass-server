@@ -709,7 +709,7 @@ def fragments_by_chr(request):
 
     # Get fragments
     try:
-        matrices = get_frag_by_loc(
+        matrices = get_frag_by_loc_from_cool(
             cooler_file,
             loci_rel_chroms,
             zoomout_level=zoomout_level

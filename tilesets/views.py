@@ -925,7 +925,7 @@ class TilesetsViewSet(viewsets.ModelViewSet):
             else:
                 queryset = queryset.order_by(dbmf.Lower(request.GET['o']).asc())
 
-        #ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
+        ts_serializer = tss.UserFacingTilesetSerializer(queryset, many=True)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
