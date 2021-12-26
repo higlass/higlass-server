@@ -1,3 +1,7 @@
+v1.14.6
+
+- Bump urllib, clodius, pandas, requests, higlass-python and simple-httpfs
+
 v1.14.5
 
 - Don't require indexfile field in Tileset model
