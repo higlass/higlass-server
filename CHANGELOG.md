@@ -1,3 +1,7 @@
+v1.14.7
+
+- Bump Pillow
+
 v1.14.6
 
 - Bump urllib, clodius, pandas, requests, higlass-python and simple-httpfs
