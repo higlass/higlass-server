@@ -1,3 +1,7 @@
+v1.14.8
+
+- Fixed issue where 'error' was being set in chromsizes-tsv tileset_info
+
 v1.14.7
 
 - Bump Pillow
@@ -23,7 +27,7 @@ v1.14.2
 
 - Turn off thumbnail generation
 
-v1.14.*
+v1.14.\*
 
 - Added support for bigBed files
 - Update readme installation instructions and troubleshooting instructions for macOS 10.15
@@ -138,7 +142,7 @@ v1.3.0 (2017-10-21)
 v1.2.3 (2017-10-03)
 
 - Same changes as last time. They didn't actually make it into v1.2.2
-v1.2.2 (2017-10-03)
+  v1.2.2 (2017-10-03)
 
 - Fixed a bug with ignore-diags in the fragments API
 
@@ -292,8 +296,8 @@ v0.3.4
 
 v0.3.3
 
-- Added __str__ to Tileset models so that they're visible in the django
-interface
+- Added **str** to Tileset models so that they're visible in the django
+  interface
 
 v0.3.2
 

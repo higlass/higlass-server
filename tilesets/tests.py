@@ -539,6 +539,29 @@ class MultivecTests(dt.TestCase):
 
 
 class ChromosomeSizes(dt.TestCase):
+    def test_tileset_info(self):
+        self.user1 = dcam.User.objects.create_user(
+            username='user1', password='pass'
+        )
+        upload_file = open('data/chromSizes.tsv', 'rb')
+        self.chroms = tm.Tileset.objects.create(
+            datafile=dcfu.SimpleUploadedFile(
+                upload_file.name, upload_file.read()
+            ),
+            filetype='chromsizes-tsv',
+            datatype='chromsizes',
+            coordSystem="hg19",
+            owner=self.user1,
+            uuid='cs-hg19'
+        )
+
+        ret = self.client.get(
+            '/api/v1/tileset_info/?d=cs-hg19'
+        ).json()
+
+        assert 'chromsizes' in ret['cs-hg19']
+        assert 'error' not in ret
+        
     def test_list_chromsizes(self):
         self.user1 = dcam.User.objects.create_user(
             username='user1', password='pass'
