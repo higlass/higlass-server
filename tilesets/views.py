@@ -651,6 +651,11 @@ def tileset_info(request):
             if 'chromsizes' in tsinfo:
                 tsinfo['chromsizes'] = [(c, int(s)) for c,s in tsinfo['chromsizes']]
             tileset_infos[tileset_uuid] = tsinfo
+        elif tileset_object.filetype == 'chromsizes-tsv':
+            chromsizes = tgt.get_chromsizes(tileset_object)
+            tileset_infos[tileset_uuid] = {
+                'chromsizes': [(c, int(s)) for c,s in chromsizes]
+            }
         elif tileset_object.filetype == 'fasta':
             chromsizes = tgt.get_chromsizes(tileset_object)
             tsinfo = hgfa.tileset_info(
