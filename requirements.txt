@@ -17,7 +17,7 @@ Pillow>=9.0.0
 pybase64==0.2.1
 redis==2.10.5
 requests==2.26.0
-scikit-learn==0.19.2
+scikit-learn==1.0.2
 slugid==2.0.0
 redis==2.10.5
 clodius==0.18.0
