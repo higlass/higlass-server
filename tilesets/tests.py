@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 def media_file(filename, sub_dir='uploads'):
     '''
     Returns path to file in the media uploads directory
+    
     Parameters:
     -----------
     filename: string
